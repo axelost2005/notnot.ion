@@ -105,7 +105,7 @@ REST + JSON bajo `/api`. Toda entrada se valida con los schemas de `shared`. Err
 
 ## Deploy
 - Vercel para web y API en el mismo origen (`/api/*` → Express). Elegí la config más simple que cumpla eso.
-- Neon: branch `dev` para local y `main` para prod. En prod, migraciones con `prisma migrate deploy`.
+- Neon: branch `dev` para local y `production` (el principal) para prod. En prod, migraciones con `prisma migrate deploy`.
 - Prisma según la guía actual de Prisma + Neon para serverless (URL pooled en runtime, directa para migraciones).
 - Variables: `DATABASE_URL`, `DIRECT_URL` si Prisma la pide, `APP_SECRET`, `SESSION_SECRET`. Se validan con Zod al arrancar la API.
 - Node LTS fijado en `.nvmrc` y en `engines`.
@@ -163,7 +163,7 @@ Se hacen de corrido, siguiendo el flujo de `CLAUDE.md`. Cada fase termina cuando
 - Candado completo (pantalla, cookie, middleware, rate limit, bloquear) con tests.
 - Layout con sidebar. Tableros: crear (nombre + color), renombrar, archivar/desarchivar, borrar con confirmación, Inbox protegido, contador de abiertas.
 - Ruta `/b/:slug` y redirección de `/`.
-- Deploy a Vercel + Neon `main`: si `vercel` está logueado, deployá; si no, dejá la config lista y los pasos manuales que tenga que hacer yo en `docs/PROGRESO.md` (proyecto, variables, branch).
+- Deploy a Vercel + Neon `production`: si `vercel` está logueado, deployá; si no, dejá la config lista y los pasos manuales que tenga que hacer yo en `docs/PROGRESO.md` (proyecto, variables, branch).
 
 **Listo cuando:** en local me pide el código, entro y manejo tableros, y `/api/boards` sin cookie devuelve 401. Si se pudo deployar, lo mismo en prod.
 
