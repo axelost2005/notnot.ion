@@ -2,7 +2,7 @@
 
 ## Fase actual
 
-**Fase 4 — PWA y mobile: cerrada.** Las cinco fases (0 a 4) están hechas. Falta solo lo que depende de vos (ver "Pendientes para vos").
+**Fase 4 — PWA y mobile: cerrada.** Las cinco fases (0 a 4) están hechas y la app está en producción. Falta solo instalarla (ver "Pendientes para vos").
 
 ## Hecho
 
@@ -22,7 +22,7 @@
 - Tableros en la API: listar (con tareas abiertas), detalle con columnas y tareas ordenadas, crear (con las 3 columnas), renombrar (regenera el slug), color, archivar/desarchivar y borrar. Inbox protegido.
 - Web: pantalla `/unlock`, cualquier 401 vuelve ahí; layout con sidebar (Inbox arriba, tableros con color y contador de abiertas, archivados colapsados, "Nuevo tablero", "Bloquear"); `/b/:slug`; `/` abre el último tablero usado o Inbox; diálogo de crear/editar con vista previa del `@slug`; borrar con confirmación; toasts para errores; claro/oscuro según el sistema.
 - e2e (`apps/web/e2e/lock-and-boards.spec.ts`): 401 sin cookie, código incorrecto, entrar y bloquear, ciclo completo de un tablero, Inbox protegido, validación y "último tablero".
-- Deploy: config lista (`vercel.json` + `scripts/build-vercel.mjs`), proyecto `notnot-ion` en Vercel y **preview funcionando** contra Neon `dev`. Producción espera la base `main` (ver pendientes).
+- Deploy: config lista (`vercel.json` + `scripts/build-vercel.mjs`), proyecto `notnot-ion` en Vercel, con las previews contra Neon `dev` y producción contra Neon `production`.
 
 ### Fase 2 — Kanban
 
@@ -61,8 +61,8 @@
 - **Candado**: el código se compara sin mayúsculas, acentos ni espacios de más (en el celu el teclado los mete solo). El rate limit cuenta solo intentos fallidos y vive en memoria de cada instancia (en serverless es aproximado, como dice la spec).
 - **Inbox**: no se renombra, archiva ni borra; el color sí se puede cambiar.
 - **Diseño**: base neutra fría que sigue al sistema (claro/oscuro sin selector) y el color del tablero como único acento (punto en la sidebar, marca del tablero activo). Tipografía Instrument Sans, servida desde el bundle (Fontsource) para que la PWA no dependa de Google Fonts.
-- **Deploy con la Build Output API de Vercel**: `pnpm build:vercel` corre `prisma migrate deploy`, el build y `scripts/build-vercel.mjs`, que arma `.vercel/output` con la web estática, la API como una función (Node 24) y las rutas (`/api/*` → función, fallback de SPA, `noindex`, caché larga para `/assets`). Se descartó Vercel Services (beta) y el builder de Express (no empaqueta y el monorepo con `shared` en TS le complica la resolución).
-- **Vercel**: `ENABLE_EXPERIMENTAL_COREPACK=1` para usar exactamente pnpm 11. Preview usa Neon `dev`; Production va a usar Neon `main`. Las migraciones de cada entorno corren en su build.
+- **Deploy con la Build Output API de Vercel**: `pnpm build:vercel` corre `prisma migrate deploy`, el seed (crea Inbox si no existe), el build y `scripts/build-vercel.mjs`, que arma `.vercel/output` con la web estática, la API como una función (Node 24) y las rutas (`/api/*` → función, fallback de SPA, `noindex`, caché larga para `/assets`). Se descartó Vercel Services (beta) y el builder de Express (no empaqueta y el monorepo con `shared` en TS le complica la resolución).
+- **Vercel**: `ENABLE_EXPERIMENTAL_COREPACK=1` para usar exactamente pnpm 11. Preview usa Neon `dev` y Production, Neon `production` (el branch principal). Las migraciones de cada entorno corren en su build. El repo está conectado a Vercel: cada push a `main` despliega a producción y cada rama tiene su preview.
 - **e2e y rate limit**: el test del código incorrecto manda su propio `X-Forwarded-For` para no acumular intentos entre corridas locales.
 - **Columnas nuevas**: si la de terminadas es la última, la nueva va justo antes (así "Hecho" queda al final); si no, al final. Cambiar cuál es la de terminadas actualiza `completedAt` de las tarjetas de las dos columnas. No se borra la de terminadas, una con tarjetas ni la última normal (409 con el motivo; la UI deshabilita la opción y explica por qué).
 - **`move`**: valida que `prevId` y `nextId` sean vecinos reales en la columna destino; si no, 409 (el cliente tenía una vista vieja: vuelve atrás y refresca). Sin vecinos, va al final. El cliente calcula la misma posición con el mismo helper de `shared` para el update optimista.
@@ -85,16 +85,4 @@
 
 ## Pendientes para vos
 
-- **Neon `main` para producción.** Hacen falta las dos connection strings del branch `main` (pooled y directa). Pasámelas o cargalas vos:
-
-  ```bash
-  vercel env add DATABASE_URL production   # la pooled (con -pooler)
-  vercel env add DIRECT_URL production     # la directa
-  vercel deploy --prod
-  ```
-
-  El build de producción aplica las migraciones en `main` y crea Inbox (si no existe) antes de publicar. `APP_SECRET` y `SESSION_SECRET` de producción ya están cargados en Vercel (el código te lo paso por chat; no está en el repo).
-
-- **Conectar el repo a Vercel** (opcional, después de lo anterior): `vercel git connect` para que cada push a `main` despliegue solo.
-
-- **Instalarla en el celu y en la compu** después del deploy a producción (ver "Instalarla" en el README).
+- **Instalarla en el celu y en la compu** (ver "Instalarla" en el README). El código de producción te lo pasé por chat; no está en el repo.
