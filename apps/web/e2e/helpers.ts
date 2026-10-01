@@ -27,11 +27,22 @@ export async function deleteE2EBoards(request: APIRequestContext) {
   }
 }
 
-/** Borra las notas de Inbox que dejaron los tests (las que mencionan un tablero `e2e-`). */
+/** Borra las tarjetas de General que dejaron los tests (las que empiezan con `e2e-`). */
+export async function deleteE2EGeneralTasks(request: APIRequestContext) {
+  const general = (await listBoards(request)).find((board) => board.slug === 'general')
+  if (!general) return
+  const res = await request.get(`/api/boards/${general.id}`)
+  const { tasks } = (await res.json()) as { tasks: { id: string; title: string }[] }
+  for (const task of tasks) {
+    if (task.title.startsWith('e2e-')) await request.delete(`/api/tasks/${task.id}`)
+  }
+}
+
+/** Borra las notas de General que dejaron los tests (las que mencionan un tablero `e2e-`). */
 export async function deleteE2ENotes(request: APIRequestContext) {
-  const inbox = (await listBoards(request)).find((board) => board.slug === 'inbox')
-  if (!inbox) return
-  const res = await request.get(`/api/boards/${inbox.id}/notes`)
+  const general = (await listBoards(request)).find((board) => board.slug === 'general')
+  if (!general) return
+  const res = await request.get(`/api/boards/${general.id}/notes`)
   const { notes } = (await res.json()) as { notes: { id: string; content: string }[] }
   for (const note of notes) {
     if (note.content.includes('@e2e-')) await request.delete(`/api/notes/${note.id}`)

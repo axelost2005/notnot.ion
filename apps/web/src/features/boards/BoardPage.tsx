@@ -16,8 +16,10 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
+import { GeneralBoard } from '../general/GeneralBoard'
 import { HistorySheet } from '../history/HistorySheet'
 import { KanbanBoard } from '../kanban/KanbanBoard'
+import { LanesSkeleton } from '../kanban/LanesSkeleton'
 import { NotesPanel } from '../notes/NotesPanel'
 import { openNotesWindow } from '../notes/openNotesWindow'
 import { readPanelOpen, writePanelOpen } from '../notes/storage'
@@ -51,7 +53,7 @@ export function BoardPage() {
           Puede que lo hayan renombrado o borrado.
         </p>
         <Button asChild variant="outline" size="sm" className="mt-2 justify-self-start">
-          <Link to="/">Ir a Inbox</Link>
+          <Link to="/">Ir a General</Link>
         </Button>
       </div>
     )
@@ -63,7 +65,6 @@ export function BoardPage() {
 type Tab = 'tablero' | 'notas'
 
 function BoardView({ board }: { board: BoardSummary }) {
-  const detail = useQuery(boardQuery(board.id))
   const [searchParams, setSearchParams] = useSearchParams()
   const [notesOpen, setNotesOpen] = useState(readPanelOpen)
 
@@ -116,17 +117,7 @@ function BoardView({ board }: { board: BoardSummary }) {
           id="vista-tablero"
           className={cn('flex min-w-0 flex-1 flex-col', tab === 'notas' && 'max-md:hidden')}
         >
-          {detail.isPending ? (
-            <LanesSkeleton />
-          ) : detail.isError ? (
-            <ErrorState
-              title="No se pudo cargar el tablero."
-              message={detail.error.message}
-              onRetry={() => void detail.refetch()}
-            />
-          ) : (
-            <KanbanBoard board={detail.data} />
-          )}
+          {board.isGeneral ? <GeneralBoard board={board} /> : <BoardKanban boardId={board.id} />}
         </div>
         {panelOpen && (
           <NotesPanel
@@ -143,6 +134,22 @@ function BoardView({ board }: { board: BoardSummary }) {
       <MobileTabs tab={tab} onSelect={selectTab} />
     </div>
   )
+}
+
+function BoardKanban({ boardId }: { boardId: string }) {
+  const detail = useQuery(boardQuery(boardId))
+
+  if (detail.isPending) return <LanesSkeleton />
+  if (detail.isError) {
+    return (
+      <ErrorState
+        title="No se pudo cargar el tablero."
+        message={detail.error.message}
+        onRetry={() => void detail.refetch()}
+      />
+    )
+  }
+  return <KanbanBoard board={detail.data} />
 }
 
 type HeaderProps = {
@@ -205,7 +212,12 @@ function BoardHeader({ board, notesOpen, onToggleNotes }: HeaderProps) {
           <History />
           <span className="max-md:sr-only">Historial</span>
         </Button>
-        <HistorySheet board={board} open={historyOpen} onOpenChange={setHistoryOpen} />
+        {/* En General, el historial de todos los tableros. */}
+        <HistorySheet
+          board={board.isGeneral ? undefined : board}
+          open={historyOpen}
+          onOpenChange={setHistoryOpen}
+        />
         <BoardActionsMenu board={board} />
         <Button
           variant="ghost"
@@ -262,19 +274,6 @@ function MobileTabs({ tab, onSelect }: { tab: Tab; onSelect: (tab: Tab) => void 
           <Icon className="size-5" aria-hidden="true" />
           {label}
         </button>
-      ))}
-    </div>
-  )
-}
-
-function LanesSkeleton() {
-  return (
-    <div
-      className="flex min-h-0 flex-1 gap-3 overflow-hidden p-3 max-md:p-4"
-      aria-label="Cargando tablero"
-    >
-      {[0, 1, 2].map((lane) => (
-        <Skeleton key={lane} className="w-66 shrink-0 rounded-lg max-md:w-[85vw]" />
       ))}
     </div>
   )

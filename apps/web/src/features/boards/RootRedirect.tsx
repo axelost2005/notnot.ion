@@ -5,8 +5,8 @@ import { boardsQuery } from './api'
 import { readLastBoard } from './lastBoard'
 
 /**
- * `/` abre el último tablero que se usó o, si no hay, Inbox.
- * `/?nueva-nota` (el atajo de la app instalada) abre Inbox en Notas, listo para escribir.
+ * `/` abre el último tablero que se usó o, si no hay, General.
+ * `/?nueva-nota` (el atajo de la app instalada) abre General en Notas, listo para escribir.
  */
 export function RootRedirect() {
   const boards = useQuery(boardsQuery)
@@ -23,16 +23,16 @@ export function RootRedirect() {
     )
   }
 
-  const inbox = boards.data.find((b) => b.isInbox)
-  if (searchParams.has('nueva-nota') && inbox) {
-    return <Navigate to={`/b/${inbox.slug}?vista=notas&escribir=1`} replace />
+  const general = boards.data.find((b) => b.isGeneral)
+  if (searchParams.has('nueva-nota') && general) {
+    return <Navigate to={`/b/${general.slug}?vista=notas&escribir=1`} replace />
   }
 
   const last = readLastBoard()
-  const target = boards.data.find((b) => b.slug === last) ?? inbox ?? boards.data[0]
+  const target = boards.data.find((b) => b.slug === last) ?? general ?? boards.data[0]
 
   if (!target) {
-    return <ErrorState title="No hay tableros." message="Corré el seed para crear Inbox." />
+    return <ErrorState title="No hay tableros." message="Corré el seed para crear General." />
   }
   return <Navigate to={`/b/${target.slug}`} replace />
 }

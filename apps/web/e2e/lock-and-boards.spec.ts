@@ -22,16 +22,16 @@ test.describe('candado', () => {
     await expect(page).toHaveURL(/\/unlock$/)
   })
 
-  test('con el código entra a Inbox y "Bloquear" cierra la sesión', async ({ page }) => {
+  test('con el código entra a General y "Bloquear" cierra la sesión', async ({ page }) => {
     await page.goto('/unlock')
     await page.getByLabel('Código').fill(CODE)
     await page.getByRole('button', { name: 'Entrar' }).click()
-    await expect(page).toHaveURL(/\/b\/inbox$/)
-    await expect(page.getByRole('heading', { level: 1, name: 'Inbox' })).toBeVisible()
+    await expect(page).toHaveURL(/\/b\/general$/)
+    await expect(page.getByRole('heading', { level: 1, name: 'General' })).toBeVisible()
 
     await page.getByRole('button', { name: 'Bloquear' }).click()
     await expect(page).toHaveURL(/\/unlock$/)
-    await page.goto('/b/inbox')
+    await page.goto('/b/general')
     await expect(page).toHaveURL(/\/unlock$/)
     expect((await page.request.get('/api/boards')).status()).toBe(401)
   })
@@ -51,7 +51,7 @@ test.describe('tableros', () => {
     const sidebar = page.getByRole('navigation', { name: 'Tableros' })
 
     await page.goto('/')
-    await expect(page).toHaveURL(/\/b\/inbox$/)
+    await expect(page).toHaveURL(/\/b\/general$/)
 
     // Crear
     await sidebar.getByRole('button', { name: 'Nuevo tablero' }).click()
@@ -89,26 +89,26 @@ test.describe('tableros', () => {
     await page.getByRole('button', { name: 'Desarchivar' }).click()
     await expect(page.getByText('Archivado', { exact: true })).toBeHidden()
 
-    // Borrar con confirmación: vuelve a Inbox
+    // Borrar con confirmación: vuelve a General
     await page.getByRole('button', { name: `Opciones de ${renamed}` }).click()
     await page.getByRole('menuitem', { name: 'Borrar…' }).click()
     const confirm = page.getByRole('alertdialog')
     await expect(confirm).toContainText(`¿Borrar «${renamed}»?`)
     await confirm.getByRole('button', { name: 'Borrar tablero' }).click()
-    await expect(page).toHaveURL(/\/b\/inbox$/)
+    await expect(page).toHaveURL(/\/b\/general$/)
     await expect(sidebar.getByRole('link', { name: renamed })).toBeHidden()
   })
 
-  test('Inbox no se puede renombrar, archivar ni borrar', async ({ page }) => {
-    await page.goto('/b/inbox')
-    await page.getByRole('button', { name: 'Opciones de Inbox' }).click()
+  test('General no se puede renombrar, archivar ni borrar', async ({ page }) => {
+    await page.goto('/b/general')
+    await page.getByRole('button', { name: 'Opciones de General' }).click()
     await expect(page.getByRole('menuitem', { name: 'Cambiar color' })).toBeVisible()
     await expect(page.getByRole('menuitem', { name: 'Archivar' })).toHaveCount(0)
     await expect(page.getByRole('menuitem', { name: /Borrar/ })).toHaveCount(0)
   })
 
   test('valida el nombre al crear', async ({ page }) => {
-    await page.goto('/b/inbox')
+    await page.goto('/b/general')
     await page.getByRole('button', { name: 'Nuevo tablero' }).click()
     const dialog = page.getByRole('dialog', { name: 'Nuevo tablero' })
     await dialog.getByRole('button', { name: 'Crear tablero' }).click()

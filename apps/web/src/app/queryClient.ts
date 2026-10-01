@@ -34,7 +34,11 @@ export const queryClient = new QueryClient({
     },
   }),
   mutationCache: new MutationCache({
-    onSuccess: () => otherWindows?.postMessage('changed'),
+    onSuccess: () => {
+      otherWindows?.postMessage('changed')
+      // General junta lo de todos los tableros: cualquier cambio lo puede tocar.
+      void queryClient.invalidateQueries({ queryKey: ['general'] })
+    },
     onError: (error, _variables, _context, mutation) => {
       if (handleUnauthorized(error) || mutation.meta?.inlineError) return
       toast.error(error.message)

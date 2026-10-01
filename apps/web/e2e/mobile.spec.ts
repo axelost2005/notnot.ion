@@ -67,7 +67,7 @@ test('en 375 px captura una nota y mueve la tarjeta con "Mover a…"', async ({ 
 
 test('el título es el selector de tablero', async ({ page }) => {
   const board = await createBoard(page, 'selector')
-  await page.goto('/b/inbox')
+  await page.goto('/b/general')
   await page.getByRole('button', { name: /cambiar de tablero/ }).tap()
   await page.getByRole('dialog').getByRole('link', { name: board.name }).tap()
   await expect(page).toHaveURL(new RegExp(`/b/${board.slug}$`))

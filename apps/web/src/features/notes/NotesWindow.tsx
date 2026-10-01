@@ -29,7 +29,7 @@ export function NotesWindow() {
 
   const board = boards.data.find((b) => b.slug === slug)
   if (!board) {
-    const fallback = boards.data.find((b) => b.isInbox) ?? boards.data[0]
+    const fallback = boards.data.find((b) => b.isGeneral) ?? boards.data[0]
     return fallback ? <Navigate to={`/notas/${fallback.slug}`} replace /> : null
   }
   // Los activos, y el actual aunque esté archivado.

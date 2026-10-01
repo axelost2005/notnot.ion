@@ -1,18 +1,21 @@
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import type { Task } from '@notnot/shared'
+import type { BoardSummary, Task } from '@notnot/shared'
 import { AlignLeft } from 'lucide-react'
 import { BrandMark } from '@/components/BrandMark'
 import { cn } from '@/lib/utils'
+import { BoardChip } from '../boards/BoardChip'
 
 type CardProps = {
   task: Task
   done: boolean
+  /** En General: el tablero de la tarjeta. */
+  board?: BoardSummary
   /** Copia que sigue al puntero mientras se arrastra. */
   overlay?: boolean
 }
 
-function TaskCardBody({ task, done, overlay }: CardProps) {
+export function TaskCardBody({ task, done, board, overlay }: CardProps) {
   return (
     <div
       className={cn(
@@ -23,8 +26,9 @@ function TaskCardBody({ task, done, overlay }: CardProps) {
       <p className={cn('break-words whitespace-pre-line', done && 'text-muted-foreground')}>
         {task.title}
       </p>
-      {(task.description || task.noteId) && (
+      {(board || task.description || task.noteId) && (
         <div className="mt-1.5 flex items-center gap-2 text-muted-foreground">
+          {board && <BoardChip board={board} className="-ml-0.5" />}
           {task.description && (
             <AlignLeft className="size-3.5" role="img" aria-label="Tiene descripción" />
           )}
@@ -35,8 +39,8 @@ function TaskCardBody({ task, done, overlay }: CardProps) {
   )
 }
 
-export function TaskCardOverlay({ task, done }: CardProps) {
-  return <TaskCardBody task={task} done={done} overlay />
+export function TaskCardOverlay(props: CardProps) {
+  return <TaskCardBody {...props} overlay />
 }
 
 type SortableProps = CardProps & { onOpen: (taskId: string) => void }
