@@ -2,7 +2,7 @@
 
 ## Fase actual
 
-**Fase 2 — Kanban: cerrada.** Sigue la Fase 3 (notas → tareas).
+**Fase 3 — Notas → tareas: cerrada.** Sigue la Fase 4 (PWA y mobile).
 
 ## Hecho
 
@@ -32,6 +32,14 @@
 - Drag & drop con dnd-kit: mouse, teclado (espacio + flechas, con anuncios en español para lectores de pantalla) y touch con long-press. Optimista: la tarjeta se mueve al toque y vuelve si la API dice que no.
 - e2e (`apps/web/e2e/kanban.spec.ts`): crear tarjetas, mover dentro y entre columnas con mouse, recargar y mantener el orden; mover con teclado; detalle; columnas.
 
+### Fase 3 — Notas → tareas
+
+- `parseNote` en `shared` con tests (marcadores, `@` válido/inexistente/archivado/repetido, acentos, mails, líneas vacías, títulos largos, saltos de Windows).
+- API: `GET /boards/:id/notes?before=` (50 por página, cada nota con sus tareas: id, línea, título actual, tablero y si está terminada), `POST /notes` (nota y tareas en una sola escritura), `DELETE /notes/:id` (las tareas quedan) y `POST /tasks/:id/toggle-done`.
+- Panel de notas a la derecha (360 px, plegable desde "Notas" en el header): tipo chat con hora relativa, carga 50 y trae más al scrollear hacia arriba, Enter envía y Shift+Enter hace salto de línea (en touch, botón enviar), chips `[ ]` y `@`, autocompletado de tableros activos por nombre o slug, vista previa ("2 tareas → Pepito, Inbox"), borrador por tablero en localStorage, checkbox + título actual + chip del tablero, tildar/destildar optimista (mueve la tarjeta en el kanban al toque), tocar el título abre la tarjeta, línea tachada si la tarjeta se borró, links clickeables y borrar con confirmación.
+- El detalle de una tarjeta que salió de una nota tiene "Ver la nota", que abre el tablero de la nota con esa nota resaltada (`?nota=<id>`).
+- e2e (`apps/web/e2e/notes.spec.ts`): el "Listo cuando" completo (Inbox → `@tablero`, al final de "Por hacer", tildar → "Hecho", mover en el tablero → checkbox, borrar la nota deja la tarjeta), composer, tachado y links, scroll infinito y link a la nota de origen.
+
 ## Decisiones
 
 - **Versiones**: lo último estable que funciona junto. TypeScript 6.0 (typescript-eslint todavía no soporta TS 7), Prisma 7.10 (Prisma 8 está en RC), React Router 8 en modo data, Vite 8, Vitest 5, ESLint 10, Tailwind 4, Zod 4, shadcn CLI 4.
@@ -53,6 +61,12 @@
 - **dnd-kit**: `@dnd-kit/core` + `@dnd-kit/sortable` (estables) en vez de `@dnd-kit/react` (todavía 0.x). Mouse arrastra a partir de 5 px; touch con long-press de 250 ms (un toque abre la tarjeta y el scroll sigue andando); teclado con espacio y flechas, Enter abre la tarjeta.
 - **Detalle de tarjeta en la URL** (`/b/:slug?tarjeta=<id>`): sirve para abrirla desde el panel de notas en la Fase 3. "Mover a" desde el detalle la deja al final de la columna elegida.
 - **`toggle-done`** queda para la Fase 3, como dice la spec.
+- **Parser**: los marcadores son exactamente los de la spec (`[]`, `[ ]`, `- []`, `- [ ]`, `* [ ]`; `* []` o `[x]` no cuentan). Solo la mención que se usa sale del título; las demás quedan como texto. Una mención es `@` al principio o después de un espacio (así un mail no cuenta), con letras, números y guiones. Si el título queda vacío o la línea era solo `[] @tablero`, es texto.
+- **Notas**: el contenido se guarda sin espacios al principio y al final. Más de 50 tareas en una nota → 400. Las tareas de cada tablero destino van al final de su primera columna normal, en el orden de las líneas. Borrar un tablero también desvincula (`noteId`/`noteLine` en null) las tareas de otros tableros que salieron de sus notas.
+- **Tachado**: una línea con marcador que ya no tiene tarea se muestra tachada (la tarjeta se borró). Si era una línea con marcador que nunca tuvo título (por ejemplo `[] @otro` con un tablero que después se borró), también se ve tachada: caso raro y sin consecuencias.
+- **Autocompletado de `@`**: se cierra cuando lo escrito ya es un slug exacto, así Enter envía en vez de volver a elegir el tablero.
+- **`noteBoardId`** en la respuesta de cada tarea: dice en qué tablero está la nota de origen, para el link "Ver la nota".
+- **Panel en mobile**: queda oculto debajo de 768 px hasta la Fase 4 (tabs "Tablero" / "Notas").
 - **Dev**: si corrés comandos de pnpm con la app levantada, pnpm 11 puede regenerar el cliente de Prisma y `node --watch` reinicia la API (algún pedido puede dar 502 en ese momento).
 
 ## Pendientes para vos
