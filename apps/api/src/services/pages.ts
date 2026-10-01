@@ -8,7 +8,7 @@ import type {
   UpdateFolderInput,
   UpdatePageInput,
 } from '@notnot/shared'
-import { canMoveFolder } from '@notnot/shared'
+import { canMoveFolder, isBoardColor, isFolderIcon } from '@notnot/shared'
 import { prisma } from '../db'
 import type * as Db from '../generated/prisma/client'
 import { conflict, notFound } from '../middleware/errors'
@@ -21,6 +21,8 @@ function toFolder(folder: Db.Folder): Folder {
     id: folder.id,
     parentId: folder.parentId,
     name: folder.name,
+    color: folder.color && isBoardColor(folder.color) ? folder.color : null,
+    icon: folder.icon && isFolderIcon(folder.icon) ? folder.icon : null,
     createdAt: folder.createdAt.toISOString(),
     updatedAt: folder.updatedAt.toISOString(),
   }
@@ -73,7 +75,7 @@ export async function updateFolder(id: string, input: UpdateFolderInput): Promis
   }
   const folder = await prisma.folder.update({
     where: { id },
-    data: { name: input.name, parentId: input.parentId },
+    data: { name: input.name, parentId: input.parentId, color: input.color, icon: input.icon },
   })
   return toFolder(folder)
 }

@@ -106,6 +106,9 @@ model Folder {
   id        String   @id @default(uuid(7)) @db.Uuid
   parentId  String?  @db.Uuid
   name      String
+  // Uno de los colores de los tableros y un ícono de la lista de `shared`; sin elegir, null.
+  color     String?
+  icon      String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
