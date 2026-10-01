@@ -1,9 +1,12 @@
 import type {
   CreatePaymentInput,
+  CreateReceivableInput,
   ImageInfo,
   Payment,
   PaymentsSummary,
+  Receivable,
   UpdatePaymentInput,
+  UpdateReceivableInput,
 } from '@notnot/shared'
 import { queryOptions, useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
@@ -22,9 +25,21 @@ export const paymentsSummaryQuery = queryOptions({
   queryFn: () => api<PaymentsSummary>('/payments/summary'),
 })
 
-/** Un pago nuevo o cambiado puede tocar dos meses, los totales y el resumen: se trae de nuevo. */
+/** Todo lo por cobrar (pendiente y cobrado), con sus pagos. */
+export const receivablesQuery = queryOptions({
+  queryKey: ['receivables'],
+  queryFn: () => api<Receivable[]>('/receivables'),
+})
+
+/**
+ * Un pago nuevo o cambiado puede tocar dos meses, los totales, el resumen y lo cobrado de algo por
+ * cobrar (y al revés: borrar algo por cobrar desvincula sus pagos). Se trae todo de nuevo.
+ */
 const refreshPayments = (queryClient: QueryClient) =>
-  queryClient.invalidateQueries({ queryKey: ['payments'] })
+  Promise.all([
+    queryClient.invalidateQueries({ queryKey: ['payments'] }),
+    queryClient.invalidateQueries({ queryKey: ['receivables'] }),
+  ])
 
 export function useCreatePayment() {
   const queryClient = useQueryClient()
@@ -48,6 +63,32 @@ export function useDeletePayment() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => api<void>(`/payments/${id}`, { method: 'DELETE' }),
+    onSuccess: () => refreshPayments(queryClient),
+  })
+}
+
+export function useCreateReceivable() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: CreateReceivableInput) =>
+      api<Receivable>('/receivables', { method: 'POST', json: input }),
+    onSuccess: () => refreshPayments(queryClient),
+  })
+}
+
+export function useUpdateReceivable() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, ...input }: UpdateReceivableInput & { id: string }) =>
+      api<Receivable>(`/receivables/${id}`, { method: 'PATCH', json: input }),
+    onSuccess: () => refreshPayments(queryClient),
+  })
+}
+
+export function useDeleteReceivable() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => api<void>(`/receivables/${id}`, { method: 'DELETE' }),
     onSuccess: () => refreshPayments(queryClient),
   })
 }

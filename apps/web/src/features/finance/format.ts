@@ -1,4 +1,5 @@
 import type { Currency } from '@notnot/shared'
+import { daysBetween } from '@notnot/shared'
 
 const pad = (value: number) => String(value).padStart(2, '0')
 
@@ -19,6 +20,9 @@ export function formatMoney(cents: number, currency: Currency) {
     maximumFractionDigits: 2,
   }).format(cents / 100)
 }
+
+/** "pesos" o "dólares" (para frases como "Cobrado en pesos"). */
+export const currencyName = (currency: Currency) => (currency === 'ARS' ? 'pesos' : 'dólares')
 
 /** Para editar el monto: "250.000" o "1.234,50". */
 export function formatAmount(cents: number) {
@@ -55,4 +59,14 @@ export function dayParts(day: string) {
     weekday: weekdayFormat.format(date).replace('.', ''),
     month: shortMonthFormat.format(date).replace('.', ''),
   }
+}
+
+/** Cuándo vence algo por cobrar, desde hoy: "venció hace 3 días", "vence hoy", "vence en 5 días". */
+export function dueLabel(dueDate: string, from: string) {
+  const days = daysBetween(from, dueDate)
+  if (days < -1) return `venció hace ${-days} días`
+  if (days === -1) return 'venció ayer'
+  if (days === 0) return 'vence hoy'
+  if (days === 1) return 'vence mañana'
+  return `vence en ${days} días`
 }

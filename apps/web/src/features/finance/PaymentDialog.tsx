@@ -1,23 +1,12 @@
-import type { BoardSummary, Currency, Payment } from '@notnot/shared'
-import { CURRENCIES, LIMITS, normalizeForMatch, parseAmount } from '@notnot/shared'
+import type { Currency, Payment, Receivable } from '@notnot/shared'
+import { LIMITS, normalizeForMatch, parseAmount, remainingCents } from '@notnot/shared'
 import { useQuery } from '@tanstack/react-query'
-import { ImagePlus, Trash2 } from 'lucide-react'
+import { ImagePlus } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
 import { ImageGallery } from '@/components/images/ImageGallery'
 import { useImageDrop } from '@/components/images/useImageDrop'
 import { usePendingImages } from '@/components/images/usePendingImages'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -37,30 +26,40 @@ import {
 } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 import { boardsQuery } from '../boards/api'
-import { boardStyle } from '../boards/colors'
 import {
   paymentsSummaryQuery,
+  receivablesQuery,
   useAddReceipt,
   useCreatePayment,
   useDeletePayment,
   useDeleteReceipt,
   useUpdatePayment,
 } from './api'
-import { formatAmount, today } from './format'
+import { AMOUNT_ERROR, AmountField, ClientSelect, DeleteButton, fieldClass } from './fields'
+import { formatAmount, formatMoney, today } from './format'
 
 type Props = {
   /** `'new'` para anotar uno; si no, el pago a editar. `null`: cerrado. */
   payment: Payment | 'new' | null
   /** El mes que se está viendo: la fecha de uno nuevo cae ahí. */
   month: string
+  /** "Me pagaron": uno nuevo de algo por cobrar, ya completo con lo que falta. */
+  receivable?: Receivable
   onClose: () => void
 }
 
-export function PaymentDialog({ payment, month, onClose }: Props) {
+export function PaymentDialog({ payment, month, receivable, onClose }: Props) {
   return (
     <Dialog open={payment !== null} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto p-0 sm:max-w-lg">
-        {payment === 'new' && <PaymentForm month={month} onClose={onClose} />}
+        {payment === 'new' && (
+          <PaymentForm
+            key={receivable?.id ?? 'new'}
+            month={month}
+            receivable={receivable}
+            onClose={onClose}
+          />
+        )}
         {payment !== null && payment !== 'new' && (
           <PaymentForm key={payment.id} payment={payment} month={month} onClose={onClose} />
         )}
@@ -69,37 +68,47 @@ export function PaymentDialog({ payment, month, onClose }: Props) {
   )
 }
 
-const NO_CLIENT = 'ninguno'
-const field =
-  'h-9 w-full rounded-lg border border-input bg-transparent px-2.5 text-base outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 aria-invalid:border-destructive md:text-sm dark:bg-input/30'
-
 type QueuedImage = { key: string; url: string; file: File }
 
 function PaymentForm({
   payment,
   month,
+  receivable,
   onClose,
 }: {
   payment?: Payment
   month: string
+  receivable?: Receivable
   onClose: () => void
 }) {
   const boards = useQuery(boardsQuery)
   const summary = useQuery(paymentsSummaryQuery)
+  const receivables = useQuery(receivablesQuery)
   const create = useCreatePayment()
   const update = useUpdatePayment()
   const remove = useDeletePayment()
   const addReceipt = useAddReceipt()
   const deleteReceipt = useDeleteReceipt()
 
-  const [amount, setAmount] = useState(payment ? formatAmount(payment.amountCents) : '')
-  const [currency, setCurrency] = useState<Currency>(payment?.currency ?? 'ARS')
+  const [amount, setAmount] = useState(() =>
+    payment
+      ? formatAmount(payment.amountCents)
+      : receivable
+        ? formatAmount(remainingCents(receivable))
+        : '',
+  )
+  const [currency, setCurrency] = useState<Currency>(
+    payment?.currency ?? receivable?.currency ?? 'ARS',
+  )
   const [date, setDate] = useState(
     () => payment?.date ?? (today().startsWith(month) ? today() : `${month}-01`),
   )
-  const [boardId, setBoardId] = useState(payment?.boardId ?? null)
+  const [boardId, setBoardId] = useState(payment?.boardId ?? receivable?.boardId ?? null)
   const [category, setCategory] = useState(payment?.category ?? '')
-  const [description, setDescription] = useState(payment?.description ?? '')
+  const [description, setDescription] = useState(
+    payment?.description ?? receivable?.description ?? '',
+  )
+  const [receivableId, setReceivableId] = useState(payment?.receivableId ?? receivable?.id ?? null)
   const [amountError, setAmountError] = useState<string | null>(null)
   // Uno nuevo todavía no existe en la API: los comprobantes esperan a que se guarde.
   const [queued, setQueued] = useState<QueuedImage[]>([])
@@ -136,9 +145,22 @@ function PaymentForm({
     })
   }
 
-  const clients = (boards.data ?? []).filter(
-    (b) => !b.isGeneral && (b.archivedAt === null || b.id === boardId),
+  // Lo que se puede cobrar con este pago: lo pendiente, más lo que ya tiene vinculado.
+  const linkable = (receivables.data ?? []).filter(
+    (r) => remainingCents(r) > 0 || r.id === receivableId,
   )
+  const linked = linkable.find((r) => r.id === receivableId)
+
+  /** Al elegir de qué es, el pago toma su moneda y completa lo que esté vacío. */
+  function link(next: Receivable | null) {
+    setReceivableId(next?.id ?? null)
+    if (!next) return
+    setCurrency(next.currency)
+    if (!boardId) setBoardId(next.boardId)
+    if (!amount.trim()) setAmount(formatAmount(remainingCents(next)))
+    if (!description.trim()) setDescription(next.description)
+  }
+
   const typed = normalizeForMatch(category.trim())
   const suggestions = (summary.data?.categories ?? [])
     .filter((c) => normalizeForMatch(c) !== typed && normalizeForMatch(c).includes(typed))
@@ -149,7 +171,7 @@ function PaymentForm({
     event.preventDefault()
     const amountCents = parseAmount(amount)
     if (amountCents === null || amountCents <= 0) {
-      setAmountError('Escribí un monto, por ejemplo 150.000 o 1.234,50')
+      setAmountError(AMOUNT_ERROR)
       return
     }
     const values = {
@@ -159,6 +181,7 @@ function PaymentForm({
       boardId,
       category: category.trim() || null,
       description: description.trim() || null,
+      receivableId,
     }
     if (payment) {
       update.mutate({ id: payment.id, ...values }, { onSuccess: onClose })
@@ -196,49 +219,19 @@ function PaymentForm({
         <DialogDescription>Lo que te pagaron, con sus comprobantes.</DialogDescription>
       </DialogHeader>
 
-      <div className="grid gap-2">
-        <Label htmlFor="payment-amount">Monto</Label>
-        <div className="flex gap-2">
-          <input
-            id="payment-amount"
-            autoFocus={!payment}
-            inputMode="decimal"
-            autoComplete="off"
-            value={amount}
-            placeholder="150.000"
-            onChange={(event) => {
-              setAmount(event.target.value)
-              setAmountError(null)
-            }}
-            aria-invalid={amountError ? true : undefined}
-            aria-describedby={amountError ? 'payment-amount-error' : undefined}
-            className={cn(field, 'flex-1 tabular-nums')}
-          />
-          <fieldset className="flex shrink-0 rounded-lg border border-input p-0.5">
-            <legend className="sr-only">Moneda</legend>
-            {CURRENCIES.map((option) => (
-              <label key={option} className="relative">
-                <input
-                  type="radio"
-                  name="currency"
-                  value={option}
-                  checked={currency === option}
-                  onChange={() => setCurrency(option)}
-                  className="peer sr-only"
-                />
-                <span className="grid h-7 cursor-pointer place-items-center rounded-md px-3 text-sm font-medium text-muted-foreground peer-checked:bg-foreground peer-checked:text-background peer-focus-visible:ring-2 peer-focus-visible:ring-ring">
-                  {option}
-                </span>
-              </label>
-            ))}
-          </fieldset>
-        </div>
-        {amountError && (
-          <p id="payment-amount-error" role="alert" className="text-[13px] text-destructive">
-            {amountError}
-          </p>
-        )}
-      </div>
+      <AmountField
+        id="payment-amount"
+        autoFocus={!payment}
+        amount={amount}
+        onAmountChange={(value) => {
+          setAmount(value)
+          setAmountError(null)
+        }}
+        currency={currency}
+        onCurrencyChange={setCurrency}
+        currencyLock={linked ? 'En la moneda de lo que te deben.' : null}
+        error={amountError}
+      />
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="grid gap-2">
@@ -249,14 +242,26 @@ function PaymentForm({
             required
             value={date}
             onChange={(event) => event.target.value && setDate(event.target.value)}
-            className={field}
+            className={fieldClass}
           />
         </div>
         <div className="grid gap-2">
           <Label id="payment-client-label">Cliente</Label>
-          <ClientSelect clients={clients} value={boardId} onChange={setBoardId} />
+          <ClientSelect
+            labelledBy="payment-client-label"
+            boards={boards.data}
+            value={boardId}
+            onChange={setBoardId}
+          />
         </div>
       </div>
+
+      {linkable.length > 0 && (
+        <div className="grid gap-2">
+          <Label id="payment-receivable-label">Por cobrar</Label>
+          <ReceivableSelect options={linkable} value={receivableId} onChange={link} />
+        </div>
+      )}
 
       <div className="grid gap-2">
         <Label htmlFor="payment-category">Categoría</Label>
@@ -267,7 +272,7 @@ function PaymentForm({
           autoComplete="off"
           placeholder="Diseño, mantenimiento…"
           onChange={(event) => setCategory(event.target.value)}
-          className={field}
+          className={fieldClass}
         />
         {suggestions.length > 0 && (
           <div className="flex flex-wrap gap-1.5" aria-label="Categorías usadas">
@@ -294,7 +299,7 @@ function PaymentForm({
           maxLength={LIMITS.paymentDescription}
           placeholder="Qué se pagó: un trabajo, una cuota, un adelanto…"
           onChange={(event) => setDescription(event.target.value)}
-          className={cn(field, 'h-auto resize-y py-1.5')}
+          className={cn(fieldClass, 'h-auto resize-y py-1.5')}
         />
       </div>
 
@@ -323,7 +328,10 @@ function PaymentForm({
 
       <DialogFooter className="sm:justify-between">
         {payment ? (
-          <DeletePaymentButton
+          <DeleteButton
+            label="Borrar pago"
+            title="¿Borrar el pago?"
+            description="Se borra para siempre, con sus comprobantes."
             pending={remove.isPending}
             onConfirm={() => remove.mutate(payment.id, { onSuccess: onClose })}
           />
@@ -343,60 +351,40 @@ function PaymentForm({
   )
 }
 
-function ClientSelect({
-  clients,
+const NO_RECEIVABLE = 'ninguno'
+
+/** De qué cosa por cobrar es el pago (o de ninguna: un pago suelto). */
+function ReceivableSelect({
+  options,
   value,
   onChange,
 }: {
-  clients: BoardSummary[]
+  options: Receivable[]
   value: string | null
-  onChange: (boardId: string | null) => void
+  onChange: (receivable: Receivable | null) => void
 }) {
   return (
-    <Select value={value ?? NO_CLIENT} onValueChange={(v) => onChange(v === NO_CLIENT ? null : v)}>
-      <SelectTrigger aria-labelledby="payment-client-label" className="h-9 w-full min-w-0">
+    <Select
+      value={value ?? NO_RECEIVABLE}
+      onValueChange={(id) => onChange(options.find((r) => r.id === id) ?? null)}
+    >
+      <SelectTrigger aria-labelledby="payment-receivable-label" className="h-9 w-full min-w-0">
         <SelectValue />
       </SelectTrigger>
-      <SelectContent>
-        <SelectItem value={NO_CLIENT}>Sin cliente</SelectItem>
-        {clients.map((board) => (
-          <SelectItem key={board.id} value={board.id}>
-            <span
-              aria-hidden="true"
-              style={boardStyle(board.color)}
-              className="size-2 shrink-0 rounded-full bg-(--board)"
-            />
-            <span className="truncate">{board.name}</span>
-          </SelectItem>
-        ))}
+      <SelectContent className="max-w-[calc(100vw-2rem)]">
+        <SelectItem value={NO_RECEIVABLE}>Nada: es un pago suelto</SelectItem>
+        {options.map((r) => {
+          const remaining = remainingCents(r)
+          return (
+            <SelectItem key={r.id} value={r.id} className="*:[span]:last:min-w-0">
+              <span className="truncate">{r.description}</span>
+              <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
+                {remaining > 0 ? `faltan ${formatMoney(remaining, r.currency)}` : 'cobrada'}
+              </span>
+            </SelectItem>
+          )
+        })}
       </SelectContent>
     </Select>
-  )
-}
-
-function DeletePaymentButton({ pending, onConfirm }: { pending: boolean; onConfirm: () => void }) {
-  return (
-    <AlertDialog>
-      <AlertDialogTrigger asChild>
-        <Button type="button" variant="ghost" className="text-destructive hover:text-destructive">
-          <Trash2 />
-          Borrar pago
-        </Button>
-      </AlertDialogTrigger>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>¿Borrar el pago?</AlertDialogTitle>
-          <AlertDialogDescription>
-            Se borra para siempre, con sus comprobantes.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Cancelar</AlertDialogCancel>
-          <AlertDialogAction variant="destructive" disabled={pending} onClick={onConfirm}>
-            Borrar pago
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
   )
 }

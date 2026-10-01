@@ -1,4 +1,5 @@
 import type { BoardSummary } from '@notnot/shared'
+import { dueCount } from '@notnot/shared'
 import { useQuery } from '@tanstack/react-query'
 import { ChevronRight, Lock, Plus, Wallet } from 'lucide-react'
 import { useState } from 'react'
@@ -8,6 +9,8 @@ import { Button } from '@/components/ui/button'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
+import { receivablesQuery } from '../finance/api'
+import { today } from '../finance/format'
 import { useLock } from '../lock/api'
 import { NotesSection } from '../pages/NotesSection'
 import { InstallButton } from '../pwa/InstallButton'
@@ -22,6 +25,7 @@ type Props = {
 
 export function Sidebar({ onNavigate }: Props) {
   const boards = useQuery(boardsQuery)
+  const receivables = useQuery(receivablesQuery)
   const lock = useLock()
   const [creating, setCreating] = useState(false)
 
@@ -30,6 +34,8 @@ export function Sidebar({ onNavigate }: Props) {
   const archived = boards.data?.filter((b) => !b.isGeneral && b.archivedAt !== null) ?? []
   // General muestra las tarjetas de todos los tableros activos: su contador es el total.
   const totalOpen = active.reduce((sum, b) => sum + b.openTaskCount, general?.openTaskCount ?? 0)
+  // Lo por cobrar que vence hoy o ya venció: para no olvidarse de reclamarlo.
+  const due = dueCount(receivables.data ?? [], today())
 
   return (
     <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
@@ -110,7 +116,17 @@ export function Sidebar({ onNavigate }: Props) {
             }
           >
             <Wallet aria-hidden="true" className="size-3.5 shrink-0 text-muted-foreground" />
-            Finanzas
+            <span className="min-w-0 flex-1 truncate">Finanzas</span>
+            {due > 0 && (
+              <span className="text-xs font-medium text-destructive tabular-nums">
+                {due}
+                <span className="sr-only">
+                  {due === 1
+                    ? ' por cobrar vence hoy o ya venció'
+                    : ' por cobrar vencen hoy o ya vencieron'}
+                </span>
+              </span>
+            )}
           </NavLink>
         </nav>
       </div>
