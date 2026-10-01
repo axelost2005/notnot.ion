@@ -8,7 +8,8 @@ import {
 } from '@notnot/shared'
 import { prisma } from '../db'
 import { badRequest, conflict, notFound } from '../middleware/errors'
-import { toTask, withNoteBoard } from './boards'
+import { taskInclude, toTask } from './boards'
+import { deleteBlobs, imagePathnames } from './images'
 
 type NewTask = { columnId: string; title: string; description?: string | null }
 type TaskChanges = { title?: string; description?: string | null }
@@ -30,7 +31,7 @@ export async function createTask(input: NewTask): Promise<Task> {
       position: positionAfterLast(column.tasks),
       completedAt: column.isDone ? new Date() : null,
     },
-    include: withNoteBoard,
+    include: taskInclude,
   })
   return toTask(task)
 }
@@ -39,13 +40,15 @@ export async function updateTask(id: string, changes: TaskChanges): Promise<Task
   const task = await prisma.task.update({
     where: { id },
     data: { title: changes.title, description: changes.description },
-    include: withNoteBoard,
+    include: taskInclude,
   })
   return toTask(task)
 }
 
 export async function deleteTask(id: string): Promise<void> {
+  const images = await imagePathnames({ taskId: id })
   await prisma.task.delete({ where: { id } })
+  await deleteBlobs(images)
 }
 
 /**
@@ -87,7 +90,7 @@ export async function moveTask(id: string, input: MoveTaskInput): Promise<Task> 
       // Moverla la saca del historial.
       archivedAt: null,
     },
-    include: withNoteBoard,
+    include: taskInclude,
   })
   return toTask(moved)
 }
@@ -127,7 +130,7 @@ export async function toggleTaskDone(id: string): Promise<Task> {
           completedAt: new Date(),
           archivedAt: null,
         },
-    include: withNoteBoard,
+    include: taskInclude,
   })
   return toTask(updated)
 }

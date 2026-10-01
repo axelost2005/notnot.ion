@@ -7,6 +7,7 @@ import { boardsRouter } from './routes/boards'
 import { columnsRouter } from './routes/columns'
 import { healthRouter } from './routes/health'
 import { historyRouter } from './routes/history'
+import { imagesRouter } from './routes/images'
 import { notesRouter } from './routes/notes'
 import { createUnlockRouter, sessionRouter } from './routes/session'
 import { tasksRouter } from './routes/tasks'
@@ -34,6 +35,7 @@ export function createApp() {
   api.use(tasksRouter)
   api.use(notesRouter)
   api.use(historyRouter)
+  api.use(imagesRouter)
   api.use(notFoundHandler)
 
   app.use('/api', api)

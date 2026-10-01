@@ -21,6 +21,7 @@ App personal para organizar el laburo por cliente. Cada cliente o categoría tie
 | Column | id, boardId, name, position, isDone, createdAt, updatedAt |
 | Task | id, boardId, columnId, title, description?, position, completedAt?, archivedAt?, noteId?, noteLine?, createdAt, updatedAt |
 | Note | id, boardId, content, createdAt |
+| Image | id, taskId, pathname, contentType, size, width, height, createdAt |
 
 - Cada tablero tiene al menos 1 columna normal y exactamente 1 `isDone`.
 - `Task.columnId` siempre pertenece a `Task.boardId`.
@@ -30,7 +31,8 @@ App personal para organizar el laburo por cliente. Cada cliente o categoría tie
 - Borrar un tablero borra en cascada columnas, tareas y notas. Borrar una nota deja sus tareas (`noteId` y `noteLine` en null).
 - Slug: minúsculas, sin acentos, espacios → guiones ("Pepito Pérez" → `pepito-perez`). Si choca, `-2`, `-3`… Se regenera al renombrar.
 - Color: paleta fija de 8.
-- Límites: nombre de tablero 1–40, título 1–200, descripción ≤ 5000, nota 1–5000, máximo 50 tareas por nota.
+- Límites: nombre de tablero 1–40, título 1–200, descripción ≤ 5000, nota 1–5000, máximo 50 tareas por nota, 20 imágenes por tarjeta (2000 px y 4 MB como mucho cada una).
+- Imágenes: el archivo vive en un store privado de Vercel Blob (`pathname`) y la fila en la base. Borrar una tarjeta o un tablero borra sus imágenes (filas en cascada; los archivos los borra la API después).
 
 ## Notas → tareas (el corazón de la app)
 Parser puro en `packages/shared`: `parseNote(content, { currentBoardSlug, boards })` devuelve las líneas tipadas (`text` o `task` con título y slug destino). Lo usa la API para crear (es la autoridad) y la web para la vista previa.
@@ -68,7 +70,7 @@ La app vive en una URL pública, así que la API no puede quedar abierta. No hay
 - En iOS, la app instalada puede pedir el código otra vez (tiene su propio almacenamiento).
 
 ## API
-REST + JSON bajo `/api`. Toda entrada se valida con los schemas de `shared`. Errores: `{ error: { code, message } }` con 400, 401, 404 o 409 según corresponda.
+REST + JSON bajo `/api`. Toda entrada se valida con los schemas de `shared`. Errores: `{ error: { code, message } }` con 400, 401, 404, 409 o 413 (cuerpo demasiado grande) según corresponda.
 
 | Método | Ruta | Qué hace |
 |---|---|---|
@@ -90,6 +92,9 @@ REST + JSON bajo `/api`. Toda entrada se valida con los schemas de `shared`. Err
 | DELETE | `/notes/:id` | Borra la nota; las tareas quedan |
 | GET | `/general` | Columnas y tarjetas (sin archivar) de todos los tableros activos, para el kanban de General |
 | GET | `/history?boardId=&before=` | Tarjetas del historial, de la más nueva a la más vieja, 50 por página. Sin `boardId`, las de todos los tableros |
+| POST | `/tasks/:id/images?width=&height=` | Sube una imagen (el cuerpo es el archivo: WebP, JPEG o PNG, hasta 4 MB) y devuelve `{ id, width, height }` |
+| GET | `/images/:id` | La imagen, con `Cache-Control: private, max-age=31536000, immutable` |
+| DELETE | `/images/:id` | Borra la imagen y su archivo |
 
 La web manda en cada pedido `X-Day-Start` con la medianoche de hoy en el dispositivo (ISO). Al leer un tablero, General, notas o historial, la API pasa al historial las terminadas antes de esa hora. Sin el header (o si está a más de 48 h de la hora del server) no archiva nada: no hace falta ninguna tarea programada.
 
@@ -100,7 +105,8 @@ La web manda en cada pedido `X-Day-Start` con la medianoche de hoy en el disposi
 - Ventana de notas (`/notas/:slug`): una ventana chica aparte (`window.open`, ~400×640) con solo el panel de notas y un selector de tablero arriba (desplegable propio, con el punto de color de cada tablero). Cambiar de tablero cambia dónde se escriben las notas y a dónde van las tareas sin `@`. Lo que cambia en una ventana se refresca en las otras (BroadcastChannel).
 - General: tres columnas fijas por estado con las tarjetas de todos los tableros activos. "Por hacer" = la primera columna normal de cada tablero, "En curso" = las otras normales, "Hecho" = la de terminadas. Cada tarjeta muestra el chip de su tablero (las de General no llevan). Dentro de cada columna van agrupadas por tablero, en el orden de la sidebar. Arrastrar una tarjeta a otra columna la mueve al final de esa columna en su propio tablero ("En curso" va a la segunda columna normal; si el tablero no tiene, avisa y no la mueve). No se reordena dentro de una columna ni se editan las columnas de General. "Agregar tarjeta" en cada columna crea una tarea de General en la columna que corresponde.
 - Columna: título con el color de su rol (la primera normal celeste, las otras amarillas, la de terminadas verde), contador, "+ Agregar tarjeta" al pie y menú (renombrar, marcar como terminadas, borrar). Toda la columna recibe lo que se suelta.
-- Tarjeta: una fila con un checkbox (tilda y destilda como desde la nota) y el título en negrita con una línea de la descripción debajo. Click abre el detalle (título, descripción, mover a otro tablero o columna, borrar, link a la nota de origen).
+- Tarjeta: una fila con un checkbox (tilda y destilda como desde la nota) y el título en negrita con una línea de la descripción debajo. Click abre el detalle (título, descripción, imágenes, mover a otro tablero o columna, borrar, link a la nota de origen).
+- Imágenes en el detalle: pegar (Ctrl+V), arrastrar o el botón "Adjuntar" (en el celu abre la galería o la cámara); el navegador las achica y las pasa a WebP antes de subirlas. Miniaturas que se borran (con confirmación) y que, al tocarlas, se agrandan desde su lugar (GSAP Flip, sin animación con `prefers-reduced-motion`) sobre el fondo oscurecido; se cierran con click, Esc o tocando afuera.
 - Mobile (<768px): header con selector de tablero, tabs abajo "Tablero" / "Notas", columnas de a una con swipe (scroll-snap). Reordenar dentro de la columna con long-press; arrastrar una tarjeta hasta el borde y esperar pasa a la columna de al lado. También "Mover a…".
 - Estética sobria y prolija tipo Linear, claro/oscuro según el sistema, color de acento por tablero. Estados vacíos y de carga cuidados. Toasts para errores.
 - Accesible: drag & drop con teclado, labels en botones de ícono, foco visible.
@@ -117,7 +123,8 @@ La web manda en cada pedido `X-Day-Start` con la medianoche de hoy en el disposi
 - Vercel para web y API en el mismo origen (`/api/*` → Express). Elegí la config más simple que cumpla eso.
 - Neon: branch `dev` para local y `production` (el principal) para prod. En prod, migraciones con `prisma migrate deploy`.
 - Prisma según la guía actual de Prisma + Neon para serverless (URL pooled en runtime, directa para migraciones).
-- Variables: `DATABASE_URL`, `DIRECT_URL` si Prisma la pide, `APP_SECRET`, `SESSION_SECRET`. Se validan con Zod al arrancar la API.
+- Variables: `DATABASE_URL`, `DIRECT_URL` si Prisma la pide, `APP_SECRET`, `SESSION_SECRET`, `BLOB_READ_WRITE_TOKEN`. Se validan con Zod al arrancar la API.
+- Vercel Blob: store privado `notnot-ion-dev` para Development y Preview, `notnot-ion-prod` para Production (los dos en `iad1`, junto a Neon).
 - Node LTS fijado en `.nvmrc` y en `engines`.
 
 ## Estructura

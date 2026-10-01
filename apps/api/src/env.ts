@@ -12,6 +12,8 @@ const envSchema = z.object({
       'tiene que ser una frase de 4 o más palabras',
     ),
   SESSION_SECRET: z.string().min(32, 'tiene que tener al menos 32 caracteres'),
+  // Store privado de Vercel Blob (imágenes). Uno para Development/Preview y otro para Production.
+  BLOB_READ_WRITE_TOKEN: z.string().min(1, 'falta el token del store de Vercel Blob'),
 })
 
 export type Env = z.infer<typeof envSchema>

@@ -26,6 +26,13 @@ export type Column = {
   isDone: boolean
 }
 
+/** Imagen privada adjunta (se sirve en `/api/images/:id`). Las medidas sirven para el visor. */
+export type ImageInfo = {
+  id: string
+  width: number
+  height: number
+}
+
 export type Task = {
   id: string
   boardId: string
@@ -40,6 +47,8 @@ export type Task = {
   noteLine: number | null
   /** Tablero donde está la nota de origen (puede ser otro). */
   noteBoardId: string | null
+  /** De la más vieja a la más nueva. */
+  images: ImageInfo[]
   createdAt: string
   updatedAt: string
 }

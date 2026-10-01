@@ -2,7 +2,7 @@
 
 ## Fase actual
 
-**Fase 6 — Correcciones, imágenes, Notas y Finanzas: en curso.** Paso 1 (correcciones) hecho. Las fases 0 a 5 están hechas y la app está en producción.
+**Fase 6 — Correcciones, imágenes, Notas y Finanzas: en curso.** Pasos 1 (correcciones) y 2 (imágenes) hechos. Las fases 0 a 5 están hechas y la app está en producción.
 
 ## Hecho
 
@@ -59,6 +59,8 @@
 
 - **Paso 1, correcciones.** Selector de tablero propio en la ventana de notas y en "Mover a…" del detalle (Radix Select con el punto de color de cada tablero, el actual tildado, teclado y foco; al elegir otro tablero en la ventana, el foco vuelve al composer). Tarjetas como fila: checkbox a la izquierda (tilda y destilda con `toggle-done`, optimista también en General), título en negrita y una línea de la descripción cortada con "…"; sin el `[]` ni el ícono de descripción. "En curso" recibe tarjetas: toda la columna es zona para soltar, con mouse y touch, en los tableros y en General, y General tiene "Agregar tarjeta" en las tres columnas. Títulos de columna con el color de su rol (`--status-todo/doing/done` en `index.css`). e2e nuevos: `drop-zones.spec.ts` y `cards.spec.ts`; la ventana de notas cambia de tablero con el teclado.
 
+- **Paso 2, imágenes en las tareas.** Modelo `Image` (migración `task_images`, solo agrega una tabla). `POST /tasks/:id/images` recibe el archivo como cuerpo (con su propio límite de 4 MB; WebP, JPEG o PNG, verificado por los primeros bytes), `GET /images/:id` lo sirve desde Blob detrás del candado y `DELETE /images/:id` lo borra; cada tarea trae `images`. Borrar una tarjeta o un tablero borra también sus archivos. En la web: pegar con Ctrl+V, arrastrar sobre el detalle o "Adjuntar" (en el celu, galería o cámara); se achica a 2000 px y se pasa a WebP antes de subir. Miniaturas con vista previa mientras suben, borrar con confirmación y visor con GSAP Flip. `ImageGallery`, `ImageViewer`, `useImageDrop` y `usePendingImages` en `components/images/` para reusar en Finanzas. e2e: `images.spec.ts`.
+
 ## Decisiones
 
 - **Versiones**: lo último estable que funciona junto. TypeScript 6.0 (typescript-eslint todavía no soporta TS 7), Prisma 7.10 (Prisma 8 está en RC), React Router 8 en modo data, Vite 8, Vitest 5, ESLint 10, Tailwind 4, Zod 4, shadcn CLI 4.
@@ -101,6 +103,12 @@
 - **Por qué "En curso" no recibía nada** (reproducido con e2e antes de tocar): (1) en los tableros la detección era `closestCorners`, que compara las esquinas de la tarjeta con las de cada zona; en una pantalla alta (1080 px) la columna vacía, larga, quedaba "más lejos" que las tarjetas de las columnas de los costados y la tarjeta volvía a su lugar. (2) La zona para soltar era solo la lista (`ol`): el título y el pie no contaban, y en General (`pointerWithin`) soltar ahí no hacía nada. (3) En el celu, el auto-scroll de dnd-kit con scroll-snap salta una columna entera en cada paso y llegaba al final en menos de 300 ms. Arreglo: la zona es toda la columna; con puntero manda lo que está debajo (`pointerWithin`, y si la columna tiene tarjetas, la más cercana marca el lugar), con teclado sigue `closestCorners`; en el celu (< 768 px) la fila de columnas no la mueve dnd-kit sino `useEdgePaging`: quedarse 0,5 s en el borde pasa a la columna de al lado y, si sigue ahí, la siguiente espera 1,1 s (da tiempo a soltar en la que llegó).
 - **Selector propio**: el `select` de shadcn (Radix Select, viene en `radix-ui`, sin dependencias nuevas) reemplaza al `<select>` nativo, que en Windows con tema oscuro mostraba la lista gris clara. Se usa también en "Mover a…": en el celu es cómodo (opciones más altas con `pointer: coarse`).
 - **Colores de columna**: por rol con `laneOf`, como tokens de claro y oscuro. Contraste medido contra el fondo de la columna y el resaltado al soltar: 4,6:1 o más en claro (el amarillo es un ocre oscuro) y 7,8:1 o más en oscuro.
+- **Vercel Blob**: dos stores privados creados con el CLI (`notnot-ion-dev` → Development y Preview, `notnot-ion-prod` → Production, en `iad1` como Neon). El CLI los conectó con `BLOB_READ_WRITE_TOKEN` por entorno (no con OIDC), así que la API usa ese token en todos lados; en local va en el `.env` (el del store de dev). Si se reconecta un store, el CLI vuelve a agregar `.env*` al `.gitignore`: hay que sacarlo (taparía `.env.example`).
+- **Subida de imágenes**: el archivo va como cuerpo del pedido (`express.raw` solo en esa ruta), no en multipart: sin dependencias nuevas. Las medidas viajan en la URL. El navegador las achica (lado mayor 2000 px) y las pasa a WebP con calidad 0,82 (JPEG con fondo blanco si el navegador no sabe hacer WebP); una foto del celu queda en unos cientos de kB, lejos de los 4,5 MB de las funciones. Una imagen animada queda en su primer cuadro.
+- **Servir imágenes**: `private, max-age=31536000, immutable` (no cambian: cada subida es un archivo nuevo); el CDN entre la función y el store también las guarda un año (`cacheControlMaxAge`). Desde Argentina contra la API de dev tarda 0,4 a 0,9 s la primera vez (Neon y Blob en EE. UU.); después la sirve el navegador.
+- **Borrado**: primero la base y después los archivos. Si borrar un archivo falla, queda suelto en el store pero ninguna fila apunta a algo que no existe.
+- **Pegar**: si lo copiado trae texto además de la imagen (celdas de una planilla), se pega el texto. El detalle de la tarjeta ahora scrollea: con imágenes no entraba en el celu.
+- **Visor**: Radix Dialog anidado (foco, Esc y lectores de pantalla) y GSAP `Flip.fit` para salir de la miniatura y volver a ella. Grande pero no a pantalla completa (88 % del ancho, 80 % del alto, nunca más que la imagen). Con `prefers-reduced-motion`, solo un fundido corto.
 - **Dev**: si corrés comandos de pnpm con la app levantada, pnpm 11 puede regenerar el cliente de Prisma y `node --watch` reinicia la API (algún pedido puede dar 502 en ese momento).
 
 ## Pendientes para vos

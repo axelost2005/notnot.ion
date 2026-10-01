@@ -16,6 +16,8 @@ export const isApiError = (error: unknown, status?: number): error is ApiError =
 
 type RequestOptions = Omit<RequestInit, 'body' | 'headers'> & {
   json?: unknown
+  /** Un archivo tal cual (por ejemplo una imagen), con su tipo como `Content-Type`. */
+  file?: Blob
   headers?: Record<string, string>
 }
 
@@ -37,7 +39,7 @@ function readError(body: unknown): { code?: string; message?: string } {
 }
 
 /** Llama a la API del mismo origen. Tira `ApiError` si no hay red o la respuesta no es 2xx. */
-export async function api<T>(path: string, { json, headers, ...init }: RequestOptions = {}) {
+export async function api<T>(path: string, { json, file, headers, ...init }: RequestOptions = {}) {
   let res: Response
   try {
     res = await fetch(`/api${path}`, {
@@ -45,9 +47,10 @@ export async function api<T>(path: string, { json, headers, ...init }: RequestOp
       headers: {
         [DAY_START_HEADER]: dayStart(),
         ...(json === undefined ? {} : { 'Content-Type': 'application/json' }),
+        ...(file === undefined ? {} : { 'Content-Type': file.type }),
         ...headers,
       },
-      body: json === undefined ? undefined : JSON.stringify(json),
+      body: file ?? (json === undefined ? undefined : JSON.stringify(json)),
     })
   } catch {
     throw new ApiError(0, 'NETWORK', 'No hay conexión con el servidor')
