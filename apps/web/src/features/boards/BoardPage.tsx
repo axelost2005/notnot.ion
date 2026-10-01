@@ -1,11 +1,13 @@
 import type { BoardSummary } from '@notnot/shared'
 import { useQuery } from '@tanstack/react-query'
-import { PanelRight } from 'lucide-react'
+import { ChevronDown, Columns3, NotebookPen, PanelRight } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router'
+import { useLayout } from '@/app/layoutContext'
 import { ErrorState } from '@/components/ErrorState'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { cn } from '@/lib/utils'
 import { KanbanBoard } from '../kanban/KanbanBoard'
 import { NotesPanel } from '../notes/NotesPanel'
 import { readPanelOpen, writePanelOpen } from '../notes/storage'
@@ -48,25 +50,47 @@ export function BoardPage() {
   return <BoardView key={board.id} board={board} />
 }
 
+type Tab = 'tablero' | 'notas'
+
 function BoardView({ board }: { board: BoardSummary }) {
   const detail = useQuery(boardQuery(board.id))
   const [searchParams, setSearchParams] = useSearchParams()
   const [notesOpen, setNotesOpen] = useState(readPanelOpen)
-  // Un link a una nota (?nota=) abre el panel aunque estuviera plegado.
-  const showNotes = notesOpen || searchParams.has('nota')
+
+  // En mobile se ve una cosa por vez. Un link a una nota (?nota=) va directo a Notas.
+  const tab: Tab =
+    searchParams.get('vista') === 'notas' || searchParams.has('nota') ? 'notas' : 'tablero'
+  // En desktop el panel va al costado; esos mismos links lo abren aunque estuviera plegado.
+  const panelOpen = notesOpen || tab === 'notas'
+
+  function updateParams(change: (params: URLSearchParams) => void) {
+    setSearchParams(
+      (params) => {
+        change(params)
+        return params
+      },
+      { replace: true },
+    )
+  }
 
   function toggleNotes() {
-    setNotesOpen(!showNotes)
-    writePanelOpen(!showNotes)
-    if (showNotes && searchParams.has('nota')) {
-      setSearchParams(
-        (params) => {
-          params.delete('nota')
-          return params
-        },
-        { replace: true },
-      )
+    setNotesOpen(!panelOpen)
+    writePanelOpen(!panelOpen)
+    if (panelOpen) {
+      updateParams((params) => {
+        params.delete('vista')
+        params.delete('nota')
+      })
     }
+  }
+
+  function selectTab(next: Tab) {
+    updateParams((params) => {
+      params.delete('nota')
+      params.delete('escribir')
+      if (next === 'notas') params.set('vista', 'notas')
+      else params.delete('vista')
+    })
   }
 
   useEffect(() => {
@@ -76,9 +100,12 @@ function BoardView({ board }: { board: BoardSummary }) {
   return (
     <div style={boardStyle(board.color)} className="flex h-full min-h-0 flex-col">
       <title>{`${board.name} – notnot.ion`}</title>
-      <BoardHeader board={board} notesOpen={showNotes} onToggleNotes={toggleNotes} />
+      <BoardHeader board={board} notesOpen={panelOpen} onToggleNotes={toggleNotes} />
       <div className="flex min-h-0 flex-1">
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div
+          id="vista-tablero"
+          className={cn('flex min-w-0 flex-1 flex-col', tab === 'notas' && 'max-md:hidden')}
+        >
           {detail.isPending ? (
             <LanesSkeleton />
           ) : detail.isError ? (
@@ -91,10 +118,19 @@ function BoardView({ board }: { board: BoardSummary }) {
             <KanbanBoard board={detail.data} />
           )}
         </div>
-        {showNotes && (
-          <NotesPanel board={board} className="hidden w-90 shrink-0 border-l md:flex" />
+        {panelOpen && (
+          <NotesPanel
+            board={board}
+            autoFocus={searchParams.get('escribir') === '1'}
+            className={cn(
+              'w-full md:w-90 md:shrink-0 md:border-l',
+              tab !== 'notas' && 'max-md:hidden',
+              !panelOpen && 'md:hidden',
+            )}
+          />
         )}
       </div>
+      <MobileTabs tab={tab} onSelect={selectTab} />
     </div>
   )
 }
@@ -107,12 +143,32 @@ type HeaderProps = {
 
 function BoardHeader({ board, notesOpen, onToggleNotes }: HeaderProps) {
   const update = useUpdateBoard()
+  const { openBoardsMenu } = useLayout()
   const archived = board.archivedAt !== null
 
   return (
-    <header className="flex h-12 shrink-0 items-center gap-2.5 border-b px-4">
-      <span aria-hidden="true" className="size-2.5 shrink-0 rounded-full bg-(--board)" />
-      <h1 className="min-w-0 truncate text-[15px] font-semibold tracking-tight">{board.name}</h1>
+    <header className="flex h-12 shrink-0 items-center gap-2.5 border-b px-4 max-md:pl-2">
+      <span
+        aria-hidden="true"
+        className="size-2.5 shrink-0 rounded-full bg-(--board) max-md:hidden"
+      />
+      <h1 className="min-w-0 truncate text-[15px] font-semibold tracking-tight max-md:hidden">
+        {board.name}
+      </h1>
+      {/* En mobile, el título es el selector de tablero. */}
+      <h1 className="min-w-0 md:hidden">
+        <button
+          type="button"
+          onClick={openBoardsMenu}
+          aria-haspopup="dialog"
+          className="flex h-9 max-w-full min-w-0 items-center gap-2 rounded-md px-2 text-[15px] font-semibold tracking-tight outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <span aria-hidden="true" className="size-2.5 shrink-0 rounded-full bg-(--board)" />
+          <span className="truncate">{board.name}</span>
+          <ChevronDown className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+          <span className="sr-only">(cambiar de tablero)</span>
+        </button>
+      </h1>
       {archived && (
         <span className="shrink-0 rounded-sm bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
           Archivado
@@ -145,11 +201,44 @@ function BoardHeader({ board, notesOpen, onToggleNotes }: HeaderProps) {
   )
 }
 
+function MobileTabs({ tab, onSelect }: { tab: Tab; onSelect: (tab: Tab) => void }) {
+  const tabs = [
+    { id: 'tablero', label: 'Tablero', Icon: Columns3 },
+    { id: 'notas', label: 'Notas', Icon: NotebookPen },
+  ] as const
+
+  return (
+    <div
+      role="tablist"
+      aria-label="Vista"
+      className="grid shrink-0 grid-cols-2 border-t bg-background pb-[env(safe-area-inset-bottom)] md:hidden"
+    >
+      {tabs.map(({ id, label, Icon }) => (
+        <button
+          key={id}
+          type="button"
+          role="tab"
+          aria-selected={tab === id}
+          aria-controls={id === 'tablero' ? 'vista-tablero' : undefined}
+          onClick={() => onSelect(id)}
+          className="flex h-14 flex-col items-center justify-center gap-1 text-xs text-muted-foreground outline-none focus-visible:bg-accent aria-selected:text-foreground"
+        >
+          <Icon className="size-5" aria-hidden="true" />
+          {label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
 function LanesSkeleton() {
   return (
-    <div className="flex min-h-0 flex-1 gap-3 overflow-hidden p-4" aria-label="Cargando tablero">
+    <div
+      className="flex min-h-0 flex-1 gap-3 overflow-hidden p-3 max-md:p-4"
+      aria-label="Cargando tablero"
+    >
       {[0, 1, 2].map((lane) => (
-        <Skeleton key={lane} className="w-68 shrink-0 rounded-lg" />
+        <Skeleton key={lane} className="w-66 shrink-0 rounded-lg max-md:w-[85vw]" />
       ))}
     </div>
   )

@@ -9,6 +9,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import { useLock } from '../lock/api'
+import { InstallButton } from '../pwa/InstallButton'
 import { boardsQuery } from './api'
 import { BoardFormDialog } from './BoardFormDialog'
 import { boardStyle } from './colors'
@@ -93,7 +94,8 @@ export function Sidebar({ onNavigate }: Props) {
         )}
       </nav>
 
-      <div className="shrink-0 border-t border-sidebar-border p-2">
+      <div className="grid shrink-0 gap-px border-t border-sidebar-border p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+        <InstallButton />
         <Button
           variant="ghost"
           className="w-full justify-start gap-2.5 px-2 text-muted-foreground"

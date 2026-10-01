@@ -23,7 +23,7 @@ export function AddColumn({ boardId }: { boardId: string }) {
   }
 
   return (
-    <div className="w-68 shrink-0">
+    <div className="w-66 shrink-0 max-md:w-[85vw] max-md:snap-start">
       {open ? (
         <form onSubmit={submit} className="grid gap-2 rounded-lg bg-lane p-2">
           <Input

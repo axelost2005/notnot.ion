@@ -48,6 +48,11 @@ export default defineConfig(
     languageOptions: { globals: globals.node },
   },
   {
+    // Scripts de Playwright: corren en Node y le pasan funciones al navegador.
+    files: ['apps/web/scripts/**'],
+    languageOptions: { globals: { ...globals.node, ...globals.browser } },
+  },
+  {
     files: ['**/*.{js,mjs}'],
     extends: [tseslint.configs.disableTypeChecked],
   },

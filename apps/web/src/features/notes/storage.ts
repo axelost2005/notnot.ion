@@ -8,5 +8,10 @@ export const writeDraft = (boardId: string, text: string) =>
 
 const PANEL_KEY = 'notnot:notes-open'
 
-export const readPanelOpen = () => readStorage(PANEL_KEY) !== 'false'
+/** Sin preferencia guardada, abierto solo si hay lugar (en tablet aprieta el tablero). */
+export function readPanelOpen() {
+  const stored = readStorage(PANEL_KEY)
+  if (stored === null) return window.matchMedia('(min-width: 1280px)').matches
+  return stored !== 'false'
+}
 export const writePanelOpen = (open: boolean) => writeStorage(PANEL_KEY, String(open))

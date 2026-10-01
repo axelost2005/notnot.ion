@@ -221,7 +221,7 @@ export function NoteComposer({ board, boards, autoFocus }: Props) {
           type="button"
           variant="outline"
           size="xs"
-          className="font-mono"
+          className="font-mono max-md:h-9 max-md:px-3.5 max-md:text-sm"
           onClick={addMarker}
           aria-label="Convertir la línea en tarea"
         >
@@ -231,7 +231,7 @@ export function NoteComposer({ board, boards, autoFocus }: Props) {
           type="button"
           variant="outline"
           size="xs"
-          className="font-mono"
+          className="font-mono max-md:h-9 max-md:px-3.5 max-md:text-sm"
           onClick={addMention}
           aria-label="Mandar a un tablero"
         >
@@ -254,6 +254,7 @@ export function NoteComposer({ board, boards, autoFocus }: Props) {
         <Button
           type="button"
           size="icon-sm"
+          className="max-md:size-9"
           aria-label="Enviar nota"
           disabled={text.trim() === '' || tooMany}
           onClick={submit}
