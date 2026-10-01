@@ -10,6 +10,13 @@ declare module '@tanstack/react-query' {
   }
 }
 
+/**
+ * Las otras ventanas de la app (la de notas, otra pestaña) se enteran de cada cambio y se
+ * refrescan: lo que se anota en la ventana de notas aparece al toque en el tablero.
+ */
+const otherWindows = 'BroadcastChannel' in window ? new BroadcastChannel('notnot') : null
+otherWindows?.addEventListener('message', () => void queryClient.invalidateQueries())
+
 /** Un 401 en cualquier pedido significa que el candado está cerrado: a /unlock. */
 function handleUnauthorized(error: unknown): boolean {
   if (!isApiError(error, 401)) return false
@@ -27,6 +34,7 @@ export const queryClient = new QueryClient({
     },
   }),
   mutationCache: new MutationCache({
+    onSuccess: () => otherWindows?.postMessage('changed'),
     onError: (error, _variables, _context, mutation) => {
       if (handleUnauthorized(error) || mutation.meta?.inlineError) return
       toast.error(error.message)

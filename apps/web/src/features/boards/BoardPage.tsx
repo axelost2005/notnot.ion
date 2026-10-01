@@ -1,15 +1,17 @@
 import type { BoardSummary } from '@notnot/shared'
 import { useQuery } from '@tanstack/react-query'
-import { ChevronDown, Columns3, NotebookPen, PanelRight } from 'lucide-react'
+import { ChevronDown, Columns3, NotebookPen, PanelRight, PictureInPicture2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router'
 import { useLayout } from '@/app/layoutContext'
 import { ErrorState } from '@/components/ErrorState'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { KanbanBoard } from '../kanban/KanbanBoard'
 import { NotesPanel } from '../notes/NotesPanel'
+import { openNotesWindow } from '../notes/openNotesWindow'
 import { readPanelOpen, writePanelOpen } from '../notes/storage'
 import { boardQuery, boardsQuery, useUpdateBoard } from './api'
 import { BoardActionsMenu } from './BoardActionsMenu'
@@ -196,6 +198,21 @@ function BoardHeader({ board, notesOpen, onToggleNotes }: HeaderProps) {
           <PanelRight />
           Notas
         </Button>
+        {/* En la compu: las notas solas en una ventana chica, para tener al costado. */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Abrir las notas en otra ventana"
+              onClick={() => openNotesWindow(board.slug)}
+              className="hidden text-muted-foreground md:inline-flex"
+            >
+              <PictureInPicture2 />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Abrir las notas en otra ventana</TooltipContent>
+        </Tooltip>
       </div>
     </header>
   )

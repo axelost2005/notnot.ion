@@ -1,7 +1,7 @@
 import { hasTaskMarker, stripTaskMarker, type BoardSummary, type NoteTask } from '@notnot/shared'
 import { Trash2 } from 'lucide-react'
 import { useState } from 'react'
-import { useNavigate } from 'react-router'
+import { useMatch, useNavigate } from 'react-router'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -112,6 +112,8 @@ type TaskLineProps = {
 function TaskLine({ task, board, showBoard, disabled }: TaskLineProps) {
   const toggle = useToggleTask()
   const navigate = useNavigate()
+  // La ventana de notas es solo para escribir: ahí el título no abre la tarjeta.
+  const inNotesWindow = useMatch('/notas/:slug') !== null
   // El cache se actualiza después de un await: sin esto el checkbox vuelve atrás un instante.
   const [optimistic, setOptimistic] = useState<boolean | null>(null)
   const done = optimistic ?? task.done
@@ -134,17 +136,23 @@ function TaskLine({ task, board, showBoard, disabled }: TaskLineProps) {
         aria-label={`${done ? 'Destildar' : 'Tildar'} ${task.title}`}
         className="mt-[5px] size-3.5 shrink-0 cursor-pointer accent-foreground disabled:cursor-default"
       />
-      <button
-        type="button"
-        disabled={disabled || !board}
-        onClick={() => board && void navigate(`/b/${board.slug}?tarjeta=${task.id}`)}
-        className={cn(
-          'min-w-0 text-left break-words underline-offset-2 outline-none hover:underline focus-visible:underline disabled:no-underline',
-          done && 'text-muted-foreground',
-        )}
-      >
-        {task.title}
-      </button>
+      {inNotesWindow ? (
+        <span className={cn('min-w-0 break-words', done && 'text-muted-foreground')}>
+          {task.title}
+        </span>
+      ) : (
+        <button
+          type="button"
+          disabled={disabled || !board}
+          onClick={() => board && void navigate(`/b/${board.slug}?tarjeta=${task.id}`)}
+          className={cn(
+            'min-w-0 text-left break-words underline-offset-2 outline-none hover:underline focus-visible:underline disabled:no-underline',
+            done && 'text-muted-foreground',
+          )}
+        >
+          {task.title}
+        </button>
+      )}
       {showBoard && board && (
         <span
           style={boardStyle(board.color)}
