@@ -45,6 +45,30 @@ export type BoardDetail = Board & {
   tasks: Task[]
 }
 
+/** Tarea que salió de una línea de la nota, con su estado actual. */
+export type NoteTask = {
+  id: string
+  noteLine: number
+  /** El título actual de la tarjeta (puede haber cambiado desde que se escribió). */
+  title: string
+  boardId: string
+  done: boolean
+}
+
+export type Note = {
+  id: string
+  boardId: string
+  content: string
+  createdAt: string
+  tasks: NoteTask[]
+}
+
+/** De la más nueva a la más vieja. `nextCursor` pide la página anterior. */
+export type NotesPage = {
+  notes: Note[]
+  nextCursor: string | null
+}
+
 export type ApiErrorBody = {
   error: { code: string; message: string }
 }
