@@ -2,7 +2,7 @@
 
 ## Fase actual
 
-**Fase 6 — Correcciones, imágenes, Notas y Finanzas: en curso.** Pasos 1 (correcciones) y 2 (imágenes) hechos. Las fases 0 a 5 están hechas y la app está en producción.
+**Fase 6 — Correcciones, imágenes, Notas y Finanzas: en curso.** Pasos 1 (correcciones), 2 (imágenes) y 3 (sección Notas) hechos. Las fases 0 a 5 están hechas y la app está en producción.
 
 ## Hecho
 
@@ -61,6 +61,8 @@
 
 - **Paso 2, imágenes en las tareas.** Modelo `Image` (migración `task_images`, solo agrega una tabla). `POST /tasks/:id/images` recibe el archivo como cuerpo (con su propio límite de 4 MB; WebP, JPEG o PNG, verificado por los primeros bytes), `GET /images/:id` lo sirve desde Blob detrás del candado y `DELETE /images/:id` lo borra; cada tarea trae `images`. Borrar una tarjeta o un tablero borra también sus archivos. En la web: pegar con Ctrl+V, arrastrar sobre el detalle o "Adjuntar" (en el celu, galería o cámara); se achica a 2000 px y se pasa a WebP antes de subir. Miniaturas con vista previa mientras suben, borrar con confirmación y visor con GSAP Flip. `ImageGallery`, `ImageViewer`, `useImageDrop` y `usePendingImages` en `components/images/` para reusar en Finanzas. e2e: `images.spec.ts`.
 
+- **Paso 3, sección Notas.** Modelos `Folder` (con `parentId`, en cascada) y `Page` (migración `notes_section`, solo agrega tablas). `GET /folders` trae el árbol entero (notas sin texto); carpetas y notas se crean, renombran, mueven y borran con su ruta. `canMoveFolder`, `descendantFolderIds`, `folderPath` y el orden alfabético en `shared`, con tests. En la web: sección "Notas" en la sidebar (árbol plegable, "+" y "…" por fila, renombrar en el lugar, "Mover a…" con el selector propio y la ruta de cada carpeta, borrar con confirmación si tiene contenido) y `/p/:id` con título y texto que se guardan solos. En el celu se llega desde el mismo panel lateral. e2e: `pages.spec.ts`.
+
 ## Decisiones
 
 - **Versiones**: lo último estable que funciona junto. TypeScript 6.0 (typescript-eslint todavía no soporta TS 7), Prisma 7.10 (Prisma 8 está en RC), React Router 8 en modo data, Vite 8, Vitest 5, ESLint 10, Tailwind 4, Zod 4, shadcn CLI 4.
@@ -109,6 +111,11 @@
 - **Borrado**: primero la base y después los archivos. Si borrar un archivo falla, queda suelto en el store pero ninguna fila apunta a algo que no existe.
 - **Pegar**: si lo copiado trae texto además de la imagen (celdas de una planilla), se pega el texto. El detalle de la tarjeta ahora scrollea: con imágenes no entraba en el celu.
 - **Visor**: Radix Dialog anidado (foco, Esc y lectores de pantalla) y GSAP `Flip.fit` para salir de la miniatura y volver a ella. Grande pero no a pantalla completa (88 % del ancho, 80 % del alto, nunca más que la imagen). Con `prefers-reduced-motion`, solo un fundido corto.
+- **Sección Notas**: el árbol viene entero en un pedido (es chico) y las notas sin su texto; el texto se pide al abrir cada una. Orden alfabético en castellano (sin mayúsculas ni acentos, "Nota 2" antes que "Nota 10"), carpetas primero y las notas sin título al final. No hay orden manual: "Mover a…" alcanza, como pediste.
+- **Renombrar**: las carpetas, en el árbol; una nota se renombra en su título (el "Renombrar" del árbol la abre con el título elegido). Así el título se edita en un solo lugar y el guardado automático no pisa un nombre cambiado desde otro lado.
+- **Guardado automático**: 800 ms después de la última tecla, al ir a otra nota y al esconder la pestaña (`keepalive` si el pedido pesa menos de 64 kB, así termina aunque se cierre). Esos guardados son `silent`: no avisan a las otras ventanas ni refrescan General en cada tecla. El cache de la nota se actualiza antes de mandar, así volver enseguida a la nota muestra lo último escrito. Si falla, avisa y se reintenta con la próxima tecla.
+- **Texto largo**: 50.000 caracteres por nota. `/api/pages` tiene su propio límite de JSON (512 kB); el resto de la API sigue en 100 kB.
+- **Carpetas abiertas**: se recuerdan en el dispositivo (`localStorage`) y al abrir una nota se abren las carpetas que llevan a ella.
 - **Dev**: si corrés comandos de pnpm con la app levantada, pnpm 11 puede regenerar el cliente de Prisma y `node --watch` reinicia la API (algún pedido puede dar 502 en ese momento).
 
 ## Pendientes para vos
