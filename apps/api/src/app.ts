@@ -6,6 +6,7 @@ import { requireSession } from './middleware/session'
 import { boardsRouter } from './routes/boards'
 import { columnsRouter } from './routes/columns'
 import { healthRouter } from './routes/health'
+import { notesRouter } from './routes/notes'
 import { createUnlockRouter, sessionRouter } from './routes/session'
 import { tasksRouter } from './routes/tasks'
 
@@ -30,6 +31,7 @@ export function createApp() {
   api.use(boardsRouter)
   api.use(columnsRouter)
   api.use(tasksRouter)
+  api.use(notesRouter)
   api.use(notFoundHandler)
 
   app.use('/api', api)

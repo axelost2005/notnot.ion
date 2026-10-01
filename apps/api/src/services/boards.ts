@@ -142,5 +142,12 @@ export async function deleteBoard(id: string): Promise<void> {
   const board = await prisma.board.findUnique({ where: { id }, select: { isInbox: true } })
   if (!board) throw notFound('El tablero no existe')
   if (board.isInbox) throw conflict('Inbox no se puede borrar')
-  await prisma.board.delete({ where: { id } })
+  await prisma.$transaction([
+    // Las tareas de otros tableros que salieron de sus notas pierden el vínculo con la nota.
+    prisma.task.updateMany({
+      where: { note: { boardId: id } },
+      data: { noteId: null, noteLine: null },
+    }),
+    prisma.board.delete({ where: { id } }),
+  ])
 }
