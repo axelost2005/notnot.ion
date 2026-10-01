@@ -15,6 +15,7 @@ App personal para organizar el laburo por cliente. Cada cliente o categoría tie
 - **Nota**: texto libre dentro de un tablero. Se crea, se lee y se borra; no se edita en el MVP.
 - **Sección Notas**: aparte de los tableros, para guardar lo que no es una tarea. Carpetas (con carpetas adentro) y notas con título y texto, sueltas o en una carpeta. En el código son `Folder` y `Page`.
 - **Finanzas**: los pagos que me hicieron (solo ingresos, en ARS o USD), con cliente (un tablero), categoría y comprobantes, para poder mostrar qué se pagó y qué no. En el código, `Payment`.
+- **Por cobrar**: lo que me deben, con el día que vence, dentro de Finanzas. Lo que me van pagando de eso son pagos vinculados: lo que falta es el monto menos esos pagos. En el código, `Receivable`.
 
 ## Modelo de datos
 | Modelo | Campos |
@@ -26,7 +27,8 @@ App personal para organizar el laburo por cliente. Cada cliente o categoría tie
 | Image | id, taskId?, paymentId?, pathname, contentType, size, width, height, createdAt |
 | Folder | id, parentId?, name, createdAt, updatedAt |
 | Page | id, folderId?, title, content, createdAt, updatedAt |
-| Payment | id, date (día), amountCents, currency, boardId?, category?, description?, createdAt, updatedAt |
+| Payment | id, date (día), amountCents, currency, boardId?, category?, description?, receivableId?, createdAt, updatedAt |
+| Receivable | id, description, amountCents, currency, boardId?, dueDate? (día), note?, createdAt, updatedAt |
 
 - Cada tablero tiene al menos 1 columna normal y exactamente 1 `isDone`.
 - `Task.columnId` siempre pertenece a `Task.boardId`.
@@ -40,6 +42,7 @@ App personal para organizar el laburo por cliente. Cada cliente o categoría tie
 - Sección Notas: sin `parentId`/`folderId`, en la raíz. Borrar una carpeta borra en cascada lo que tiene adentro. Una carpeta no puede ir dentro de sí misma (409). Carpeta 1–60 caracteres; título de nota ≤ 200 (puede quedar vacío: "Sin título"); texto ≤ 50.000.
 - Imágenes: el archivo vive en un store privado de Vercel Blob (`pathname`) y la fila en la base. Cada imagen es de una tarjeta o de un pago (un CHECK lo asegura). Borrar una tarjeta, un tablero o un pago borra sus imágenes (filas en cascada; los archivos los borra la API después).
 - Pagos: monto en centavos (mayor a cero), moneda `ARS` o `USD`, fecha sin hora. Borrar el tablero cliente deja el pago sin cliente. Categoría ≤ 40 y descripción ≤ 1000 (vacías quedan en `null`); hasta 20 comprobantes por pago.
+- Por cobrar: concepto 1–200, monto como el de los pagos, vence (día) y nota ≤ 1000 opcionales. Lo cobrado es la suma de sus pagos (`Payment.receivableId`), que van en su misma moneda (si no, 409); cuando cubren el monto, está cobrada. Borrarla deja sus pagos, sin el vínculo. Borrar el tablero cliente la deja sin cliente.
 
 ## Notas → tareas (el corazón de la app)
 Parser puro en `packages/shared`: `parseNote(content, { currentBoardSlug, boards })` devuelve las líneas tipadas (`text` o `task` con título y slug destino). Lo usa la API para crear (es la autoridad) y la web para la vista previa.
@@ -109,17 +112,22 @@ REST + JSON bajo `/api`. Toda entrada se valida con los schemas de `shared`. Err
 | GET / PATCH / DELETE | `/pages/:id` | Una nota con su texto / guardar título, texto o carpeta / borrar |
 | GET | `/payments?month=2026-10` | Los pagos de un mes, del más nuevo al más viejo, con sus comprobantes |
 | GET | `/payments/summary` | Los meses con pagos (y cuántos) y las categorías ya usadas |
-| POST | `/payments` | `{ date, amountCents, currency, boardId?, category?, description? }` |
+| POST | `/payments` | `{ date, amountCents, currency, boardId?, category?, description?, receivableId? }` |
 | PATCH / DELETE | `/payments/:id` | Editar / borrar (con sus comprobantes) |
 | POST | `/payments/:id/images?width=&height=` | Sube un comprobante (igual que las imágenes de las tarjetas) |
+| GET | `/receivables` | Todo lo por cobrar (pendiente y cobrado), cada una con lo cobrado y sus pagos |
+| POST | `/receivables` | `{ description, amountCents, currency, boardId?, dueDate?, note? }` |
+| PATCH / DELETE | `/receivables/:id` | Editar / borrar (sus pagos quedan) |
 
 La web manda en cada pedido `X-Day-Start` con la medianoche de hoy en el dispositivo (ISO). Al leer un tablero, General, notas o historial, la API pasa al historial las terminadas antes de esa hora. Sin el header (o si está a más de 48 h de la hora del server) no archiva nada: no hace falta ninguna tarea programada.
 
 ## UI
-- Rutas: `/unlock`, `/b/:slug` (la web resuelve slug → id con la lista de tableros), `/notas/:slug` (la ventana de notas), `/p/:id` (una nota de la sección Notas) y `/finanzas/:mes` (`/finanzas` abre el mes actual). `/` redirige al último tablero abierto o a General.
-- Desktop: sidebar (General fijo arriba con el total de abiertas, tableros con color y contador de abiertas, archivados colapsados, "+ Nuevo tablero", la sección Notas, "Bloquear"), kanban al centro con scroll horizontal, panel de notas a la derecha (~360px, plegable).
+- Rutas: `/unlock`, `/b/:slug` (la web resuelve slug → id con la lista de tableros), `/notas/:slug` (la ventana de notas), `/p/:id` (una nota de la sección Notas), `/finanzas/:mes` (`/finanzas` abre el mes actual) y `/finanzas/por-cobrar`. `/` redirige al último tablero abierto o a General.
+- Desktop: sidebar (General fijo arriba con el total de abiertas, tableros con color y contador de abiertas, archivados colapsados, "+ Nuevo tablero", la sección Notas, Finanzas con cuánto por cobrar vence hoy o ya venció, "Bloquear"), kanban al centro con scroll horizontal, panel de notas a la derecha (~360px, plegable).
 - Sección Notas en la sidebar: árbol plegable (se recuerda qué carpetas están abiertas), carpetas primero y orden alfabético. "+" crea una nota o una carpeta; el "…" de cada fila tiene crear adentro (carpetas), renombrar, "Mover a…" y borrar. Una carpeta nueva queda lista para escribirle el nombre; una nota se renombra en su título. Borrar una carpeta vacía no pregunta; con contenido, pide confirmación y dice qué se lleva.
-- Finanzas (`/finanzas/2026-10`): el mes con flechas para ir y volver y la lista de los meses con pagos; lo cobrado en el mes por moneda; la lista por fecha o agrupada por categoría con subtotales (`?por=categoria`). "Anotar un pago" y tocar uno abren el mismo formulario: monto como se escribe acá ("150.000", "1.234,50"), moneda, fecha, cliente, categoría (con las ya usadas como sugerencia), descripción y comprobantes (pegar, arrastrar o adjuntar; en uno nuevo se suben al guardarlo).
+- Finanzas tiene dos pestañas: **Cobrado** (los pagos por mes) y **Por cobrar** (con cuántas hay pendientes).
+- Cobrado (`/finanzas/2026-10`): el mes con flechas para ir y volver y la lista de los meses con pagos; lo cobrado en el mes por moneda; la lista por fecha o agrupada por categoría con subtotales (`?por=categoria`). "Anotar un pago" y tocar uno abren el mismo formulario: monto como se escribe acá ("150.000", "1.234,50"), moneda, fecha, cliente, categoría (con las ya usadas como sugerencia), descripción y comprobantes (pegar, arrastrar o adjuntar; en uno nuevo se suben al guardarlo). Si hay algo por cobrar, el formulario deja vincular el pago (o desvincularlo); vinculado, la moneda es la de lo que te deben.
+- Por cobrar (`/finanzas/por-cobrar`): lo que te deben en total por moneda y la lista: primero lo vencido (marcado, "venció hace 3 días"), después lo que vence, por fecha ("vence hoy", "vence en 5 días"), y al final lo que no tiene fecha; las cobradas, aparte y plegadas. Cada fila: el día que vence, concepto, cliente, lo que falta (y de cuánto, si ya pagaron una parte) y "Me pagaron", que abre el formulario de un pago ya completo (lo que falta, la moneda, el cliente y el concepto) para ajustar el monto y adjuntar el comprobante. Tocar una abre su formulario: concepto, monto y moneda, vence, cliente, nota y los pagos que tiene.
 - Nota (`/p/:id`): título y texto plano. Se guarda sola (un rato después de la última tecla, al ir a otra nota y al esconder la pestaña) y lo avisa ("Guardando…", "Guardado"). Arriba, dónde está (Notas / carpeta), "Mover a…" y borrar. En el celu, el título del header abre la sidebar, como en los tableros.
 - Header del tablero: "Historial" (panel lateral con las terminadas, agrupadas por día; en General, las de todos con el chip de su tablero) y, en desktop, "Abrir las notas en otra ventana".
 - Ventana de notas (`/notas/:slug`): una ventana chica aparte (`window.open`, ~400×640) con solo el panel de notas y un selector de tablero arriba (desplegable propio, con el punto de color de cada tablero). Cambiar de tablero cambia dónde se escriben las notas y a dónde van las tareas sin `@`. Lo que cambia en una ventana se refresca en las otras (BroadcastChannel).
@@ -270,7 +278,24 @@ Una rama y un PR por paso, en este orden. Producción tiene datos reales: las mi
 
    **Listo cuando:** el e2e carga dos pagos en el mes (uno en ARS con cliente y comprobante, otro en USD), ve los totales por moneda, los agrupa por categoría, cambia de mes y vuelve, edita uno y borra el otro.
 
+### Fase 7 — Por cobrar y carpetas personalizadas
+Una rama y un PR por paso. Las migraciones solo agregan.
+
+1. **Por cobrar.** En Finanzas, un lugar para anotar lo que me deben y cuándo me lo tienen que pagar.
+   - Cada cosa: concepto ("Desarrollo web, segundo 50%"), monto y moneda, cliente (opcional), el día que vence (opcional) y una nota. En el código, `Receivable`.
+   - Finanzas con dos pestañas: **Cobrado** (los pagos por mes, lo de la Fase 6) y **Por cobrar** (`/finanzas/por-cobrar`): lo que me deben en total por moneda y la lista, primero lo vencido (marcado), después lo que vence por fecha y al final lo que no tiene fecha. Las cobradas, aparte y plegadas.
+   - "Me pagaron" abre el formulario de un pago ya completo para ajustar el monto (si pagaron una parte) y adjuntar el comprobante. El pago queda en Cobrado, vinculado: lo que falta es el monto menos sus pagos y, en cero, pasa a las cobradas con la lista de sus pagos. Desde el formulario de un pago también se vincula o desvincula.
+   - En la sidebar, al lado de Finanzas, cuántas vencen hoy o ya vencieron.
+   - Sin avisos (notificaciones) ni tiendas: la lista y el número alcanzan, y la app se instala desde el navegador.
+
+   **Listo cuando:** el e2e anota una vencida con cliente y otra sin fecha; ve el total por moneda, la vencida primero y marcada, y el número en la sidebar; con "Me pagaron" registra una parte (queda lo que falta y el pago aparece en Cobrado del mes) y después el resto (pasa a las cobradas con sus dos pagos); vincula un pago anotado aparte; edita la otra y la borra.
+
+2. **Carpetas personalizadas.** En la sección Notas, cada carpeta puede tener uno de los 8 colores de los tableros y un ícono de una lista; sin elegir, queda como ahora. Se cambian desde su "…" → "Personalizar", con una vista previa.
+
+   **Listo cuando:** el e2e le pone color e ícono a una carpeta, recarga y siguen; y la vuelve a dejar como estaba.
+
 ## Después (no ahora)
+- Avisos de lo que vence por cobrar (notificaciones push con la app instalada).
 - IA para procesar notas desordenadas (Claude API desde la API, con confirmación antes de crear).
 - Fechas y recordatorios ("mañana", "viernes").
 - Búsqueda, filtros, etiquetas y prioridad.
