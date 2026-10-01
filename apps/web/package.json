@@ -8,7 +8,8 @@
     "preview": "vite preview",
     "typecheck": "tsc -b",
     "e2e": "playwright test",
-    "icons": "pwa-assets-generator"
+    "icons": "pwa-assets-generator",
+    "capturas": "node scripts/capturas.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
