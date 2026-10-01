@@ -1,40 +1,12 @@
-import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
-import { Navigate, Outlet, useLocation } from 'react-router'
-import { BrandMark } from '@/components/BrandMark'
-import { ErrorState } from '@/components/ErrorState'
+import { Outlet } from 'react-router'
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet'
 import { Sidebar } from '@/features/boards/Sidebar'
-import { sessionQuery } from '@/features/lock/api'
 import { OfflineBanner } from '@/features/pwa/OfflineBanner'
-import { isApiError } from '@/lib/api'
 import type { LayoutContext } from './layoutContext'
 
 export function AppLayout() {
-  const session = useQuery(sessionQuery)
-  const location = useLocation()
   const [menuOpen, setMenuOpen] = useState(false)
-
-  if (session.isPending) {
-    return (
-      <div className="grid h-dvh place-items-center text-muted-foreground" aria-label="Cargando">
-        <BrandMark className="size-5 animate-pulse" />
-      </div>
-    )
-  }
-
-  if (session.isError) {
-    if (isApiError(session.error, 401)) {
-      return <Navigate to="/unlock" replace state={{ from: location.pathname }} />
-    }
-    return (
-      <ErrorState
-        title="No hay conexión con el servidor."
-        message={session.error.message}
-        onRetry={() => void session.refetch()}
-      />
-    )
-  }
 
   const context: LayoutContext = { openBoardsMenu: () => setMenuOpen(true) }
 
