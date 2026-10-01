@@ -72,7 +72,7 @@ En desarrollo, Vite manda `/api` a la API: web y API quedan en el mismo origen, 
 
 ## Deploy
 
-Vercel sirve la web y la API en el mismo origen: `pnpm build:vercel` aplica las migraciones, hace el build y arma `.vercel/output` con la web estática y la API como una función (`/api/*`). La configuración está en `vercel.json` y `scripts/build-vercel.mjs`.
+Vercel sirve la web y la API en el mismo origen: `pnpm build:vercel` aplica las migraciones, crea Inbox si no existe, hace el build y arma `.vercel/output` con la web estática y la API como una función (`/api/*`). La configuración está en `vercel.json` y `scripts/build-vercel.mjs`.
 
 Neon tiene un branch `dev` para local y previews, y `main` para producción.
 

@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "pnpm --filter @notnot/api --filter @notnot/web --parallel dev",
     "build": "pnpm -r build",
-    "build:vercel": "pnpm db:deploy && pnpm build && node scripts/build-vercel.mjs",
+    "build:vercel": "pnpm db:deploy && pnpm db:seed && pnpm build && node scripts/build-vercel.mjs",
     "check": "pnpm lint && pnpm typecheck && pnpm test",
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
