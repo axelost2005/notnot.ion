@@ -1,4 +1,4 @@
-import { columnNameSchema, LIMITS, type Column } from '@notnot/shared'
+import { columnNameSchema, LIMITS, type Column, type Lane } from '@notnot/shared'
 import { Check, CircleCheck, Ellipsis, Pencil, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
@@ -9,17 +9,20 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { cn } from '@/lib/utils'
 import { useDeleteColumn, useUpdateColumn } from './api'
+import { laneTitleClass } from './laneColors'
 
 type Props = {
   boardId: string
   column: Column
+  lane: Lane
   count: number
   /** Por qué no se puede borrar; `null` si se puede. */
   deleteBlockedReason: string | null
 }
 
-export function ColumnHeader({ boardId, column, count, deleteBlockedReason }: Props) {
+export function ColumnHeader({ boardId, column, lane, count, deleteBlockedReason }: Props) {
   const update = useUpdateColumn(boardId)
   const remove = useDeleteColumn(boardId)
   const [renaming, setRenaming] = useState(false)
@@ -35,7 +38,10 @@ export function ColumnHeader({ boardId, column, count, deleteBlockedReason }: Pr
           }}
         />
       ) : (
-        <h2 id={`column-${column.id}`} className="truncate text-[13px] font-medium">
+        <h2
+          id={`column-${column.id}`}
+          className={cn('truncate text-[13px] font-medium', laneTitleClass[lane])}
+        >
           {column.name}
         </h2>
       )}

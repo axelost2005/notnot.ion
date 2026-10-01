@@ -1,20 +1,25 @@
 import {
+  closestCenter,
   closestCorners,
   DndContext,
   DragOverlay,
+  getFirstCollision,
   KeyboardSensor,
   MouseSensor,
+  pointerWithin,
+  rectIntersection,
   TouchSensor,
   useSensor,
   useSensors,
   type Announcements,
+  type CollisionDetection,
   type DragEndEvent,
   type DragOverEvent,
   type DragStartEvent,
   type UniqueIdentifier,
 } from '@dnd-kit/core'
 import { arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable'
-import { slotAt, sortByPosition, type BoardDetail, type Task } from '@notnot/shared'
+import { laneOf, slotAt, sortByPosition, type BoardDetail, type Task } from '@notnot/shared'
 import { useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router'
 import { AddColumn } from './AddColumn'
@@ -22,6 +27,7 @@ import { useMoveTask } from './api'
 import { KanbanColumn } from './KanbanColumn'
 import { TaskCardOverlay } from './TaskCard'
 import { TaskDetailDialog } from './TaskDetailDialog'
+import { useEdgePaging } from './useEdgePaging'
 
 type Items = Record<string, string[]>
 
@@ -37,6 +43,8 @@ export function KanbanBoard({ board }: { board: BoardDetail }) {
   const [activeId, setActiveId] = useState<string | null>(null)
   const [drag, setDrag] = useState<DragState | null>(null)
   const lastDragEnd = useRef(0)
+  const scrollerRef = useRef<HTMLDivElement>(null)
+  const canScroll = useEdgePaging(scrollerRef, activeId !== null)
 
   const columns = useMemo(() => sortByPosition(board.columns), [board.columns])
   const tasksById = useMemo(() => new Map(board.tasks.map((t) => [t.id, t])), [board.tasks])
@@ -62,6 +70,30 @@ export function KanbanBoard({ board }: { board: BoardDetail }) {
       keyboardCodes: { start: ['Space'], cancel: ['Escape'], end: ['Space'] },
     }),
   )
+
+  /**
+   * Con el puntero manda lo que está debajo: toda la columna recibe la tarjeta y, si tiene
+   * tarjetas, la más cercana marca el lugar. Con la esquina más cercana (lo de antes), en una
+   * pantalla alta una columna vacía quedaba "más lejos" que las tarjetas de los costados y no
+   * se podía soltar ahí. Con el teclado sigue siendo la esquina más cercana.
+   */
+  const collisionDetection: CollisionDetection = (args) => {
+    if (!args.pointerCoordinates) return closestCorners(args)
+    const underPointer = pointerWithin(args)
+    const overId = getFirstCollision(
+      underPointer.length > 0 ? underPointer : rectIntersection(args),
+      'id',
+    )
+    if (overId === null) return []
+    const columnTasks = items[String(overId)]
+    if (!columnTasks?.length) return [{ id: overId }]
+    return closestCenter({
+      ...args,
+      droppableContainers: args.droppableContainers.filter((c) =>
+        columnTasks.includes(String(c.id)),
+      ),
+    })
+  }
 
   const findColumn = (id: UniqueIdentifier, source: Items) => {
     const key = String(id)
@@ -172,7 +204,8 @@ export function KanbanBoard({ board }: { board: BoardDetail }) {
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCorners}
+      collisionDetection={collisionDetection}
+      autoScroll={{ canScroll }}
       onDragStart={onDragStart}
       onDragOver={onDragOver}
       onDragEnd={onDragEnd}
@@ -189,7 +222,10 @@ export function KanbanBoard({ board }: { board: BoardDetail }) {
       }}
     >
       {/* En mobile, una columna por vez con swipe (scroll-snap). */}
-      <div className="flex min-h-0 flex-1 items-start gap-3 overflow-x-auto p-3 max-md:snap-x max-md:p-4 max-md:snap-mandatory max-md:scroll-px-4 max-md:[scrollbar-width:none]">
+      <div
+        ref={scrollerRef}
+        className="flex min-h-0 flex-1 items-start gap-3 overflow-x-auto p-3 max-md:snap-x max-md:p-4 max-md:snap-mandatory max-md:scroll-px-4 max-md:[scrollbar-width:none]"
+      >
         {columns.map((column) => {
           const columnTasks = (items[column.id] ?? [])
             .map((id) => tasksById.get(id))
@@ -206,6 +242,7 @@ export function KanbanBoard({ board }: { board: BoardDetail }) {
               key={column.id}
               boardId={board.id}
               column={column}
+              lane={laneOf(column, columns)}
               tasks={columnTasks}
               deleteBlockedReason={deleteBlockedReason}
               onOpenTask={openTask}
