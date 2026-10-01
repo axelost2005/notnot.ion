@@ -2,7 +2,7 @@
 
 ## Fase actual
 
-**Fase 1 — Candado, tableros y primer deploy: cerrada.** Sigue la Fase 2 (kanban).
+**Fase 2 — Kanban: cerrada.** Sigue la Fase 3 (notas → tareas).
 
 ## Hecho
 
@@ -24,6 +24,14 @@
 - e2e (`apps/web/e2e/lock-and-boards.spec.ts`): 401 sin cookie, código incorrecto, entrar y bloquear, ciclo completo de un tablero, Inbox protegido, validación y "último tablero".
 - Deploy: config lista (`vercel.json` + `scripts/build-vercel.mjs`), proyecto `notnot-ion` en Vercel y **preview funcionando** contra Neon `dev`. Producción espera la base `main` (ver pendientes).
 
+### Fase 2 — Kanban
+
+- API: `POST /boards/:id/columns`, `PATCH`/`DELETE /columns/:id`, `POST /tasks`, `PATCH`/`DELETE /tasks/:id` y `POST /tasks/:id/move` (calcula `position` con los vecinos y actualiza solo esa fila; también mueve a otro tablero). Validaciones con tests.
+- `shared`: schemas de columnas y tareas, y helpers de movimiento (`slotAt`, `isValidSlot`, `positionForSlot`) con tests.
+- Web: columnas con título, contador, menú (renombrar, usar para terminadas, borrar) y "Agregar tarjeta" al pie; "Agregar columna"; tarjetas con indicador de descripción; detalle (título, descripción, mover a otro tablero o columna, borrar con confirmación).
+- Drag & drop con dnd-kit: mouse, teclado (espacio + flechas, con anuncios en español para lectores de pantalla) y touch con long-press. Optimista: la tarjeta se mueve al toque y vuelve si la API dice que no.
+- e2e (`apps/web/e2e/kanban.spec.ts`): crear tarjetas, mover dentro y entre columnas con mouse, recargar y mantener el orden; mover con teclado; detalle; columnas.
+
 ## Decisiones
 
 - **Versiones**: lo último estable que funciona junto. TypeScript 6.0 (typescript-eslint todavía no soporta TS 7), Prisma 7.10 (Prisma 8 está en RC), React Router 8 en modo data, Vite 8, Vitest 5, ESLint 10, Tailwind 4, Zod 4, shadcn CLI 4.
@@ -40,6 +48,12 @@
 - **Deploy con la Build Output API de Vercel**: `pnpm build:vercel` corre `prisma migrate deploy`, el build y `scripts/build-vercel.mjs`, que arma `.vercel/output` con la web estática, la API como una función (Node 24) y las rutas (`/api/*` → función, fallback de SPA, `noindex`, caché larga para `/assets`). Se descartó Vercel Services (beta) y el builder de Express (no empaqueta y el monorepo con `shared` en TS le complica la resolución).
 - **Vercel**: `ENABLE_EXPERIMENTAL_COREPACK=1` para usar exactamente pnpm 11. Preview usa Neon `dev`; Production va a usar Neon `main`. Las migraciones de cada entorno corren en su build.
 - **e2e y rate limit**: el test del código incorrecto manda su propio `X-Forwarded-For` para no acumular intentos entre corridas locales.
+- **Columnas nuevas**: si la de terminadas es la última, la nueva va justo antes (así "Hecho" queda al final); si no, al final. Cambiar cuál es la de terminadas actualiza `completedAt` de las tarjetas de las dos columnas. No se borra la de terminadas, una con tarjetas ni la última normal (409 con el motivo; la UI deshabilita la opción y explica por qué).
+- **`move`**: valida que `prevId` y `nextId` sean vecinos reales en la columna destino; si no, 409 (el cliente tenía una vista vieja: vuelve atrás y refresca). Sin vecinos, va al final. El cliente calcula la misma posición con el mismo helper de `shared` para el update optimista.
+- **dnd-kit**: `@dnd-kit/core` + `@dnd-kit/sortable` (estables) en vez de `@dnd-kit/react` (todavía 0.x). Mouse arrastra a partir de 5 px; touch con long-press de 250 ms (un toque abre la tarjeta y el scroll sigue andando); teclado con espacio y flechas, Enter abre la tarjeta.
+- **Detalle de tarjeta en la URL** (`/b/:slug?tarjeta=<id>`): sirve para abrirla desde el panel de notas en la Fase 3. "Mover a" desde el detalle la deja al final de la columna elegida.
+- **`toggle-done`** queda para la Fase 3, como dice la spec.
+- **Dev**: si corrés comandos de pnpm con la app levantada, pnpm 11 puede regenerar el cliente de Prisma y `node --watch` reinicia la API (algún pedido puede dar 502 en ese momento).
 
 ## Pendientes para vos
 
