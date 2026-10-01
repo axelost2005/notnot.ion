@@ -32,19 +32,28 @@ export const toImageInfo = (image: { id: string; width: number; height: number }
 
 type Upload = { body: Buffer; width: number; height: number }
 
-/** Sube la imagen al store privado y la suma a la tarjeta. */
-export async function addTaskImage(taskId: string, upload: Upload): Promise<ImageInfo> {
+/** De quién es la imagen: una tarjeta o un pago (sus comprobantes). */
+export type ImageOwner = { taskId: string } | { paymentId: string }
+
+/** Cuántas tiene ya (o `null` si el dueño no existe) y cuántas puede tener. */
+async function ownerImages(owner: ImageOwner) {
+  const select = { _count: { select: { images: true } } } as const
+  if ('taskId' in owner) {
+    const task = await prisma.task.findUnique({ where: { id: owner.taskId }, select })
+    return { count: task?._count.images ?? null, max: LIMITS.imagesPerTask, what: 'La tarjeta' }
+  }
+  const payment = await prisma.payment.findUnique({ where: { id: owner.paymentId }, select })
+  return { count: payment?._count.images ?? null, max: LIMITS.imagesPerPayment, what: 'El pago' }
+}
+
+/** Sube la imagen al store privado y la suma a su tarjeta o pago. */
+export async function addImage(owner: ImageOwner, upload: Upload): Promise<ImageInfo> {
   const contentType = detectImageType(upload.body)
   if (!contentType) throw badRequest('Mandá una imagen WebP, JPEG o PNG')
 
-  const task = await prisma.task.findUnique({
-    where: { id: taskId },
-    select: { _count: { select: { images: true } } },
-  })
-  if (!task) throw notFound('La tarjeta no existe')
-  if (task._count.images >= LIMITS.imagesPerTask) {
-    throw conflict(`La tarjeta ya tiene ${LIMITS.imagesPerTask} imágenes`)
-  }
+  const { count, max, what } = await ownerImages(owner)
+  if (count === null) throw notFound(`${what} no existe`)
+  if (count >= max) throw conflict(`${what} ya tiene ${max} imágenes`)
 
   const pathname = `images/${randomUUID()}.${EXTENSIONS[contentType]}`
   await put(pathname, upload.body, {
@@ -57,7 +66,7 @@ export async function addTaskImage(taskId: string, upload: Upload): Promise<Imag
   try {
     const image = await prisma.image.create({
       data: {
-        taskId,
+        ...owner,
         pathname,
         contentType,
         size: upload.body.length,
@@ -87,9 +96,9 @@ export async function deleteImage(id: string): Promise<void> {
 }
 
 /** Los archivos de las imágenes, para borrarlos después de borrar sus filas. */
-export async function imagePathnames(where: { taskId?: string; boardId?: string }) {
+export async function imagePathnames(where: ImageOwner | { boardId: string }) {
   const images = await prisma.image.findMany({
-    where: where.boardId ? { task: { boardId: where.boardId } } : { taskId: where.taskId },
+    where: 'boardId' in where ? { task: { boardId: where.boardId } } : where,
     select: { pathname: true },
   })
   return images.map((image) => image.pathname)

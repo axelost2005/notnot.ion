@@ -15,6 +15,11 @@ export const LIMITS = {
   folderName: 60,
   pageTitle: 200,
   pageContent: 50_000,
+  paymentCategory: 40,
+  paymentDescription: 1000,
+  imagesPerPayment: 20,
+  /** Cien mil millones (en centavos): sobra para cualquier pago. */
+  paymentAmountCents: 10_000_000_000_000,
 } as const
 
 /** Formatos que acepta la API (la web los convierte a WebP, o a JPEG si el navegador no puede). */

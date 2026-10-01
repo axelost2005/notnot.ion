@@ -18,9 +18,10 @@ model Board {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 
-  columns Column[]
-  tasks   Task[]
-  notes   Note[]
+  columns  Column[]
+  tasks    Task[]
+  notes    Note[]
+  payments Payment[]
 }
 
 model Column {
@@ -79,10 +80,12 @@ model Note {
   @@index([boardId, createdAt])
 }
 
-/// Imagen privada en Vercel Blob. Borrar la fila no borra el archivo: lo hace la API.
+/// Imagen privada en Vercel Blob, de una tarea o de un pago (nunca de los dos: lo exige un CHECK de
+/// la migración). Borrar la fila no borra el archivo: lo hace la API.
 model Image {
   id          String   @id @default(uuid(7)) @db.Uuid
-  taskId      String   @db.Uuid
+  taskId      String?  @db.Uuid
+  paymentId   String?  @db.Uuid
   pathname    String   @unique
   contentType String
   size        Int
@@ -90,9 +93,11 @@ model Image {
   height      Int
   createdAt   DateTime @default(now())
 
-  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  task    Task?    @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  payment Payment? @relation(fields: [paymentId], references: [id], onDelete: Cascade)
 
   @@index([taskId, createdAt])
+  @@index([paymentId, createdAt])
 }
 
 /// Carpeta de la sección Notas (aparte de las notas de los tableros). Puede tener carpetas adentro.
@@ -123,4 +128,24 @@ model Page {
   folder Folder? @relation(fields: [folderId], references: [id], onDelete: Cascade)
 
   @@index([folderId])
+}
+
+/// Un pago que me hicieron (Finanzas). Solo ingresos, en ARS o USD.
+model Payment {
+  id          String   @id @default(uuid(7)) @db.Uuid
+  date        DateTime @db.Date
+  amountCents BigInt
+  currency    String
+  // El cliente es un tablero. Si se borra el tablero, el pago queda sin cliente.
+  boardId     String?  @db.Uuid
+  category    String?
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  board  Board?  @relation(fields: [boardId], references: [id], onDelete: SetNull)
+  images Image[]
+
+  @@index([date])
+  @@index([boardId])
 }

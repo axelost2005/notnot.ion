@@ -1,4 +1,5 @@
 import type { BoardColor } from './constants'
+import type { Currency } from './finance/finance'
 
 // Respuestas de la API. Las fechas viajan como string ISO.
 
@@ -122,6 +123,28 @@ export type Page = PageSummary & {
 export type PagesTree = {
   folders: Folder[]
   pages: PageSummary[]
+}
+
+/** Un pago que me hicieron (Finanzas). `date` es el día ("2026-10-15"); el monto, en centavos. */
+export type Payment = {
+  id: string
+  date: string
+  amountCents: number
+  currency: Currency
+  /** El cliente: uno de los tableros. */
+  boardId: string | null
+  category: string | null
+  description: string | null
+  /** Los comprobantes. */
+  images: ImageInfo[]
+  createdAt: string
+  updatedAt: string
+}
+
+/** Los meses con pagos (del más nuevo al más viejo) y las categorías que ya se usaron. */
+export type PaymentsSummary = {
+  months: { month: string; count: number }[]
+  categories: string[]
 }
 
 export type ApiErrorBody = {
