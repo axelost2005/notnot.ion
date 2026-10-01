@@ -210,6 +210,13 @@ export function NoteComposer({ board, boards, autoFocus }: Props) {
           setCaret(event.target.selectionStart)
         }}
         onSelect={(event) => setCaret(event.currentTarget.selectionStart)}
+        onFocus={(event) => {
+          // Al entrar con Tab o al abrirse enfocado, el cursor queda al principio: va después
+          // de los corchetes. Si ya hay algo seleccionado, se respeta.
+          const el = event.currentTarget
+          if (!isBlank(text) || el.selectionStart !== 0 || el.selectionEnd !== 0) return
+          el.setSelectionRange(el.value.length, el.value.length)
+        }}
         onKeyDown={onKeyDown}
         onBlur={() => setCaret(null)}
         placeholder="Escribí una nota…"
