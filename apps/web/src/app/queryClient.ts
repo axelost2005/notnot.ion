@@ -6,7 +6,8 @@ import { router } from './router'
 declare module '@tanstack/react-query' {
   interface Register {
     // `inlineError`: la pantalla ya muestra el error, no hace falta toast.
-    mutationMeta: { inlineError?: boolean }
+    // `silent`: un guardado automático (cada pocas teclas) no avisa a las otras ventanas.
+    mutationMeta: { inlineError?: boolean; silent?: boolean }
   }
 }
 
@@ -34,7 +35,8 @@ export const queryClient = new QueryClient({
     },
   }),
   mutationCache: new MutationCache({
-    onSuccess: () => {
+    onSuccess: (_data, _variables, _context, mutation) => {
+      if (mutation.meta?.silent) return
       otherWindows?.postMessage('changed')
       // General junta lo de todos los tableros: cualquier cambio lo puede tocar.
       void queryClient.invalidateQueries({ queryKey: ['general'] })

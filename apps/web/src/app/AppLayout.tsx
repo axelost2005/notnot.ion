@@ -22,13 +22,11 @@ export function AppLayout() {
         </main>
       </div>
 
-      {/* En mobile, la lista de tableros se abre desde el header del tablero. */}
+      {/* En mobile, la sidebar se abre desde el título del header (de un tablero o una nota). */}
       <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
         <SheetContent side="left" className="w-72 gap-0 p-0" showCloseButton={false}>
-          <SheetTitle className="sr-only">Tableros</SheetTitle>
-          <SheetDescription className="sr-only">
-            Elegí un tablero o creá uno nuevo.
-          </SheetDescription>
+          <SheetTitle className="sr-only">Menú</SheetTitle>
+          <SheetDescription className="sr-only">Tableros y notas.</SheetDescription>
           <Sidebar onNavigate={() => setMenuOpen(false)} />
         </SheetContent>
       </Sheet>

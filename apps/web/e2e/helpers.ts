@@ -48,3 +48,19 @@ export async function deleteE2ENotes(request: APIRequestContext) {
     if (note.content.includes('@e2e-')) await request.delete(`/api/notes/${note.id}`)
   }
 }
+
+/** Borra las carpetas y notas de la sección Notas que dejaron los tests (prefijo `e2e-`). */
+export async function deleteE2EPages(request: APIRequestContext) {
+  const res = await request.get('/api/folders')
+  const tree = (await res.json()) as {
+    folders: { id: string; name: string }[]
+    pages: { id: string; title: string }[]
+  }
+  for (const page of tree.pages) {
+    if (page.title.startsWith('e2e-')) await request.delete(`/api/pages/${page.id}`)
+  }
+  for (const folder of tree.folders) {
+    // Las de adentro ya pudieron irse con su carpeta.
+    if (folder.name.startsWith('e2e-')) await request.delete(`/api/folders/${folder.id}`)
+  }
+}

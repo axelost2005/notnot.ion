@@ -9,6 +9,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import { useLock } from '../lock/api'
+import { NotesSection } from '../pages/NotesSection'
 import { InstallButton } from '../pwa/InstallButton'
 import { boardsQuery } from './api'
 import { BoardFormDialog } from './BoardFormDialog'
@@ -37,64 +38,67 @@ export function Sidebar({ onNavigate }: Props) {
         <span className="text-[15px] font-semibold tracking-tight text-foreground">notnot.ion</span>
       </div>
 
-      <nav aria-label="Tableros" className="min-h-0 flex-1 overflow-y-auto px-2 pb-3">
-        {boards.isPending ? (
-          <div className="grid gap-2 px-2 pt-1" aria-label="Cargando tableros">
-            {[64, 48, 56, 40].map((width) => (
-              <Skeleton key={width} className="h-5" style={{ width: `${width}%` }} />
-            ))}
-          </div>
-        ) : boards.isError ? (
-          <div className="grid gap-2 px-2 pt-1 text-[13px]">
-            <p className="text-muted-foreground">No se pudieron cargar los tableros.</p>
-            <Button variant="outline" size="sm" onClick={() => void boards.refetch()}>
-              Reintentar
-            </Button>
-          </div>
-        ) : (
-          <>
-            {general && (
-              <ul className="grid gap-px">
-                <BoardLink board={general} count={totalOpen} onNavigate={onNavigate} />
-              </ul>
-            )}
-
-            <h2 className="mt-5 mb-1 px-2 text-xs font-medium text-muted-foreground">Tableros</h2>
-            <ul className="grid gap-px">
-              {active.map((board) => (
-                <BoardLink key={board.id} board={board} onNavigate={onNavigate} />
+      <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-3">
+        <nav aria-label="Tableros">
+          {boards.isPending ? (
+            <div className="grid gap-2 px-2 pt-1" aria-label="Cargando tableros">
+              {[64, 48, 56, 40].map((width) => (
+                <Skeleton key={width} className="h-5" style={{ width: `${width}%` }} />
               ))}
-              <li>
-                <button
-                  type="button"
-                  onClick={() => setCreating(true)}
-                  className="flex h-8 w-full items-center gap-2.5 rounded-md px-2 text-muted-foreground outline-none hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  <Plus className="size-3.5" />
-                  Nuevo tablero
-                </button>
-              </li>
-            </ul>
+            </div>
+          ) : boards.isError ? (
+            <div className="grid gap-2 px-2 pt-1 text-[13px]">
+              <p className="text-muted-foreground">No se pudieron cargar los tableros.</p>
+              <Button variant="outline" size="sm" onClick={() => void boards.refetch()}>
+                Reintentar
+              </Button>
+            </div>
+          ) : (
+            <>
+              {general && (
+                <ul className="grid gap-px">
+                  <BoardLink board={general} count={totalOpen} onNavigate={onNavigate} />
+                </ul>
+              )}
 
-            {archived.length > 0 && (
-              <Collapsible className="mt-5">
-                <CollapsibleTrigger className="group flex h-7 w-full items-center gap-1 rounded-md px-2 text-xs font-medium text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">
-                  <ChevronRight className="size-3.5 transition-transform group-data-[state=open]:rotate-90" />
-                  Archivados
-                  <span className="ml-auto tabular-nums">{archived.length}</span>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <ul className="mt-1 grid gap-px">
-                    {archived.map((board) => (
-                      <BoardLink key={board.id} board={board} onNavigate={onNavigate} />
-                    ))}
-                  </ul>
-                </CollapsibleContent>
-              </Collapsible>
-            )}
-          </>
-        )}
-      </nav>
+              <h2 className="mt-5 mb-1 px-2 text-xs font-medium text-muted-foreground">Tableros</h2>
+              <ul className="grid gap-px">
+                {active.map((board) => (
+                  <BoardLink key={board.id} board={board} onNavigate={onNavigate} />
+                ))}
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => setCreating(true)}
+                    className="flex h-8 w-full items-center gap-2.5 rounded-md px-2 text-muted-foreground outline-none hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <Plus className="size-3.5" />
+                    Nuevo tablero
+                  </button>
+                </li>
+              </ul>
+
+              {archived.length > 0 && (
+                <Collapsible className="mt-5">
+                  <CollapsibleTrigger className="group flex h-7 w-full items-center gap-1 rounded-md px-2 text-xs font-medium text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">
+                    <ChevronRight className="size-3.5 transition-transform group-data-[state=open]:rotate-90" />
+                    Archivados
+                    <span className="ml-auto tabular-nums">{archived.length}</span>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <ul className="mt-1 grid gap-px">
+                      {archived.map((board) => (
+                        <BoardLink key={board.id} board={board} onNavigate={onNavigate} />
+                      ))}
+                    </ul>
+                  </CollapsibleContent>
+                </Collapsible>
+              )}
+            </>
+          )}
+        </nav>
+        <NotesSection onNavigate={onNavigate} />
+      </div>
 
       <div className="grid shrink-0 gap-px border-t border-sidebar-border p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
         <InstallButton />
