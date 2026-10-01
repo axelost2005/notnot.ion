@@ -1,3 +1,5 @@
+import { DAY_START_HEADER } from '@notnot/shared'
+
 export class ApiError extends Error {
   readonly status: number
   readonly code: string
@@ -12,7 +14,17 @@ export class ApiError extends Error {
 export const isApiError = (error: unknown, status?: number): error is ApiError =>
   error instanceof ApiError && (status === undefined || error.status === status)
 
-type RequestOptions = Omit<RequestInit, 'body'> & { json?: unknown }
+type RequestOptions = Omit<RequestInit, 'body' | 'headers'> & {
+  json?: unknown
+  headers?: Record<string, string>
+}
+
+/** La medianoche de hoy en este dispositivo: la API pasa al historial lo terminado antes. */
+function dayStart() {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return today.toISOString()
+}
 
 function readError(body: unknown): { code?: string; message?: string } {
   if (typeof body !== 'object' || body === null || !('error' in body)) return {}
@@ -30,7 +42,11 @@ export async function api<T>(path: string, { json, headers, ...init }: RequestOp
   try {
     res = await fetch(`/api${path}`, {
       ...init,
-      headers: json === undefined ? headers : { 'Content-Type': 'application/json', ...headers },
+      headers: {
+        [DAY_START_HEADER]: dayStart(),
+        ...(json === undefined ? {} : { 'Content-Type': 'application/json' }),
+        ...headers,
+      },
       body: json === undefined ? undefined : JSON.stringify(json),
     })
   } catch {

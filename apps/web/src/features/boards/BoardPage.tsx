@@ -1,6 +1,13 @@
 import type { BoardSummary } from '@notnot/shared'
 import { useQuery } from '@tanstack/react-query'
-import { ChevronDown, Columns3, NotebookPen, PanelRight, PictureInPicture2 } from 'lucide-react'
+import {
+  ChevronDown,
+  Columns3,
+  History,
+  NotebookPen,
+  PanelRight,
+  PictureInPicture2,
+} from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router'
 import { useLayout } from '@/app/layoutContext'
@@ -9,6 +16,7 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
+import { HistorySheet } from '../history/HistorySheet'
 import { KanbanBoard } from '../kanban/KanbanBoard'
 import { NotesPanel } from '../notes/NotesPanel'
 import { openNotesWindow } from '../notes/openNotesWindow'
@@ -146,6 +154,7 @@ type HeaderProps = {
 function BoardHeader({ board, notesOpen, onToggleNotes }: HeaderProps) {
   const update = useUpdateBoard()
   const { openBoardsMenu } = useLayout()
+  const [historyOpen, setHistoryOpen] = useState(false)
   const archived = board.archivedAt !== null
 
   return (
@@ -187,6 +196,16 @@ function BoardHeader({ board, notesOpen, onToggleNotes }: HeaderProps) {
             Desarchivar
           </Button>
         )}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setHistoryOpen(true)}
+          className="gap-1.5 text-muted-foreground"
+        >
+          <History />
+          <span className="max-md:sr-only">Historial</span>
+        </Button>
+        <HistorySheet board={board} open={historyOpen} onOpenChange={setHistoryOpen} />
         <BoardActionsMenu board={board} />
         <Button
           variant="ghost"

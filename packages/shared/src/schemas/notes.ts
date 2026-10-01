@@ -17,4 +17,10 @@ export const notesQuerySchema = z.object({
   before: idSchema.optional(),
 })
 
+/** Sin `boardId`, el historial de todos los tableros. */
+export const historyQuerySchema = z.object({
+  boardId: idSchema.optional(),
+  before: idSchema.optional(),
+})
+
 export type CreateNoteInput = z.infer<typeof createNoteSchema>

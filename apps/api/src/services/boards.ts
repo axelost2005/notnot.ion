@@ -56,6 +56,7 @@ export function toTask(task: Db.Task & { note?: { boardId: string } | null }): T
     description: task.description,
     position: task.position,
     completedAt: task.completedAt?.toISOString() ?? null,
+    archivedAt: task.archivedAt?.toISOString() ?? null,
     noteId: task.noteId,
     noteLine: task.noteLine,
     noteBoardId: task.note?.boardId ?? null,
@@ -80,10 +81,11 @@ async function getBoardSummary(id: string): Promise<BoardSummary> {
   return { ...toBoard(board), openTaskCount: board._count.tasks }
 }
 
+/** Las tarjetas del historial no se ven en el tablero. */
 export async function getBoard(id: string): Promise<BoardDetail> {
   const board = await prisma.board.findUnique({
     where: { id },
-    include: { columns: true, tasks: { include: withNoteBoard } },
+    include: { columns: true, tasks: { where: { archivedAt: null }, include: withNoteBoard } },
   })
   if (!board) throw notFound('El tablero no existe')
   return {

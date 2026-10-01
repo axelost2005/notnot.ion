@@ -48,6 +48,8 @@ model Task {
   description String?
   position    String
   completedAt DateTime?
+  // Terminada antes de hoy: ya no se ve en el tablero, está en el historial.
+  archivedAt  DateTime?
   noteId      String?   @db.Uuid
   noteLine    Int?
   createdAt   DateTime  @default(now())
@@ -61,6 +63,7 @@ model Task {
   @@index([boardId])
   @@index([columnId, position])
   @@index([noteId])
+  @@index([archivedAt, completedAt])
 }
 
 model Note {
