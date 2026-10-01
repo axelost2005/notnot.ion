@@ -1,0 +1,76 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Board {
+  id         String    @id @default(uuid(7)) @db.Uuid
+  name       String
+  slug       String    @unique
+  color      String
+  position   String
+  isInbox    Boolean   @default(false)
+  archivedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  columns Column[]
+  tasks   Task[]
+  notes   Note[]
+}
+
+model Column {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  boardId   String   @db.Uuid
+  name      String
+  position  String
+  isDone    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  board Board  @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  tasks Task[]
+
+  // Lo usa la FK compuesta de Task: la columna de una tarea siempre es de su mismo tablero.
+  @@unique([id, boardId])
+  @@index([boardId])
+}
+
+model Task {
+  id          String    @id @default(uuid(7)) @db.Uuid
+  boardId     String    @db.Uuid
+  columnId    String    @db.Uuid
+  title       String
+  description String?
+  position    String
+  completedAt DateTime?
+  noteId      String?   @db.Uuid
+  noteLine    Int?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  board  Board  @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  // NoAction (y no Restrict) para que el borrado en cascada del tablero no choque con esta FK.
+  column Column @relation(fields: [columnId, boardId], references: [id, boardId], onDelete: NoAction)
+  note   Note?  @relation(fields: [noteId], references: [id], onDelete: SetNull)
+
+  @@index([boardId])
+  @@index([columnId, position])
+  @@index([noteId])
+}
+
+model Note {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  boardId   String   @db.Uuid
+  content   String
+  createdAt DateTime @default(now())
+
+  board Board  @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  tasks Task[]
+
+  @@index([boardId, createdAt])
+}
