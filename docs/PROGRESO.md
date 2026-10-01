@@ -2,7 +2,7 @@
 
 ## Fase actual
 
-**Fase 5 — Ventana de notas, General e Historial: cerrada.** Las fases 0 a 5 están hechas y la app está en producción. Falta solo instalarla (ver "Pendientes para vos").
+**Fase 6 — Correcciones, imágenes, Notas y Finanzas: en curso.** Paso 1 (correcciones) hecho. Las fases 0 a 5 están hechas y la app está en producción.
 
 ## Hecho
 
@@ -55,6 +55,10 @@
 - Historial: `Task.archivedAt` (migración `task_archived_at`). La web manda `X-Day-Start` (la medianoche del dispositivo) en cada pedido; al leer un tablero, sus notas o el historial, la API pasa al historial lo terminado antes. `GET /history?boardId=&before=`, 50 por página. Las del historial no se ven en el kanban ni cuentan como vecinas al mover o para "columna vacía"; destildarlas desde su nota o moverlas las vuelve al tablero. Botón "Historial" en el header: panel lateral agrupado por día ("Ayer", "Lunes, 28 de septiembre"…). En la nota, una tarea del historial se ve tildada y no abre la tarjeta. e2e con el reloj del navegador en mañana: "Hecho" vacío, la tarea en "Ayer" y, al destildarla en la nota, vuelve a "Por hacer".
 - General: Inbox pasó a ser General (migración `general_board`). `GET /general` trae columnas y tarjetas de los tableros activos y la web las muestra en "Por hacer", "En curso" y "Hecho" con el chip de cada tablero, agrupadas en el orden de la sidebar. Arrastrar entre columnas mueve la tarjeta al final de la columna que corresponde en su tablero; tocarla abre el detalle de siempre; "Agregar tarjeta" en "Por hacer" crea una tarea de General. Su Historial es el de todos los tableros y su contador en la sidebar, el total de abiertas. `laneOf` y `columnForLane` en `shared`, con tests. e2e: tarjetas de dos tableros con su chip, arrastrar a "En curso" la mueve en su tablero y una tarjeta nueva de General va sin chip. README con la captura de General.
 
+### Fase 6 — Correcciones, imágenes, Notas y Finanzas
+
+- **Paso 1, correcciones.** Selector de tablero propio en la ventana de notas y en "Mover a…" del detalle (Radix Select con el punto de color de cada tablero, el actual tildado, teclado y foco; al elegir otro tablero en la ventana, el foco vuelve al composer). Tarjetas como fila: checkbox a la izquierda (tilda y destilda con `toggle-done`, optimista también en General), título en negrita y una línea de la descripción cortada con "…"; sin el `[]` ni el ícono de descripción. "En curso" recibe tarjetas: toda la columna es zona para soltar, con mouse y touch, en los tableros y en General, y General tiene "Agregar tarjeta" en las tres columnas. Títulos de columna con el color de su rol (`--status-todo/doing/done` en `index.css`). e2e nuevos: `drop-zones.spec.ts` y `cards.spec.ts`; la ventana de notas cambia de tablero con el teclado.
+
 ## Decisiones
 
 - **Versiones**: lo último estable que funciona junto. TypeScript 6.0 (typescript-eslint todavía no soporta TS 7), Prisma 7.10 (Prisma 8 está en RC), React Router 8 en modo data, Vite 8, Vitest 5, ESLint 10, Tailwind 4, Zod 4, shadcn CLI 4.
@@ -94,6 +98,9 @@
 - **Historial sin tareas programadas**: el día lo define el dispositivo (header `X-Day-Start` con su medianoche) y el archivado pasa al leer (tablero, notas, historial). Se descartó un cron de Vercel: en Hobby corre una vez por día con una hora de margen, necesita una ruta fuera del candado y no anda en local. Si el header falta o está a más de 48 h de la hora del server, no se archiva nada.
 - **Tarjetas del historial**: quedan en su columna con `archivedAt` (no se mueven). Cambiar la columna de terminadas no las reabre; si se borra una columna que las tiene (porque antes era la de terminadas), pasan a la de terminadas actual. `toggle-done` decide por `completedAt` (lo que muestra la nota) y no por la columna.
 - **Ventana de notas**: `window.open` común, que anda en cualquier navegador, en vez de Document Picture-in-Picture (siempre encima, pero solo Chrome/Edge, una sola ventana flotante a la vez y los diálogos se abrirían en la ventana principal). Para tenerla siempre encima en Windows: PowerToys, Win+Ctrl+T.
+- **Por qué "En curso" no recibía nada** (reproducido con e2e antes de tocar): (1) en los tableros la detección era `closestCorners`, que compara las esquinas de la tarjeta con las de cada zona; en una pantalla alta (1080 px) la columna vacía, larga, quedaba "más lejos" que las tarjetas de las columnas de los costados y la tarjeta volvía a su lugar. (2) La zona para soltar era solo la lista (`ol`): el título y el pie no contaban, y en General (`pointerWithin`) soltar ahí no hacía nada. (3) En el celu, el auto-scroll de dnd-kit con scroll-snap salta una columna entera en cada paso y llegaba al final en menos de 300 ms. Arreglo: la zona es toda la columna; con puntero manda lo que está debajo (`pointerWithin`, y si la columna tiene tarjetas, la más cercana marca el lugar), con teclado sigue `closestCorners`; en el celu (< 768 px) la fila de columnas no la mueve dnd-kit sino `useEdgePaging`: quedarse 0,5 s en el borde pasa a la columna de al lado y, si sigue ahí, la siguiente espera 1,1 s (da tiempo a soltar en la que llegó).
+- **Selector propio**: el `select` de shadcn (Radix Select, viene en `radix-ui`, sin dependencias nuevas) reemplaza al `<select>` nativo, que en Windows con tema oscuro mostraba la lista gris clara. Se usa también en "Mover a…": en el celu es cómodo (opciones más altas con `pointer: coarse`).
+- **Colores de columna**: por rol con `laneOf`, como tokens de claro y oscuro. Contraste medido contra el fondo de la columna y el resaltado al soltar: 4,6:1 o más en claro (el amarillo es un ocre oscuro) y 7,8:1 o más en oscuro.
 - **Dev**: si corrés comandos de pnpm con la app levantada, pnpm 11 puede regenerar el cliente de Prisma y `node --watch` reinicia la API (algún pedido puede dar 502 en ese momento).
 
 ## Pendientes para vos

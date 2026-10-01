@@ -122,15 +122,14 @@ test('detalle: editar, mover a otra columna y borrar', async ({ page }) => {
 
   // "Mover a…" tiene su propio botón.
   await card(page, 'Llamar al cliente por la factura').click()
-  await dialog.getByLabel('Columna').selectOption({ label: 'Hecho' })
+  await dialog.getByRole('combobox', { name: 'Columna' }).click()
+  await page.getByRole('option', { name: 'Hecho' }).click()
   await dialog.getByRole('button', { name: 'Mover', exact: true }).click()
   await expect(dialog).toBeHidden()
 
+  // La tarjeta muestra la descripción en una línea, debajo del título.
   const done = column(page, 'Hecho')
-  await expect(card(done, 'Llamar al cliente por la factura')).toBeVisible()
-  await expect(
-    card(done, 'Llamar al cliente por la factura').getByRole('img', { name: 'Tiene descripción' }),
-  ).toBeVisible()
+  await expect(card(done, 'Llamar al cliente por la factura')).toContainText('Pedir el CUIT nuevo.')
 
   await card(done, 'Llamar al cliente por la factura').click()
   await expect(dialog.getByLabel('Descripción')).toHaveValue('Pedir el CUIT nuevo.')

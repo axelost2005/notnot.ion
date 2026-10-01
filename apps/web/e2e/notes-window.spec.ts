@@ -36,8 +36,18 @@ test('las notas se abren en otra ventana y ahí se cambia de tablero', async ({ 
   // Mientras tanto, la ventana principal muestra el segundo tablero.
   await page.goto(`/b/${second.slug}`)
 
-  // Cambiar de tablero en la ventana de notas y seguir escribiendo.
-  await notes.getByLabel('Tablero', { exact: true }).selectOption({ label: second.name })
+  // Cambiar de tablero en la ventana de notas con el teclado y seguir escribiendo.
+  const selector = notes.getByRole('combobox', { name: 'Tablero', exact: true })
+  await expect(selector).toHaveText(first.name)
+  await selector.focus()
+  await notes.keyboard.press('Enter')
+  await expect(notes.getByRole('option', { name: first.name })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  )
+  await notes.keyboard.type(second.name)
+  await expect(notes.getByRole('option', { name: second.name })).toBeFocused()
+  await notes.keyboard.press('Enter')
   await expect(notes).toHaveURL(new RegExp(`/notas/${second.slug}$`))
   const composer = notes.getByRole('combobox', { name: `Nueva nota en ${second.name}` })
   await expect(composer).toBeFocused()

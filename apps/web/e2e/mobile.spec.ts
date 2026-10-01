@@ -48,7 +48,8 @@ test('en 375 px captura una nota y mueve la tarjeta con "Mover a…"', async ({ 
   const card = column(page, 'Por hacer').getByRole('button', { name: 'pedir presupuesto' })
   await card.tap()
   const dialog = page.getByRole('dialog', { name: 'Tarjeta' })
-  await dialog.getByLabel('Columna').selectOption({ label: 'En curso' })
+  await dialog.getByRole('combobox', { name: 'Columna' }).tap()
+  await page.getByRole('option', { name: 'En curso' }).tap()
   const moved = page.waitForResponse((r) => r.url().includes('/move') && r.ok())
   await dialog.getByRole('button', { name: 'Mover', exact: true }).tap()
   await moved

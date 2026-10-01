@@ -32,9 +32,11 @@ import { cn } from '@/lib/utils'
 import { boardQuery, boardsQuery } from '../boards/api'
 import { useMoveTask } from '../kanban/api'
 import { AddTaskComposer } from '../kanban/AddTaskComposer'
+import { laneTitleClass } from '../kanban/laneColors'
 import { LanesSkeleton } from '../kanban/LanesSkeleton'
-import { TaskCardBody, TaskCardOverlay } from '../kanban/TaskCard'
+import { TaskCard, TaskCardOverlay } from '../kanban/TaskCard'
 import { TaskDetailDialog } from '../kanban/TaskDetailDialog'
+import { useEdgePaging } from '../kanban/useEdgePaging'
 import { generalQuery } from './api'
 
 const isLane = (id: UniqueIdentifier): id is Lane => LANES.some((lane) => lane.id === id)
@@ -51,6 +53,8 @@ export function GeneralBoard({ board }: { board: BoardSummary }) {
   const [searchParams, setSearchParams] = useSearchParams()
   const [activeId, setActiveId] = useState<string | null>(null)
   const lastDragEnd = useRef(0)
+  const scrollerRef = useRef<HTMLDivElement>(null)
+  const canScroll = useEdgePaging(scrollerRef, activeId !== null)
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
     // Long-press en touch: un toque corto abre la tarjeta y el scroll sigue funcionando.
@@ -161,8 +165,8 @@ export function GeneralBoard({ board }: { board: BoardSummary }) {
     onDragCancel: ({ active }) => `Cancelaste el movimiento de ${titleOf(active.id)}.`,
   }
 
-  // Las tarjetas nuevas que se agregan acá son de General.
-  const generalTodo = columnForLane(view.columnsByBoard.get(board.id) ?? [], 'todo')
+  // Las tarjetas nuevas que se agregan acá son de General, en la columna que corresponde.
+  const generalColumn = (lane: Lane) => columnForLane(view.columnsByBoard.get(board.id) ?? [], lane)
   const activeTask = activeId ? view.tasksById.get(activeId) : undefined
   const chipFor = (task: Task) =>
     task.boardId === board.id ? undefined : view.boardsById.get(task.boardId)
@@ -171,6 +175,7 @@ export function GeneralBoard({ board }: { board: BoardSummary }) {
     <DndContext
       sensors={sensors}
       collisionDetection={pointerWithin}
+      autoScroll={{ canScroll }}
       onDragStart={({ active }) => setActiveId(String(active.id))}
       onDragEnd={onDragEnd}
       onDragCancel={() => setActiveId(null)}
@@ -183,34 +188,35 @@ export function GeneralBoard({ board }: { board: BoardSummary }) {
       }}
     >
       {/* En mobile, una columna por vez con swipe (scroll-snap). */}
-      <div className="flex min-h-0 flex-1 items-start gap-3 overflow-x-auto p-3 max-md:snap-x max-md:p-4 max-md:snap-mandatory max-md:scroll-px-4 max-md:[scrollbar-width:none]">
-        {LANES.map((lane) => (
-          <GeneralLane
-            key={lane.id}
-            lane={lane}
-            count={view.lanes[lane.id].length}
-            footer={
-              lane.id === 'todo' &&
-              generalTodo && (
-                <AddTaskComposer
-                  boardId={board.id}
-                  columnId={generalTodo.id}
-                  columnName={lane.name}
+      <div
+        ref={scrollerRef}
+        className="flex min-h-0 flex-1 items-start gap-3 overflow-x-auto p-3 max-md:snap-x max-md:p-4 max-md:snap-mandatory max-md:scroll-px-4 max-md:[scrollbar-width:none]"
+      >
+        {LANES.map((lane) => {
+          const target = generalColumn(lane.id)
+          return (
+            <GeneralLane
+              key={lane.id}
+              lane={lane}
+              count={view.lanes[lane.id].length}
+              footer={
+                target && (
+                  <AddTaskComposer boardId={board.id} columnId={target.id} columnName={lane.name} />
+                )
+              }
+            >
+              {view.lanes[lane.id].map((task) => (
+                <GeneralCard
+                  key={task.id}
+                  task={task}
+                  board={chipFor(task)}
+                  done={lane.id === 'done'}
+                  onOpen={openCard}
                 />
-              )
-            }
-          >
-            {view.lanes[lane.id].map((task) => (
-              <GeneralCard
-                key={task.id}
-                task={task}
-                board={chipFor(task)}
-                done={lane.id === 'done'}
-                onOpen={openCard}
-              />
-            ))}
-          </GeneralLane>
-        ))}
+              ))}
+            </GeneralLane>
+          )
+        })}
       </div>
 
       <DragOverlay>
@@ -238,11 +244,12 @@ type LaneProps = {
 }
 
 function GeneralLane({ lane, count, footer, children }: LaneProps) {
-  // Toda la columna recibe tarjetas, aunque esté vacía.
+  // Toda la columna recibe tarjetas (también el título y el pie), aunque esté vacía.
   const { setNodeRef, isOver } = useDroppable({ id: lane.id })
 
   return (
     <section
+      ref={setNodeRef}
       aria-labelledby={`lane-${lane.id}`}
       className={cn(
         'flex h-full w-66 shrink-0 flex-col rounded-lg bg-lane transition-colors max-md:w-[85vw] max-md:snap-start',
@@ -250,7 +257,10 @@ function GeneralLane({ lane, count, footer, children }: LaneProps) {
       )}
     >
       <header className="flex h-10 shrink-0 items-center gap-1.5 pr-1 pl-3">
-        <h2 id={`lane-${lane.id}`} className="truncate text-[13px] font-medium">
+        <h2
+          id={`lane-${lane.id}`}
+          className={cn('truncate text-[13px] font-medium', laneTitleClass[lane.id])}
+        >
           {lane.name}
         </h2>
         {lane.id === 'done' && (
@@ -262,10 +272,7 @@ function GeneralLane({ lane, count, footer, children }: LaneProps) {
         )}
         <span className="text-xs text-muted-foreground tabular-nums">{count}</span>
       </header>
-      <ol
-        ref={setNodeRef}
-        className="flex min-h-16 flex-1 flex-col gap-1.5 overflow-y-auto px-2 pb-2"
-      >
+      <ol className="flex min-h-16 flex-1 flex-col gap-1.5 overflow-y-auto px-2 pb-2">
         {children}
       </ol>
       {footer}
@@ -285,19 +292,15 @@ function GeneralCard({ task, board, done, onOpen }: CardProps) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: task.id })
 
   return (
-    <li ref={setNodeRef} className={cn('touch-manipulation', isDragging && 'opacity-40')}>
-      <div
-        {...attributes}
-        {...listeners}
-        aria-label={task.title}
-        onClick={() => onOpen(task.id)}
-        onKeyUp={(event) => {
-          if (event.key === 'Enter') onOpen(task.id)
-        }}
-        className="cursor-pointer rounded-md outline-none select-none focus-visible:ring-2 focus-visible:ring-ring [&>div]:hover:border-foreground/20"
-      >
-        <TaskCardBody task={task} done={done} board={board} />
-      </div>
-    </li>
+    <TaskCard
+      task={task}
+      done={done}
+      board={board}
+      setNodeRef={setNodeRef}
+      attributes={attributes}
+      listeners={listeners}
+      dragging={isDragging}
+      onOpen={onOpen}
+    />
   )
 }

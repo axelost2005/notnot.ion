@@ -1,8 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
+import { useRef } from 'react'
 import { Navigate, useNavigate, useParams } from 'react-router'
 import { ErrorState } from '@/components/ErrorState'
-import { NativeSelect } from '@/components/NativeSelect'
 import { boardsQuery } from '../boards/api'
+import { BoardSelect } from '../boards/BoardSelect'
 import { boardStyle } from '../boards/colors'
 import { OfflineBanner } from '../pwa/OfflineBanner'
 import { NotesPanel } from './NotesPanel'
@@ -15,6 +16,8 @@ export function NotesWindow() {
   const { slug } = useParams()
   const navigate = useNavigate()
   const boards = useQuery(boardsQuery)
+  // Al elegir otro tablero el foco va al composer, no de vuelta al selector.
+  const switched = useRef(false)
 
   if (boards.isPending) return null
   if (boards.isError) {
@@ -40,19 +43,23 @@ export function NotesWindow() {
       <title>{`Notas de ${board.name} – notnot.ion`}</title>
       <OfflineBanner />
       <header className="flex h-12 shrink-0 items-center gap-2.5 border-b px-3">
-        <span aria-hidden="true" className="size-2.5 shrink-0 rounded-full bg-(--board)" />
-        <NativeSelect
+        <BoardSelect
           aria-label="Tablero"
-          value={board.slug}
-          onChange={(event) => void navigate(`/notas/${event.target.value}`, { replace: true })}
-          className="min-w-0 flex-1"
-        >
-          {options.map((b) => (
-            <option key={b.id} value={b.slug}>
-              {b.name}
-            </option>
-          ))}
-        </NativeSelect>
+          boards={options}
+          value={board.id}
+          onValueChange={(id) => {
+            const next = options.find((b) => b.id === id)
+            if (!next) return
+            switched.current = true
+            void navigate(`/notas/${next.slug}`, { replace: true })
+          }}
+          onCloseAutoFocus={(event) => {
+            if (!switched.current) return
+            switched.current = false
+            event.preventDefault()
+          }}
+          className="flex-1"
+        />
       </header>
       {/* Al cambiar de tablero el composer se vuelve a enfocar: se sigue escribiendo. */}
       <NotesPanel key={board.id} board={board} autoFocus className="min-h-0 flex-1" />

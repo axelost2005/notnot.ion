@@ -1,4 +1,4 @@
-import type { BoardDetail, BoardSummary, Note, NotesPage, Task } from '@notnot/shared'
+import type { BoardSummary, Column, Note, NotesPage, Task } from '@notnot/shared'
 import { parseNote, positionAfterLast, positionBeforeFirst, sortByPosition } from '@notnot/shared'
 import {
   infiniteQueryOptions,
@@ -9,6 +9,7 @@ import {
 } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { boardQuery, boardsQuery } from '../boards/api'
+import { generalQuery } from '../general/api'
 
 /** Una nota recién escrita se muestra antes de que la API conteste. */
 export type ClientNote = Note & { pending?: boolean }
@@ -115,7 +116,10 @@ export function useDeleteNote(boardId: string) {
 
 type ToggleVariables = { taskId: string; boardId: string; done: boolean }
 
-/** Tildar/destildar desde la nota. Optimista en la nota y en el tablero de la tarjeta. */
+/**
+ * Tildar/destildar desde la nota o desde la tarjeta. Optimista en las notas, en el tablero de
+ * la tarjeta y en General.
+ */
 export function useToggleTask() {
   const queryClient = useQueryClient()
   return useMutation({
@@ -124,8 +128,10 @@ export function useToggleTask() {
     onMutate: async ({ taskId, boardId, done }) => {
       await queryClient.cancelQueries({ queryKey: ['notes'] })
       await queryClient.cancelQueries({ queryKey: boardQuery(boardId).queryKey })
+      await queryClient.cancelQueries({ queryKey: generalQuery.queryKey })
       const notes = queryClient.getQueriesData<NotesData>({ queryKey: ['notes'] })
       const board = queryClient.getQueryData(boardQuery(boardId).queryKey)
+      const general = queryClient.getQueryData(generalQuery.queryKey)
 
       queryClient.setQueriesData<NotesData>({ queryKey: ['notes'] }, (data) =>
         mapNotes(data, (list) =>
@@ -138,14 +144,20 @@ export function useToggleTask() {
           })),
         ),
       )
-      queryClient.setQueryData(boardQuery(boardId).queryKey, (detail) =>
-        detail ? toggleInBoard(detail, taskId, done) : detail,
+      queryClient.setQueryData(
+        boardQuery(boardId).queryKey,
+        (detail) => detail && toggleIn(detail, taskId, boardId, done),
       )
-      return { notes, board }
+      queryClient.setQueryData(
+        generalQuery.queryKey,
+        (data) => data && toggleIn(data, taskId, boardId, done),
+      )
+      return { notes, board, general }
     },
     onError: (_error, { boardId }, context) => {
       for (const [key, data] of context?.notes ?? []) queryClient.setQueryData(key, data)
       if (context?.board) queryClient.setQueryData(boardQuery(boardId).queryKey, context.board)
+      if (context?.general) queryClient.setQueryData(generalQuery.queryKey, context.general)
     },
     onSettled: (_task, _error, { boardId }) => {
       void refreshNotes(queryClient)
@@ -157,18 +169,26 @@ export function useToggleTask() {
   })
 }
 
-/** Lo mismo que hace la API: al final de terminadas o arriba de la primera normal. */
-function toggleInBoard(board: BoardDetail, taskId: string, done: boolean): BoardDetail {
-  const others = board.tasks.filter((t) => t.id !== taskId)
+/**
+ * Lo mismo que hace la API: al final de terminadas o arriba de la primera normal. Sirve para un
+ * tablero y para General (que tiene las columnas de todos).
+ */
+function toggleIn<T extends { columns: Column[]; tasks: Task[] }>(
+  data: T,
+  taskId: string,
+  boardId: string,
+  done: boolean,
+): T {
+  const columns = data.columns.filter((c) => c.boardId === boardId)
   const target = done
-    ? sortByPosition(board.columns.filter((c) => !c.isDone))[0]
-    : board.columns.find((c) => c.isDone)
-  if (!target) return board
-  const siblings = others.filter((t) => t.columnId === target.id)
+    ? sortByPosition(columns.filter((c) => !c.isDone))[0]
+    : columns.find((c) => c.isDone)
+  if (!target) return data
+  const siblings = data.tasks.filter((t) => t.columnId === target.id && t.id !== taskId)
   const position = done ? positionBeforeFirst(siblings) : positionAfterLast(siblings)
   return {
-    ...board,
-    tasks: board.tasks.map((t) =>
+    ...data,
+    tasks: data.tasks.map((t) =>
       t.id === taskId
         ? {
             ...t,

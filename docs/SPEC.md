@@ -97,11 +97,11 @@ La web manda en cada pedido `X-Day-Start` con la medianoche de hoy en el disposi
 - Rutas: `/unlock`, `/b/:slug` (la web resuelve slug → id con la lista de tableros) y `/notas/:slug` (la ventana de notas). `/` redirige al último tablero abierto o a General.
 - Desktop: sidebar (General fijo arriba con el total de abiertas, tableros con color y contador de abiertas, archivados colapsados, "+ Nuevo tablero", "Bloquear"), kanban al centro con scroll horizontal, panel de notas a la derecha (~360px, plegable).
 - Header del tablero: "Historial" (panel lateral con las terminadas, agrupadas por día; en General, las de todos con el chip de su tablero) y, en desktop, "Abrir las notas en otra ventana".
-- Ventana de notas (`/notas/:slug`): una ventana chica aparte (`window.open`, ~400×640) con solo el panel de notas y un selector de tablero arriba. Cambiar de tablero cambia dónde se escriben las notas y a dónde van las tareas sin `@`. Lo que cambia en una ventana se refresca en las otras (BroadcastChannel).
-- General: tres columnas fijas por estado con las tarjetas de todos los tableros activos. "Por hacer" = la primera columna normal de cada tablero, "En curso" = las otras normales, "Hecho" = la de terminadas. Cada tarjeta muestra el chip de su tablero (las de General no llevan). Dentro de cada columna van agrupadas por tablero, en el orden de la sidebar. Arrastrar una tarjeta a otra columna la mueve al final de esa columna en su propio tablero ("En curso" va a la segunda columna normal; si el tablero no tiene, avisa y no la mueve). No se reordena dentro de una columna ni se editan las columnas de General. "Agregar tarjeta" en "Por hacer" crea una tarea de General.
-- Columna: título, contador, "+ Agregar tarjeta" al pie y menú (renombrar, marcar como terminadas, borrar).
-- Tarjeta: click abre el detalle (título, descripción, mover a otro tablero o columna, borrar, link a la nota de origen).
-- Mobile (<768px): header con selector de tablero, tabs abajo "Tablero" / "Notas", columnas de a una con swipe (scroll-snap). Reordenar dentro de la columna con long-press; cambiar de columna o tablero con "Mover a…".
+- Ventana de notas (`/notas/:slug`): una ventana chica aparte (`window.open`, ~400×640) con solo el panel de notas y un selector de tablero arriba (desplegable propio, con el punto de color de cada tablero). Cambiar de tablero cambia dónde se escriben las notas y a dónde van las tareas sin `@`. Lo que cambia en una ventana se refresca en las otras (BroadcastChannel).
+- General: tres columnas fijas por estado con las tarjetas de todos los tableros activos. "Por hacer" = la primera columna normal de cada tablero, "En curso" = las otras normales, "Hecho" = la de terminadas. Cada tarjeta muestra el chip de su tablero (las de General no llevan). Dentro de cada columna van agrupadas por tablero, en el orden de la sidebar. Arrastrar una tarjeta a otra columna la mueve al final de esa columna en su propio tablero ("En curso" va a la segunda columna normal; si el tablero no tiene, avisa y no la mueve). No se reordena dentro de una columna ni se editan las columnas de General. "Agregar tarjeta" en cada columna crea una tarea de General en la columna que corresponde.
+- Columna: título con el color de su rol (la primera normal celeste, las otras amarillas, la de terminadas verde), contador, "+ Agregar tarjeta" al pie y menú (renombrar, marcar como terminadas, borrar). Toda la columna recibe lo que se suelta.
+- Tarjeta: una fila con un checkbox (tilda y destilda como desde la nota) y el título en negrita con una línea de la descripción debajo. Click abre el detalle (título, descripción, mover a otro tablero o columna, borrar, link a la nota de origen).
+- Mobile (<768px): header con selector de tablero, tabs abajo "Tablero" / "Notas", columnas de a una con swipe (scroll-snap). Reordenar dentro de la columna con long-press; arrastrar una tarjeta hasta el borde y esperar pasa a la columna de al lado. También "Mover a…".
 - Estética sobria y prolija tipo Linear, claro/oscuro según el sistema, color de acento por tablero. Estados vacíos y de carga cuidados. Toasts para errores.
 - Accesible: drag & drop con teclado, labels en botones de ícono, foco visible.
 - Datos con TanStack Query: refetch al volver a la app y optimistic updates al mover tarjetas, tildar y crear notas.
@@ -207,6 +207,41 @@ Un PR por paso, en este orden:
 4. General: Inbox pasa a ser General (`isInbox` → `isGeneral`, nombre y slug `general` si está libre), `GET /general`, su kanban por estado con drag & drop entre columnas, contador total en la sidebar.
 
 **Listo cuando:** el e2e escribe `algo` + Enter y aparece la tarjeta con el composer otra vez en `[] `; abre la ventana de notas, cambia de tablero y la tarea cae en el elegido (y la ventana principal la muestra sin recargar); con el reloj del navegador en mañana, la tarjeta terminada ya no está en "Hecho" y sí en el Historial; General muestra tarjetas de dos tableros con su chip y arrastrar una a "En curso" la mueve en su tablero.
+
+### Fase 6 — Correcciones, imágenes, Notas y Finanzas
+Una rama y un PR por paso, en este orden. Producción tiene datos reales: las migraciones solo agregan (nada de resets).
+
+1. **Correcciones.**
+   - Selector de tablero propio en la ventana de notas: popover con el punto de color de cada tablero, el actual marcado, y teclado y foco bien. El mismo componente en "Mover a…" del detalle de la tarjeta.
+   - Tarjeta como fila: checkbox a la izquierda y, a la derecha, el título en negrita y una línea de la descripción en gris cortada con "…". El checkbox tilda y destilda como desde la nota (`toggle-done`), no abre la tarjeta ni la arrastra y anda con teclado. En General, con el chip del tablero. Sin el `[]` ni el ícono de descripción.
+   - "En curso" recibe tarjetas: toda la columna es zona para soltar (también el título y el pie), con mouse y con touch, en los tableros y en General. En General, "Agregar tarjeta" en las tres columnas: crea tareas de General en la columna que corresponde.
+   - Título de las columnas con color según su rol (`laneOf`): la primera normal celeste, las otras normales amarillas y la de terminadas verde. Tokens en `index.css` para claro y oscuro, con buen contraste.
+
+   **Listo cuando:** el e2e cambia de tablero en la ventana de notas con el teclado y sigue escribiendo; tilda y destilda una tarjeta desde su checkbox (en un tablero y en General) sin abrirla; la tarjeta muestra la primera línea de la descripción; con "Por hacer" y "Hecho" llenas, arrastrar a "En curso" vacía la mueve (con mouse y con touch, también soltando sobre el título), en un tablero y en General; y en General se agrega una tarjeta en "En curso" y otra en "Hecho".
+
+2. **Imágenes en las tareas.**
+   - En el detalle de la tarjeta: pegar (Ctrl+V), arrastrar (en la compu) o el botón "Adjuntar imagen" (en el celu abre la galería o la cámara). El navegador la achica (2000 px como máximo) y la pasa a WebP antes de subirla.
+   - Miniaturas chicas que se pueden borrar (con confirmación). Al tocar una, se agranda desde la miniatura (GSAP Flip) a un tamaño grande pero no de pantalla completa, con el fondo oscurecido; se cierra con click, Esc o tocando afuera. Con `prefers-reduced-motion`, sin animación.
+   - Privadas: Vercel Blob privado, un store para Development y Preview y otro para Production. La API las sirve detrás del candado con `Cache-Control: private, max-age=31536000, immutable` (no cambian una vez subidas).
+   - Miniaturas y visor como componentes reutilizables (los usa Finanzas).
+
+   **Listo cuando:** el e2e adjunta una imagen con el input de archivo y otra pegándola, ve las miniaturas, agranda una y la cierra con Esc, recarga y siguen ahí; sin cookie, la imagen da 401; borrar una la saca.
+
+3. **Notas.** Una sección aparte de los tableros para guardar cosas que no son tareas.
+   - En la sidebar, abajo de los tableros: un árbol plegable de carpetas (con carpetas adentro) y notas, que pueden estar en una carpeta o sueltas en la raíz. Carpetas primero, en orden alfabético.
+   - Crear, renombrar, mover ("Mover a…") y borrar carpetas y notas. Borrar una carpeta con contenido pide confirmación y borra todo lo de adentro.
+   - Cada nota tiene título y texto, y se guarda sola mientras escribís.
+   - En el código son `Folder` y `Page` (`Note` son las notas de los tableros). Ruta web: `/p/:id`.
+   - En el celu se abre desde el mismo panel lateral de los tableros; en una nota, el título del header lo abre.
+
+   **Listo cuando:** el e2e crea una carpeta con una subcarpeta, una nota adentro y otra suelta; escribe en una, recarga y el texto sigue; la mueve a la raíz con "Mover a…"; renombra la carpeta; borrarla pide confirmación y se lleva lo de adentro. En 375 px se llega a una nota desde el panel lateral.
+
+4. **Finanzas.** Un registro de los pagos que me hicieron, con sus comprobantes, para poder mostrar qué se pagó y qué no.
+   - Solo ingresos, en ARS o USD. Cada pago: fecha, monto, moneda, cliente (opcional, uno de los tableros), categoría (libre, con autocompletado de las ya usadas), descripción y comprobantes (imágenes, con las miniaturas y el visor del paso 2).
+   - Organizado por mes (`/finanzas/2026-10`; `/finanzas` abre el actual): flechas para ir y volver y la lista de los meses con pagos. Totales del mes por moneda. Dentro del mes, por fecha o agrupados por categoría (con subtotales).
+   - En la sidebar, "Finanzas" abajo de Notas. En el código, `Payment`.
+
+   **Listo cuando:** el e2e carga dos pagos en el mes (uno en ARS con cliente y comprobante, otro en USD), ve los totales por moneda, los agrupa por categoría, cambia de mes y vuelve, edita uno y borra el otro.
 
 ## Después (no ahora)
 - IA para procesar notas desordenadas (Claude API desde la API, con confirmación antes de crear).
