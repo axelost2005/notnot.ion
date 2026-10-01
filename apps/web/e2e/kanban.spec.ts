@@ -13,6 +13,8 @@ async function titlesIn(page: Page, name: string) {
 
 /** Arrastre con mouse real: dnd-kit necesita movimientos intermedios. */
 async function dragWithMouse(page: Page, source: Locator, target: Locator, edge: 'top' | 'center') {
+  // Con el panel de notas abierto, la columna puede quedar fuera de vista.
+  await source.scrollIntoViewIfNeeded()
   const from = await source.boundingBox()
   const to = await target.boundingBox()
   if (!from || !to) throw new Error('No se pudo medir la tarjeta o el destino')
@@ -142,7 +144,7 @@ test('columnas: agregar, renombrar, elegir la de terminadas y borrar', async ({ 
   await page.getByLabel('Nombre de la nueva columna').fill('Revisión')
   await page.getByRole('button', { name: 'Agregar columna' }).click()
   // Va antes de "Hecho".
-  await expect(page.getByRole('main').getByRole('heading', { level: 2 })).toHaveText([
+  await expect(page.locator('section h2')).toHaveText([
     'Por hacer',
     'En curso',
     'Revisión',
@@ -172,9 +174,5 @@ test('columnas: agregar, renombrar, elegir la de terminadas y borrar', async ({ 
   // Ahora "Hecho" está vacía y no es la de terminadas: se puede borrar.
   await page.getByRole('button', { name: 'Opciones de la columna Hecho' }).click()
   await page.getByRole('menuitem', { name: /Borrar columna/ }).click()
-  await expect(page.getByRole('main').getByRole('heading', { level: 2 })).toHaveText([
-    'Por hacer',
-    'En curso',
-    'QA',
-  ])
+  await expect(page.locator('section h2')).toHaveText(['Por hacer', 'En curso', 'QA'])
 })
