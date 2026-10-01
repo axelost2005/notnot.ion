@@ -9,6 +9,7 @@ import {
 import { useQuery } from '@tanstack/react-query'
 import { Trash2 } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
+import { Link } from 'react-router'
 import { toast } from 'sonner'
 import { NativeSelect } from '@/components/NativeSelect'
 import {
@@ -89,6 +90,8 @@ function TaskDetailForm({
     : (targetColumns.find((c) => !c.isDone)?.id ?? '')
 
   const activeBoards = (boards.data ?? []).filter((b) => b.archivedAt === null || b.id === board.id)
+  // La nota de origen puede estar en otro tablero.
+  const noteBoard = task.noteId ? boards.data?.find((b) => b.id === task.noteBoardId) : undefined
   const pending = update.isPending || move.isPending
 
   async function onSave(event: FormEvent) {
@@ -133,6 +136,17 @@ function TaskDetailForm({
         <DialogDescription>
           Creada el {dateFormat.format(new Date(task.createdAt))}
           {task.completedAt && `, terminada el ${dateFormat.format(new Date(task.completedAt))}`}
+          {noteBoard && (
+            <>
+              {'. '}
+              <Link
+                to={`/b/${noteBoard.slug}?nota=${task.noteId}`}
+                className="text-foreground underline underline-offset-2"
+              >
+                {noteBoard.id === board.id ? 'Ver la nota' : `Ver la nota en ${noteBoard.name}`}
+              </Link>
+            </>
+          )}
         </DialogDescription>
       </DialogHeader>
 

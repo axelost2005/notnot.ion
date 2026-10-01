@@ -1,8 +1,14 @@
 import type { MoveTaskInput, Task } from '@notnot/shared'
-import { isValidSlot, positionAfterLast, positionForSlot } from '@notnot/shared'
+import {
+  isValidSlot,
+  positionAfterLast,
+  positionBeforeFirst,
+  positionForSlot,
+  sortByPosition,
+} from '@notnot/shared'
 import { prisma } from '../db'
 import { badRequest, conflict, notFound } from '../middleware/errors'
-import { toTask } from './boards'
+import { toTask, withNoteBoard } from './boards'
 
 type NewTask = { columnId: string; title: string; description?: string | null }
 type TaskChanges = { title?: string; description?: string | null }
@@ -24,6 +30,7 @@ export async function createTask(input: NewTask): Promise<Task> {
       position: positionAfterLast(column.tasks),
       completedAt: column.isDone ? new Date() : null,
     },
+    include: withNoteBoard,
   })
   return toTask(task)
 }
@@ -32,6 +39,7 @@ export async function updateTask(id: string, changes: TaskChanges): Promise<Task
   const task = await prisma.task.update({
     where: { id },
     data: { title: changes.title, description: changes.description },
+    include: withNoteBoard,
   })
   return toTask(task)
 }
@@ -76,6 +84,34 @@ export async function moveTask(id: string, input: MoveTaskInput): Promise<Task> 
       // Se marca al entrar a la de terminadas y se limpia al salir.
       completedAt: column.isDone ? (task.completedAt ?? new Date()) : null,
     },
+    include: withNoteBoard,
   })
   return toTask(moved)
+}
+
+/**
+ * Tildar: al final de la columna de terminadas. Destildar: arriba de la primera columna
+ * normal (vuelve a quedar a la vista).
+ */
+export async function toggleTaskDone(id: string): Promise<Task> {
+  const task = await prisma.task.findUnique({ where: { id }, include: { column: true } })
+  if (!task) throw notFound('La tarjeta no existe')
+
+  const columns = await prisma.column.findMany({
+    where: { boardId: task.boardId },
+    include: { tasks: { where: { id: { not: id } }, select: { position: true } } },
+  })
+  const target = task.column.isDone
+    ? sortByPosition(columns.filter((c) => !c.isDone))[0]
+    : columns.find((c) => c.isDone)
+  if (!target) throw conflict('Al tablero le falta la columna para moverla')
+
+  const updated = await prisma.task.update({
+    where: { id },
+    data: task.column.isDone
+      ? { columnId: target.id, position: positionBeforeFirst(target.tasks), completedAt: null }
+      : { columnId: target.id, position: positionAfterLast(target.tasks), completedAt: new Date() },
+    include: withNoteBoard,
+  })
+  return toTask(updated)
 }

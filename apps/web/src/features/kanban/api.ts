@@ -11,6 +11,7 @@ import { positionForSlot } from '@notnot/shared'
 import { useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { boardQuery, boardsQuery } from '../boards/api'
+import { refreshNotes } from '../notes/api'
 
 function updateBoardCache(
   queryClient: QueryClient,
@@ -48,6 +49,7 @@ export function useUpdateTask(boardId: string) {
         ...board,
         tasks: board.tasks.map((t) => (t.id === task.id ? task : t)),
       }))
+      void refreshNotes(queryClient)
     },
   })
 }
@@ -62,6 +64,7 @@ export function useDeleteTask(boardId: string) {
         tasks: board.tasks.filter((t) => t.id !== id),
       }))
       void refreshCounts(queryClient)
+      void refreshNotes(queryClient)
     },
   })
 }
@@ -122,6 +125,7 @@ export function useMoveTask() {
     },
     onSettled: (_moved, _error, { task, boardId }) => {
       void refreshCounts(queryClient)
+      void refreshNotes(queryClient)
       if (boardId !== task.boardId) {
         void queryClient.invalidateQueries({ queryKey: boardQuery(boardId).queryKey })
       }
@@ -157,6 +161,7 @@ export function useUpdateColumn(boardId: string) {
         // Cambiaron dos columnas y las fechas de terminadas: mejor traer todo de nuevo.
         void queryClient.invalidateQueries({ queryKey: boardQuery(boardId).queryKey })
         void refreshCounts(queryClient)
+        void refreshNotes(queryClient)
         return
       }
       updateBoardCache(queryClient, boardId, (board) => ({

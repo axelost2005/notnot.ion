@@ -1,6 +1,6 @@
 import { createTaskSchema, idParamsSchema, moveTaskSchema, updateTaskSchema } from '@notnot/shared'
 import { Router } from 'express'
-import { createTask, deleteTask, moveTask, updateTask } from '../services/tasks'
+import { createTask, deleteTask, moveTask, toggleTaskDone, updateTask } from '../services/tasks'
 
 export const tasksRouter = Router()
 
@@ -25,4 +25,9 @@ tasksRouter.post('/tasks/:id/move', async (req, res) => {
   const { id } = idParamsSchema.parse(req.params)
   const input = moveTaskSchema.parse(req.body)
   res.json(await moveTask(id, input))
+})
+
+tasksRouter.post('/tasks/:id/toggle-done', async (req, res) => {
+  const { id } = idParamsSchema.parse(req.params)
+  res.json(await toggleTaskDone(id))
 })

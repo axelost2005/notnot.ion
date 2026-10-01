@@ -44,7 +44,10 @@ export function toColumn(column: Db.Column): Column {
   }
 }
 
-export function toTask(task: Db.Task): Task {
+/** Para saber en qué tablero vive la nota de origen de una tarea. */
+export const withNoteBoard = { note: { select: { boardId: true } } } as const
+
+export function toTask(task: Db.Task & { note?: { boardId: string } | null }): Task {
   return {
     id: task.id,
     boardId: task.boardId,
@@ -55,6 +58,7 @@ export function toTask(task: Db.Task): Task {
     completedAt: task.completedAt?.toISOString() ?? null,
     noteId: task.noteId,
     noteLine: task.noteLine,
+    noteBoardId: task.note?.boardId ?? null,
     createdAt: task.createdAt.toISOString(),
     updatedAt: task.updatedAt.toISOString(),
   }
@@ -79,7 +83,7 @@ async function getBoardSummary(id: string): Promise<BoardSummary> {
 export async function getBoard(id: string): Promise<BoardDetail> {
   const board = await prisma.board.findUnique({
     where: { id },
-    include: { columns: true, tasks: true },
+    include: { columns: true, tasks: { include: withNoteBoard } },
   })
   if (!board) throw notFound('El tablero no existe')
   return {
@@ -142,5 +146,12 @@ export async function deleteBoard(id: string): Promise<void> {
   const board = await prisma.board.findUnique({ where: { id }, select: { isInbox: true } })
   if (!board) throw notFound('El tablero no existe')
   if (board.isInbox) throw conflict('Inbox no se puede borrar')
-  await prisma.board.delete({ where: { id } })
+  await prisma.$transaction([
+    // Las tareas de otros tableros que salieron de sus notas pierden el vínculo con la nota.
+    prisma.task.updateMany({
+      where: { note: { boardId: id } },
+      data: { noteId: null, noteLine: null },
+    }),
+    prisma.board.delete({ where: { id } }),
+  ])
 }
