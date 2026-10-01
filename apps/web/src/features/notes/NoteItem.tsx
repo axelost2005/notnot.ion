@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { boardStyle } from '../boards/colors'
+import { BoardChip } from '../boards/BoardChip'
 import { useDeleteNote, useToggleTask, type ClientNote } from './api'
 import { fullDateTime, splitLinks, timeAgo } from './format'
 
@@ -112,8 +112,10 @@ type TaskLineProps = {
 function TaskLine({ task, board, showBoard, disabled }: TaskLineProps) {
   const toggle = useToggleTask()
   const navigate = useNavigate()
-  // La ventana de notas es solo para escribir: ahí el título no abre la tarjeta.
+  // La ventana de notas es solo para escribir, y una del historial no está en el tablero:
+  // en esos casos el título no abre la tarjeta.
   const inNotesWindow = useMatch('/notas/:slug') !== null
+  const opensCard = !inNotesWindow && !task.archived
   // El cache se actualiza después de un await: sin esto el checkbox vuelve atrás un instante.
   const [optimistic, setOptimistic] = useState<boolean | null>(null)
   const done = optimistic ?? task.done
@@ -136,7 +138,7 @@ function TaskLine({ task, board, showBoard, disabled }: TaskLineProps) {
         aria-label={`${done ? 'Destildar' : 'Tildar'} ${task.title}`}
         className="mt-[5px] size-3.5 shrink-0 cursor-pointer accent-foreground disabled:cursor-default"
       />
-      {inNotesWindow ? (
+      {!opensCard ? (
         <span className={cn('min-w-0 break-words', done && 'text-muted-foreground')}>
           {task.title}
         </span>
@@ -153,15 +155,7 @@ function TaskLine({ task, board, showBoard, disabled }: TaskLineProps) {
           {task.title}
         </button>
       )}
-      {showBoard && board && (
-        <span
-          style={boardStyle(board.color)}
-          className="mt-[3px] inline-flex max-w-32 shrink-0 items-center gap-1 rounded-sm bg-muted px-1.5 text-xs leading-5 text-muted-foreground"
-        >
-          <span aria-hidden="true" className="size-1.5 shrink-0 rounded-full bg-(--board)" />
-          <span className="truncate">{board.name}</span>
-        </span>
-      )}
+      {showBoard && board && <BoardChip board={board} className="mt-[3px]" />}
     </div>
   )
 }

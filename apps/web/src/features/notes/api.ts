@@ -64,6 +64,7 @@ export function useCreateNote() {
           title: task.title,
           boardId: bySlug.get(task.boardSlug) ?? board.id,
           done: false,
+          archived: false,
         })),
         pending: true,
       }
@@ -130,7 +131,10 @@ export function useToggleTask() {
         mapNotes(data, (list) =>
           list.map((note) => ({
             ...note,
-            tasks: note.tasks.map((t) => (t.id === taskId ? { ...t, done: !done } : t)),
+            // Tildar o destildar la saca del historial (si estaba).
+            tasks: note.tasks.map((t) =>
+              t.id === taskId ? { ...t, done: !done, archived: false } : t,
+            ),
           })),
         ),
       )
@@ -147,6 +151,8 @@ export function useToggleTask() {
       void refreshNotes(queryClient)
       void queryClient.invalidateQueries({ queryKey: boardQuery(boardId).queryKey })
       void queryClient.invalidateQueries({ queryKey: boardsQuery.queryKey })
+      // Si estaba en el historial, sale de ahí.
+      void queryClient.invalidateQueries({ queryKey: ['history'] })
     },
   })
 }

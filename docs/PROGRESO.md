@@ -2,7 +2,7 @@
 
 ## Fase actual
 
-**Fase 5 — Ventana de notas, General e Historial: en curso.** Las fases 0 a 4 están hechas y la app está en producción. De la Fase 5 están hechos los pasos 1 (composer con `[] `) y 2 (ventana de notas); siguen el Historial y General.
+**Fase 5 — Ventana de notas, General e Historial: en curso.** Las fases 0 a 4 están hechas y la app está en producción. De la Fase 5 están hechos los pasos 1 (composer con `[] `), 2 (ventana de notas) y 3 (Historial); sigue General.
 
 ## Hecho
 
@@ -52,6 +52,7 @@
 
 - Composer: arranca con `[] ` y vuelve a `[] ` (con el foco puesto) después de enviar, así cada Enter crea una tarjeta. e2e: dos tareas seguidas con Enter y Enter con los corchetes solos no manda nada.
 - Ventana de notas (`/notas/:slug`): botón con tooltip en el header (solo desktop) que abre una ventana de 400×640 (siempre la misma: si ya está abierta, cambia de tablero y pasa adelante). Arriba tiene el selector de tablero; el composer se enfoca al abrirla y al cambiar de tablero. Ahí el título de una tarea no navega (se tilda nada más). Cada cambio guardado avisa a las otras ventanas por `BroadcastChannel` y esas refrescan sus datos. El chequeo del candado pasó a `SessionGate`, un layout de rutas que comparten la app y la ventana. e2e: abre la ventana, cambia de tablero, escribe una tarea y la ventana principal la muestra sin recargar.
+- Historial: `Task.archivedAt` (migración `task_archived_at`). La web manda `X-Day-Start` (la medianoche del dispositivo) en cada pedido; al leer un tablero, sus notas o el historial, la API pasa al historial lo terminado antes. `GET /history?boardId=&before=`, 50 por página. Las del historial no se ven en el kanban ni cuentan como vecinas al mover o para "columna vacía"; destildarlas desde su nota o moverlas las vuelve al tablero. Botón "Historial" en el header: panel lateral agrupado por día ("Ayer", "Lunes, 28 de septiembre"…). En la nota, una tarea del historial se ve tildada y no abre la tarjeta. e2e con el reloj del navegador en mañana: "Hecho" vacío, la tarea en "Ayer" y, al destildarla en la nota, vuelve a "Por hacer".
 
 ## Decisiones
 
@@ -87,6 +88,8 @@
 - **Bundle**: las dependencias van en un chunk aparte (`vendor`, ~200 kB gzip) y el código de la app en otro (~21 kB gzip): un deploy solo vuelve a bajar lo que cambió. El aviso de tamaño de Vite se subió a 700 kB porque el chunk de librerías es grande por naturaleza.
 - **e2e de la PWA**: el proyecto `pwa` de Playwright hace `vite build` + `vite preview` (puerto 4173) y usa la API de dev a través del proxy de la preview.
 - **Composer con `[] `**: si queda solo el marcador, no se envía ni se guarda como borrador. Shift+Enter sigue siendo un salto de línea común (no continúa la lista). Al enfocarlo vacío (con Tab o al abrirse enfocado), el cursor va después de los corchetes; si ya hay texto seleccionado, se respeta.
+- **Historial sin tareas programadas**: el día lo define el dispositivo (header `X-Day-Start` con su medianoche) y el archivado pasa al leer (tablero, notas, historial). Se descartó un cron de Vercel: en Hobby corre una vez por día con una hora de margen, necesita una ruta fuera del candado y no anda en local. Si el header falta o está a más de 48 h de la hora del server, no se archiva nada.
+- **Tarjetas del historial**: quedan en su columna con `archivedAt` (no se mueven). Cambiar la columna de terminadas no las reabre; si se borra una columna que las tiene (porque antes era la de terminadas), pasan a la de terminadas actual. `toggle-done` decide por `completedAt` (lo que muestra la nota) y no por la columna.
 - **Ventana de notas**: `window.open` común, que anda en cualquier navegador, en vez de Document Picture-in-Picture (siempre encima, pero solo Chrome/Edge, una sola ventana flotante a la vez y los diálogos se abrirían en la ventana principal). Para tenerla siempre encima en Windows: PowerToys, Win+Ctrl+T.
 - **Dev**: si corrés comandos de pnpm con la app levantada, pnpm 11 puede regenerar el cliente de Prisma y `node --watch` reinicia la API (algún pedido puede dar 502 en ese momento).
 
