@@ -117,8 +117,13 @@ test('detalle: editar, mover a otra columna y borrar', async ({ page }) => {
   const dialog = page.getByRole('dialog', { name: 'Tarjeta' })
   await dialog.getByLabel('Título').fill('Llamar al cliente por la factura')
   await dialog.getByLabel('Descripción').fill('Pedir el CUIT nuevo.')
-  await dialog.getByLabel('Columna').selectOption({ label: 'Hecho' })
   await dialog.getByRole('button', { name: 'Guardar' }).click()
+  await expect(dialog).toBeHidden()
+
+  // "Mover a…" tiene su propio botón.
+  await card(page, 'Llamar al cliente por la factura').click()
+  await dialog.getByLabel('Columna').selectOption({ label: 'Hecho' })
+  await dialog.getByRole('button', { name: 'Mover', exact: true }).click()
   await expect(dialog).toBeHidden()
 
   const done = column(page, 'Hecho')

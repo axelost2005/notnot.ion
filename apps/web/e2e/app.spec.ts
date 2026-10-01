@@ -1,0 +1,24 @@
+import { expect, test } from '@playwright/test'
+import { unlock } from './helpers'
+
+test.beforeEach(async ({ page }) => {
+  await unlock(page)
+})
+
+test('el atajo "Nueva nota" abre Inbox en Notas con el composer listo', async ({ page }) => {
+  await page.goto('/?nueva-nota')
+  await expect(page).toHaveURL(/\/b\/inbox\?vista=notas&escribir=1$/)
+  await expect(page.getByRole('combobox', { name: 'Nueva nota en Inbox' })).toBeFocused()
+})
+
+test('sin conexión aparece el aviso y se va al volver', async ({ page, context }) => {
+  await page.goto('/b/inbox')
+  await expect(page.getByRole('heading', { level: 1, name: 'Inbox' })).toBeVisible()
+
+  await context.setOffline(true)
+  const banner = page.getByRole('status').filter({ hasText: 'Sin conexión' })
+  await expect(banner).toBeVisible()
+
+  await context.setOffline(false)
+  await expect(banner).toBeHidden()
+})
