@@ -1,11 +1,14 @@
 import type { BoardSummary } from '@notnot/shared'
 import { useQuery } from '@tanstack/react-query'
-import { useEffect } from 'react'
-import { Link, useParams } from 'react-router'
+import { PanelRight } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Link, useParams, useSearchParams } from 'react-router'
 import { ErrorState } from '@/components/ErrorState'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { KanbanBoard } from '../kanban/KanbanBoard'
+import { NotesPanel } from '../notes/NotesPanel'
+import { readPanelOpen, writePanelOpen } from '../notes/storage'
 import { boardQuery, boardsQuery, useUpdateBoard } from './api'
 import { BoardActionsMenu } from './BoardActionsMenu'
 import { boardStyle } from './colors'
@@ -47,6 +50,24 @@ export function BoardPage() {
 
 function BoardView({ board }: { board: BoardSummary }) {
   const detail = useQuery(boardQuery(board.id))
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [notesOpen, setNotesOpen] = useState(readPanelOpen)
+  // Un link a una nota (?nota=) abre el panel aunque estuviera plegado.
+  const showNotes = notesOpen || searchParams.has('nota')
+
+  function toggleNotes() {
+    setNotesOpen(!showNotes)
+    writePanelOpen(!showNotes)
+    if (showNotes && searchParams.has('nota')) {
+      setSearchParams(
+        (params) => {
+          params.delete('nota')
+          return params
+        },
+        { replace: true },
+      )
+    }
+  }
 
   useEffect(() => {
     writeLastBoard(board.slug)
@@ -55,23 +76,36 @@ function BoardView({ board }: { board: BoardSummary }) {
   return (
     <div style={boardStyle(board.color)} className="flex h-full min-h-0 flex-col">
       <title>{`${board.name} – notnot.ion`}</title>
-      <BoardHeader board={board} />
-      {detail.isPending ? (
-        <LanesSkeleton />
-      ) : detail.isError ? (
-        <ErrorState
-          title="No se pudo cargar el tablero."
-          message={detail.error.message}
-          onRetry={() => void detail.refetch()}
-        />
-      ) : (
-        <KanbanBoard board={detail.data} />
-      )}
+      <BoardHeader board={board} notesOpen={showNotes} onToggleNotes={toggleNotes} />
+      <div className="flex min-h-0 flex-1">
+        <div className="flex min-w-0 flex-1 flex-col">
+          {detail.isPending ? (
+            <LanesSkeleton />
+          ) : detail.isError ? (
+            <ErrorState
+              title="No se pudo cargar el tablero."
+              message={detail.error.message}
+              onRetry={() => void detail.refetch()}
+            />
+          ) : (
+            <KanbanBoard board={detail.data} />
+          )}
+        </div>
+        {showNotes && (
+          <NotesPanel board={board} className="hidden w-90 shrink-0 border-l md:flex" />
+        )}
+      </div>
     </div>
   )
 }
 
-function BoardHeader({ board }: { board: BoardSummary }) {
+type HeaderProps = {
+  board: BoardSummary
+  notesOpen: boolean
+  onToggleNotes: () => void
+}
+
+function BoardHeader({ board, notesOpen, onToggleNotes }: HeaderProps) {
   const update = useUpdateBoard()
   const archived = board.archivedAt !== null
 
@@ -96,6 +130,16 @@ function BoardHeader({ board }: { board: BoardSummary }) {
           </Button>
         )}
         <BoardActionsMenu board={board} />
+        <Button
+          variant="ghost"
+          size="sm"
+          aria-pressed={notesOpen}
+          onClick={onToggleNotes}
+          className="hidden gap-1.5 text-muted-foreground aria-pressed:text-foreground md:inline-flex"
+        >
+          <PanelRight />
+          Notas
+        </Button>
       </div>
     </header>
   )
