@@ -30,6 +30,8 @@ const board = async (name, color) => {
   created.push(b.id)
   return b
 }
+const folders = []
+const payments = []
 
 try {
   const lumen = await board('Estudio Lumen', 'blue')
@@ -62,9 +64,84 @@ try {
   })
   await call('POST', `/api/tasks/${note.tasks[0].id}/toggle-done`)
 
+  // Sección Notas: carpetas y una nota abierta.
+  const clients = await call('POST', '/api/folders', { name: 'Clientes' })
+  folders.push(clients.id)
+  const lumenFolder = await call('POST', '/api/folders', {
+    name: 'Estudio Lumen',
+    parentId: clients.id,
+  })
+  await call('POST', '/api/folders', { name: 'Café Altamira', parentId: clients.id })
+  const ideas = await call('POST', '/api/folders', { name: 'Ideas' })
+  folders.push(ideas.id)
+  const access = await call('POST', '/api/pages', {
+    title: 'Accesos y datos del proyecto',
+    folderId: lumenFolder.id,
+  })
+  await call('PATCH', `/api/pages/${access.id}`, {
+    content: [
+      'Hosting: el panel lo maneja Lucía; los accesos están en el gestor.',
+      'Dominio: renueva en marzo.',
+      '',
+      'Contacto para facturas: administración, los martes.',
+      'Paleta: azul #2D5BFF y crema #F6F1E7.',
+    ].join('\n'),
+  })
+  await call('POST', '/api/pages', { title: 'Reunión de arranque', folderId: lumenFolder.id })
+  await call('POST', '/api/pages', { title: 'Portfolio 2027', folderId: ideas.id })
+
+  // Finanzas: pagos del mes actual.
+  const now = new Date()
+  const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  for (const payment of [
+    {
+      day: '03',
+      amountCents: 45_000_000,
+      currency: 'ARS',
+      boardId: lumen.id,
+      category: 'Diseño',
+      description: 'Rediseño de la web, primera mitad',
+    },
+    {
+      day: '08',
+      amountCents: 120_000,
+      currency: 'USD',
+      boardId: cafe.id,
+      category: 'Desarrollo',
+      description: 'Tienda online',
+    },
+    {
+      day: '14',
+      amountCents: 8_500_000,
+      currency: 'ARS',
+      boardId: lumen.id,
+      category: 'Mantenimiento',
+      description: null,
+    },
+    {
+      day: '21',
+      amountCents: 6_000_000,
+      currency: 'ARS',
+      boardId: cafe.id,
+      category: 'Diseño',
+      description: 'Menú del verano',
+    },
+  ]) {
+    const { day, ...data } = payment
+    payments.push(await call('POST', '/api/payments', { ...data, date: `${month}-${day}` }))
+  }
+
   async function shoot(
     file,
-    { width, height, dark = false, mobile = false, path = `/b/${lumen.slug}`, notes = true },
+    {
+      width,
+      height,
+      dark = false,
+      mobile = false,
+      path = `/b/${lumen.slug}`,
+      notes = true,
+      waitFor = ['Maqueta de la home', ...(notes ? ['Ideas para la home'] : [])],
+    },
   ) {
     const context = await browser.newContext({
       baseURL: BASE,
@@ -83,8 +160,7 @@ try {
     const page = await context.newPage()
     await page.goto(path)
     // En mobile una de las dos vistas está oculta: alcanza con que estén cargadas.
-    await page.getByText('Maqueta de la home').first().waitFor({ state: 'attached' })
-    if (notes) await page.getByText('Ideas para la home').first().waitFor({ state: 'attached' })
+    for (const text of waitFor) await page.getByText(text).first().waitFor({ state: 'attached' })
     await page.waitForTimeout(400)
     await page.screenshot({ path: fileURLToPath(new URL(file, OUT)) })
     await context.close()
@@ -99,6 +175,18 @@ try {
     path: '/b/general',
     notes: false,
   })
+  await shoot('escritorio-notas.png', {
+    width: 1440,
+    height: 860,
+    path: `/p/${access.id}`,
+    waitFor: ['Reunión de arranque'],
+  })
+  await shoot('escritorio-finanzas.png', {
+    width: 1440,
+    height: 860,
+    path: `/finanzas/${month}`,
+    waitFor: ['Tienda online'],
+  })
   await shoot('mobile-tablero.png', { width: 390, height: 844, mobile: true })
   await shoot('mobile-notas.png', {
     width: 390,
@@ -107,6 +195,8 @@ try {
     path: `/b/${lumen.slug}?vista=notas`,
   })
 } finally {
+  for (const payment of payments) await call('DELETE', `/api/payments/${payment.id}`)
+  for (const id of folders) await call('DELETE', `/api/folders/${id}`)
   for (const id of created) await call('DELETE', `/api/boards/${id}`)
   await browser.close()
 }
