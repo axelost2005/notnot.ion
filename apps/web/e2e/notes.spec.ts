@@ -16,9 +16,9 @@ async function createBoard(page: Page, label: string) {
   return (await res.json()) as { id: string; slug: string; name: string }
 }
 
-/** Escribe en el composer: cada línea con Shift+Enter, y envía con Enter. */
+/** Escribe una nota común (sin los corchetes con los que arranca): cada línea con Shift+Enter. */
 async function writeNote(composer: Locator, lines: string[]) {
-  await composer.click()
+  await composer.fill('')
   for (const [index, line] of lines.entries()) {
     if (index > 0) await composer.press('Shift+Enter')
     await composer.pressSequentially(line)
@@ -69,7 +69,7 @@ test('una nota en Inbox crea la tarjeta en otro tablero, se tilda, se mueve y se
   const created = page.waitForResponse((r) => r.url().endsWith('/api/notes') && r.status() === 201)
   await composer.press('Enter')
   await created
-  await expect(composer).toHaveValue('')
+  await expect(composer).toHaveValue('[] ')
 
   const note = panel.locator('article', { hasText: title })
   await expect(note.getByRole('checkbox', { name: `Tildar ${title}` })).not.toBeChecked()
@@ -106,6 +106,34 @@ test('una nota en Inbox crea la tarjeta en otro tablero, se tilda, se mueve y se
   await expect(note).toHaveCount(0)
   await page.goto(`/b/${board.slug}`)
   await expect.poll(() => titlesIn(page, 'En curso')).toEqual([title])
+})
+
+test('el composer arranca con [] y cada Enter crea una tarjeta', async ({ page }) => {
+  const board = await createBoard(page, 'de-a-una')
+  await page.goto(`/b/${board.slug}`)
+  const composer = notesPanel(page).getByRole('combobox', { name: `Nueva nota en ${board.name}` })
+  await expect(composer).toHaveValue('[] ')
+
+  await composer.click()
+  for (const title of ['llamar a Juan', 'mandar el presupuesto']) {
+    await composer.pressSequentially(title)
+    const created = page.waitForResponse(
+      (r) => r.url().endsWith('/api/notes') && r.status() === 201,
+    )
+    await composer.press('Enter')
+    await created
+    // Queda listo para la próxima, sin sacar las manos del teclado.
+    await expect(composer).toHaveValue('[] ')
+    await expect(composer).toBeFocused()
+  }
+  await expect
+    .poll(() => titlesIn(page, 'Por hacer'))
+    .toEqual(['llamar a Juan', 'mandar el presupuesto'])
+
+  // Enter con los corchetes solos no manda nada.
+  await composer.press('Enter')
+  await expect(composer).toHaveValue('[] ')
+  await expect(notesPanel(page).locator('article')).toHaveCount(2)
 })
 
 test('composer: chips, autocompletado de @, vista previa y borrador', async ({ page }) => {

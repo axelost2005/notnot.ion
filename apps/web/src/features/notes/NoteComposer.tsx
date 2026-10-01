@@ -27,12 +27,18 @@ function findMention(text: string, caret: number): Mention | null {
 // En touch, Enter hace salto de línea y se envía con el botón.
 const isCoarsePointer = () => window.matchMedia('(pointer: coarse)').matches
 
+/** El composer arranca listo para una tarea: escribir y dar Enter crea una tarjeta. */
+const TASK_PREFIX = '[] '
+
+/** Vacío o solo con el marcador: no hay nada para mandar ni para guardar como borrador. */
+const isBlank = (text: string) => text.trim() === '' || text.trim() === '[]'
+
 export function NoteComposer({ board, boards, autoFocus }: Props) {
   const create = useCreateNote()
   const listId = useId()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const pendingCaret = useRef<number | null>(null)
-  const [text, setText] = useState(() => readDraft(board.id))
+  const [text, setText] = useState(() => readDraft(board.id) || TASK_PREFIX)
   const [caret, setCaret] = useState<number | null>(null)
   const [highlight, setHighlight] = useState(0)
   const [dismissedAt, setDismissedAt] = useState<number | null>(null)
@@ -71,7 +77,7 @@ export function NoteComposer({ board, boards, autoFocus }: Props) {
 
   function update(next: string, nextCaret?: number) {
     setText(next)
-    writeDraft(board.id, next)
+    writeDraft(board.id, isBlank(next) ? '' : next)
     if (nextCaret !== undefined) {
       pendingCaret.current = nextCaret
       setCaret(nextCaret)
@@ -111,18 +117,19 @@ export function NoteComposer({ board, boards, autoFocus }: Props) {
   function submit() {
     const content = text.trim()
     if (
-      !content ||
+      isBlank(text) ||
       parsed.tasks.length > LIMITS.tasksPerNote ||
       content.length > LIMITS.noteContent
     ) {
       return
     }
-    update('')
+    // Queda listo para la próxima tarea, con el cursor después de los corchetes.
+    update(TASK_PREFIX, TASK_PREFIX.length)
     create.mutate(
       { board, content, boards },
       {
         // Si falló, el texto vuelve al composer (salvo que ya se haya escrito otra cosa).
-        onError: () => setText((current) => (current === '' ? content : current)),
+        onError: () => setText((current) => (isBlank(current) ? content : current)),
       },
     )
   }
@@ -256,7 +263,7 @@ export function NoteComposer({ board, boards, autoFocus }: Props) {
           size="icon-sm"
           className="max-md:size-9"
           aria-label="Enviar nota"
-          disabled={text.trim() === '' || tooMany}
+          disabled={isBlank(text) || tooMany}
           onClick={submit}
         >
           <ArrowUp />
