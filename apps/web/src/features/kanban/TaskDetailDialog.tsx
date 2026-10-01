@@ -7,10 +7,13 @@ import {
   type UpdateTaskInput,
 } from '@notnot/shared'
 import { useQuery } from '@tanstack/react-query'
-import { Trash2 } from 'lucide-react'
+import { ImagePlus, Trash2 } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router'
 import { toast } from 'sonner'
+import { ImageGallery } from '@/components/images/ImageGallery'
+import { useImageDrop } from '@/components/images/useImageDrop'
+import { usePendingImages } from '@/components/images/usePendingImages'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -42,7 +45,13 @@ import {
 } from '@/components/ui/select'
 import { boardQuery, boardsQuery } from '../boards/api'
 import { BoardSelect } from '../boards/BoardSelect'
-import { useDeleteTask, useMoveTask, useUpdateTask } from './api'
+import {
+  useAddTaskImage,
+  useDeleteTask,
+  useDeleteTaskImage,
+  useMoveTask,
+  useUpdateTask,
+} from './api'
 
 type Props = {
   board: BoardDetail
@@ -55,7 +64,8 @@ export function TaskDetailDialog({ board, taskId, onClose }: Props) {
 
   return (
     <Dialog open={task !== undefined} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-lg">
+      {/* Sin padding propio: el formulario lo ocupa entero y recibe las imágenes que se sueltan. */}
+      <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto p-0 sm:max-w-lg">
         {task && <TaskDetailForm key={task.id} board={board} task={task} onClose={onClose} />}
       </DialogContent>
     </Dialog>
@@ -77,6 +87,18 @@ function TaskDetailForm({
   const update = useUpdateTask(board.id)
   const move = useMoveTask()
   const remove = useDeleteTask(board.id)
+  const addImage = useAddTaskImage(task)
+  const removeImage = useDeleteTaskImage(task)
+  const uploads = usePendingImages((file, done) => addImage.mutate(file, { onSettled: done }))
+  const roomForImages = LIMITS.imagesPerTask - task.images.length - uploads.pending.length
+  // Con el botón, pegando (Ctrl+V) o soltándolas sobre el detalle.
+  function addImages(files: File[]) {
+    if (files.length > roomForImages) {
+      toast.error(`Una tarjeta tiene hasta ${LIMITS.imagesPerTask} imágenes`)
+    }
+    uploads.add(files.slice(0, Math.max(0, roomForImages)))
+  }
+  const drop = useImageDrop(addImages)
 
   const [title, setTitle] = useState(task.title)
   const [description, setDescription] = useState(task.description ?? '')
@@ -137,7 +159,18 @@ function TaskDetailForm({
   }
 
   return (
-    <form onSubmit={onSave} className="grid gap-5" noValidate>
+    <form onSubmit={onSave} {...drop.handlers} className="relative grid gap-5 p-4" noValidate>
+      {drop.dragging && (
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-2 z-10 grid place-items-center rounded-lg border-2 border-dashed border-foreground/30 bg-popover/90"
+        >
+          <span className="flex items-center gap-2 text-sm font-medium">
+            <ImagePlus className="size-4" />
+            Soltá la imagen para adjuntarla
+          </span>
+        </div>
+      )}
       <DialogHeader>
         <DialogTitle>Tarjeta</DialogTitle>
         <DialogDescription>
@@ -189,6 +222,25 @@ function TaskDetailForm({
           onChange={(event) => setDescription(event.target.value)}
           placeholder="Detalles, links, lo que haga falta."
           className="resize-y rounded-lg border border-input bg-transparent px-2.5 py-1.5 text-base outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:text-sm dark:bg-input/30"
+        />
+      </div>
+
+      <div className="grid gap-2">
+        <div className="flex items-baseline justify-between gap-3">
+          <span id="task-images-label" className="text-sm leading-none font-medium">
+            Imágenes
+          </span>
+          <span className="text-xs text-muted-foreground pointer-coarse:hidden">
+            Pegá o arrastrá una imagen
+          </span>
+        </div>
+        <ImageGallery
+          labelledBy="task-images-label"
+          images={task.images}
+          pending={uploads.pending}
+          canAdd={roomForImages > 0}
+          onAdd={addImages}
+          onDelete={(image) => removeImage.mutate(image.id)}
         />
       </div>
 

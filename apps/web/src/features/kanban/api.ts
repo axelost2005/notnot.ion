@@ -10,6 +10,7 @@ import type {
 import { positionAfterLast, positionForSlot, type GeneralBoard } from '@notnot/shared'
 import { useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
+import { uploadImage } from '@/lib/images'
 import { boardQuery, boardsQuery } from '../boards/api'
 import { generalQuery } from '../general/api'
 import { refreshNotes } from '../notes/api'
@@ -71,6 +72,45 @@ export function useDeleteTask(boardId: string) {
       }))
       void refreshCounts(queryClient)
       void refreshNotes(queryClient)
+    },
+  })
+}
+
+/** Cambia las imágenes de una tarjeta en el cache de su tablero. */
+function updateTaskImages(
+  queryClient: QueryClient,
+  task: Task,
+  update: (images: Task['images']) => Task['images'],
+) {
+  updateBoardCache(queryClient, task.boardId, (board) => ({
+    ...board,
+    tasks: board.tasks.map((t) => (t.id === task.id ? { ...t, images: update(t.images) } : t)),
+  }))
+}
+
+/** La achica en el navegador y la sube a la tarjeta. */
+export function useAddTaskImage(task: Task) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (file: File) => uploadImage(`/tasks/${task.id}/images`, file),
+    onSuccess: (image) => updateTaskImages(queryClient, task, (images) => [...images, image]),
+  })
+}
+
+/** Optimista: la miniatura se va al toque y vuelve si la API dice que no. */
+export function useDeleteTaskImage(task: Task) {
+  const queryClient = useQueryClient()
+  const key = boardQuery(task.boardId).queryKey
+  return useMutation({
+    mutationFn: (imageId: string) => api<void>(`/images/${imageId}`, { method: 'DELETE' }),
+    onMutate: async (imageId) => {
+      await queryClient.cancelQueries({ queryKey: key })
+      const previous = queryClient.getQueryData(key)
+      updateTaskImages(queryClient, task, (images) => images.filter((i) => i.id !== imageId))
+      return { previous }
+    },
+    onError: (_error, _imageId, context) => {
+      if (context?.previous) queryClient.setQueryData(key, context.previous)
     },
   })
 }
