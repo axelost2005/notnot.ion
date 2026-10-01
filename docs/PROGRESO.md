@@ -2,7 +2,7 @@
 
 ## Fase actual
 
-**Fase 6 — Correcciones, imágenes, Notas y Finanzas: cerrada.** Las fases 0 a 6 están hechas y la app está en producción.
+**Fase 7 — Por cobrar y carpetas personalizadas: en curso.** El paso 1 (Por cobrar) está hecho; falta el paso 2 (carpetas con color e ícono). Las fases 0 a 6 están en producción.
 
 ## Hecho
 
@@ -65,6 +65,10 @@
 
 - **Paso 4, Finanzas.** Modelo `Payment` (migración `payments`: agrega la tabla, `Image.paymentId` y un CHECK para que cada imagen sea de una tarjeta o de un pago; `Image.taskId` pasa a opcional, sin tocar datos). `GET /payments?month=`, `GET /payments/summary`, `POST/PATCH/DELETE /payments/:id` y `POST /payments/:id/images` (la misma subida que las tarjetas). `parseAmount` (montos en formato argentino), `shiftMonth`, `totalsByCurrency` y `groupByCategory` en `shared`, con tests. En la web: "Finanzas" en la sidebar y `/finanzas/:mes` con el mes, los totales por moneda, la lista por fecha o por categoría y el formulario del pago con los comprobantes (reusa `ImageGallery`, `ImageViewer` y `useImageDrop`). e2e: `finance.spec.ts`. README con capturas nuevas (sección Notas y Finanzas, y las tarjetas nuevas).
 
+### Fase 7 — Por cobrar y carpetas personalizadas
+
+- **Paso 1, Por cobrar.** Modelo `Receivable` y `Payment.receivableId` (migración `receivables`: agrega la tabla y una columna opcional, sin tocar datos). `GET/POST /receivables` y `PATCH/DELETE /receivables/:id`; cada una viene con lo cobrado y sus pagos. Los pagos aceptan `receivableId` (en la misma moneda, si no 409). `remainingCents`, `daysBetween`, `groupReceivables` y `dueCount` en `shared`, con tests. En la web: Finanzas con pestañas **Cobrado** y **Por cobrar** (`/finanzas/por-cobrar`): lo que te deben por moneda, vencidas (marcadas), por vencer, sin fecha y las cobradas plegadas; "Me pagaron" abre el pago ya completo con lo que falta; el formulario de un pago deja vincularlo o desvincularlo; la sidebar muestra al lado de Finanzas cuánto vence hoy o ya venció. En el celu, el monto baja a su propia línea y "Me pagaron" queda como ícono. e2e: `receivables.spec.ts`. README con la captura nueva.
+
 ## Decisiones
 
 - **Versiones**: lo último estable que funciona junto. TypeScript 6.0 (typescript-eslint todavía no soporta TS 7), Prisma 7.10 (Prisma 8 está en RC), React Router 8 en modo data, Vite 8, Vitest 5, ESLint 10, Tailwind 4, Zod 4, shadcn CLI 4.
@@ -123,10 +127,16 @@
 - **Comprobantes de un pago nuevo**: se pueden pegar o adjuntar antes de guardar; esperan en la pantalla y se suben apenas se crea el pago.
 - **Categorías**: texto libre. Las sugerencias son las ya usadas (sin repetir mayúsculas/minúsculas) que contienen lo que vas escribiendo, como botones abajo del campo: no hay lista desplegable del sistema (la misma que se veía mal en Windows oscuro).
 - **Cliente**: los tableros activos (sin General). Si se borra el tablero, el pago queda "sin cliente".
+- **App para iPhone y Android**: es la PWA, instalada desde el navegador (como pediste, sin tiendas). Publicarla costaría la cuenta de Google Play (USD 25 una vez y, con una cuenta personal nueva, una prueba cerrada con 12 personas durante 14 días) y la de Apple (USD 99 por año, compilar en una Mac y el riesgo de que la rechacen por ser una web empaquetada), sin sumar nada para una app de una sola persona.
+- **Por cobrar sin avisos**: también lo elegiste así: alcanza con la lista (lo vencido arriba y marcado) y el número de la sidebar. Las notificaciones quedan en "Después" de la spec.
+- **Lo cobrado se calcula**: es la suma de los pagos vinculados, no un campo aparte, así nunca queda desfasado si se edita o borra un pago. Cuando cubren el monto, está cobrada (si pagaron de más, también; no hay saldo a favor). No hay "marcar como cobrada" a mano: para cerrar una con descuento se le baja el monto, y si ya no te la van a pagar, se borra (sus pagos quedan sueltos en Cobrado).
+- **Misma moneda**: un pago vinculado va en la moneda de lo que te deben (si no, la API da 409 y el formulario traba la moneda). Si te pagan en pesos algo que era en dólares, se anota el pago suelto y se ajusta o borra lo que te debían.
+- **Vencimientos**: el día lo pone el dispositivo, como el historial. El número de la sidebar cuenta lo que vence hoy además de lo vencido, para acordarte de reclamarlo ese mismo día.
+- **"Me pagaron"**: abre el mismo formulario de "Anotar un pago" con lo que falta, la moneda, el cliente y el concepto, y la fecha de hoy. Si fue una parte, se cambia el monto y queda el resto.
 - **Dev**: si corrés comandos de pnpm con la app levantada, pnpm 11 puede regenerar el cliente de Prisma y `node --watch` reinicia la API (algún pedido puede dar 502 en ese momento).
 
 ## Pendientes para vos
 
 - **Instalarla en el celu y en la compu** (ver "Instalarla" en el README). El código de producción te lo pasé por chat; no está en el repo.
-- **Probar en producción lo de la Fase 6** con tus datos: imágenes en una tarjeta, la sección Notas y un pago con comprobante. Las subidas las probé en el preview (mismo código, store de dev); en producción no puedo entrar porque no tengo el código.
+- **Probar en producción lo de las fases 6 y 7** con tus datos: imágenes en una tarjeta, la sección Notas, un pago con comprobante y algo por cobrar con "Me pagaron". Las subidas las probé en el preview (mismo código, store de dev); en producción no puedo entrar porque no tengo el código.
 - **Opcional**: en Vercel, los dos `BLOB_READ_WRITE_TOKEN` quedaron como variables "no sensibles" (así las creó el CLI). Si querés que no se puedan volver a leer desde el dashboard, marcalas como sensibles (Settings → Environment Variables).

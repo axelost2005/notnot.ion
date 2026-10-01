@@ -32,6 +32,7 @@ const board = async (name, color) => {
 }
 const folders = []
 const payments = []
+const receivables = []
 
 try {
   const lumen = await board('Estudio Lumen', 'blue')
@@ -90,9 +91,54 @@ try {
   await call('POST', '/api/pages', { title: 'Reunión de arranque', folderId: lumenFolder.id })
   await call('POST', '/api/pages', { title: 'Portfolio 2027', folderId: ideas.id })
 
-  // Finanzas: pagos del mes actual.
+  // Finanzas: lo que te deben (algunas con pagos) y los pagos del mes actual.
   const now = new Date()
   const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  const fromToday = (days) => {
+    const date = new Date()
+    date.setDate(date.getDate() + days)
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+  }
+  const receivable = async (data) => {
+    const r = await call('POST', '/api/receivables', data)
+    receivables.push(r.id)
+    return r
+  }
+  const redesign = await receivable({
+    description: 'Rediseño de la web',
+    amountCents: 90_000_000,
+    currency: 'ARS',
+    boardId: lumen.id,
+    dueDate: fromToday(-3),
+    note: 'La segunda mitad, contra entrega.',
+  })
+  const menu = await receivable({
+    description: 'Menú del verano',
+    amountCents: 6_000_000,
+    currency: 'ARS',
+    boardId: cafe.id,
+    dueDate: fromToday(-10),
+  })
+  await receivable({
+    description: 'Mantenimiento de noviembre',
+    amountCents: 8_500_000,
+    currency: 'ARS',
+    boardId: lumen.id,
+    dueDate: fromToday(5),
+  })
+  await receivable({
+    description: 'Tienda online, entrega final',
+    amountCents: 60_000,
+    currency: 'USD',
+    boardId: cafe.id,
+    dueDate: fromToday(12),
+  })
+  await receivable({
+    description: 'Fotos de producto',
+    amountCents: 15_000_000,
+    currency: 'ARS',
+    boardId: cafe.id,
+  })
   for (const payment of [
     {
       day: '03',
@@ -101,6 +147,7 @@ try {
       boardId: lumen.id,
       category: 'Diseño',
       description: 'Rediseño de la web, primera mitad',
+      receivableId: redesign.id,
     },
     {
       day: '08',
@@ -125,6 +172,7 @@ try {
       boardId: cafe.id,
       category: 'Diseño',
       description: 'Menú del verano',
+      receivableId: menu.id,
     },
   ]) {
     const { day, ...data } = payment
@@ -187,6 +235,12 @@ try {
     path: `/finanzas/${month}`,
     waitFor: ['Tienda online'],
   })
+  await shoot('escritorio-por-cobrar.png', {
+    width: 1440,
+    height: 860,
+    path: '/finanzas/por-cobrar',
+    waitFor: ['Mantenimiento de noviembre'],
+  })
   await shoot('mobile-tablero.png', { width: 390, height: 844, mobile: true })
   await shoot('mobile-notas.png', {
     width: 390,
@@ -196,6 +250,7 @@ try {
   })
 } finally {
   for (const payment of payments) await call('DELETE', `/api/payments/${payment.id}`)
+  for (const id of receivables) await call('DELETE', `/api/receivables/${id}`)
   for (const id of folders) await call('DELETE', `/api/folders/${id}`)
   for (const id of created) await call('DELETE', `/api/boards/${id}`)
   await browser.close()
