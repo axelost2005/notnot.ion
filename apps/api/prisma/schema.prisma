@@ -94,3 +94,33 @@ model Image {
 
   @@index([taskId, createdAt])
 }
+
+/// Carpeta de la sección Notas (aparte de las notas de los tableros). Puede tener carpetas adentro.
+model Folder {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  parentId  String?  @db.Uuid
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Borrar una carpeta borra lo que tiene adentro.
+  parent   Folder?  @relation("FolderTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children Folder[] @relation("FolderTree")
+  pages    Page[]
+
+  @@index([parentId])
+}
+
+/// Nota de la sección Notas: título y texto. Suelta en la raíz o dentro de una carpeta.
+model Page {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  folderId  String?  @db.Uuid
+  title     String   @default("")
+  content   String   @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  folder Folder? @relation(fields: [folderId], references: [id], onDelete: Cascade)
+
+  @@index([folderId])
+}
