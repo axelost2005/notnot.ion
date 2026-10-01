@@ -1,10 +1,11 @@
-import type { BoardDetail, BoardSummary } from '@notnot/shared'
+import type { BoardSummary } from '@notnot/shared'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { Link, useParams } from 'react-router'
 import { ErrorState } from '@/components/ErrorState'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { KanbanBoard } from '../kanban/KanbanBoard'
 import { boardQuery, boardsQuery, useUpdateBoard } from './api'
 import { BoardActionsMenu } from './BoardActionsMenu'
 import { boardStyle } from './colors'
@@ -64,7 +65,7 @@ function BoardView({ board }: { board: BoardSummary }) {
           onRetry={() => void detail.refetch()}
         />
       ) : (
-        <Lanes board={detail.data} />
+        <KanbanBoard board={detail.data} />
       )}
     </div>
   )
@@ -100,42 +101,11 @@ function BoardHeader({ board }: { board: BoardSummary }) {
   )
 }
 
-function Lanes({ board }: { board: BoardDetail }) {
-  return (
-    <div className="flex min-h-0 flex-1 gap-3 overflow-x-auto p-4">
-      {board.columns.map((column) => {
-        const tasks = board.tasks.filter((task) => task.columnId === column.id)
-        return (
-          <section
-            key={column.id}
-            aria-labelledby={`column-${column.id}`}
-            className="flex max-h-full w-72 shrink-0 flex-col rounded-lg bg-lane"
-          >
-            <header className="flex h-10 shrink-0 items-center gap-2 px-3">
-              <h2 id={`column-${column.id}`} className="text-[13px] font-medium">
-                {column.name}
-              </h2>
-              <span className="text-xs text-muted-foreground tabular-nums">{tasks.length}</span>
-            </header>
-            <ol className="grid gap-1.5 overflow-y-auto px-2 pb-2">
-              {tasks.map((task) => (
-                <li key={task.id} className="rounded-md border bg-card px-3 py-2">
-                  {task.title}
-                </li>
-              ))}
-            </ol>
-          </section>
-        )
-      })}
-    </div>
-  )
-}
-
 function LanesSkeleton() {
   return (
     <div className="flex min-h-0 flex-1 gap-3 overflow-hidden p-4" aria-label="Cargando tablero">
       {[0, 1, 2].map((lane) => (
-        <Skeleton key={lane} className="w-72 shrink-0 rounded-lg" />
+        <Skeleton key={lane} className="w-68 shrink-0 rounded-lg" />
       ))}
     </div>
   )

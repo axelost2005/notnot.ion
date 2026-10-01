@@ -1,0 +1,48 @@
+import { useDroppable } from '@dnd-kit/core'
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import type { Column, Task } from '@notnot/shared'
+import { cn } from '@/lib/utils'
+import { AddTaskComposer } from './AddTaskComposer'
+import { ColumnHeader } from './ColumnHeader'
+import { SortableTaskCard } from './TaskCard'
+
+type Props = {
+  boardId: string
+  column: Column
+  tasks: Task[]
+  deleteBlockedReason: string | null
+  onOpenTask: (taskId: string) => void
+}
+
+export function KanbanColumn({ boardId, column, tasks, deleteBlockedReason, onOpenTask }: Props) {
+  // Toda la columna recibe tarjetas, aunque esté vacía.
+  const { setNodeRef, isOver } = useDroppable({ id: column.id })
+
+  return (
+    <section
+      aria-labelledby={`column-${column.id}`}
+      className={cn(
+        'flex h-full w-68 shrink-0 flex-col rounded-lg bg-lane transition-colors',
+        isOver && 'bg-accent',
+      )}
+    >
+      <ColumnHeader
+        boardId={boardId}
+        column={column}
+        count={tasks.length}
+        deleteBlockedReason={deleteBlockedReason}
+      />
+      <SortableContext items={tasks.map((task) => task.id)} strategy={verticalListSortingStrategy}>
+        <ol
+          ref={setNodeRef}
+          className="flex min-h-16 flex-1 flex-col gap-1.5 overflow-y-auto px-2 pb-2"
+        >
+          {tasks.map((task) => (
+            <SortableTaskCard key={task.id} task={task} done={column.isDone} onOpen={onOpenTask} />
+          ))}
+        </ol>
+      </SortableContext>
+      <AddTaskComposer boardId={boardId} columnId={column.id} columnName={column.name} />
+    </section>
+  )
+}
