@@ -96,6 +96,34 @@ export type HistoryPage = {
   nextCursor: string | null
 }
 
+/** Carpeta de la sección Notas. Sin `parentId`, está en la raíz. */
+export type Folder = {
+  id: string
+  parentId: string | null
+  name: string
+  createdAt: string
+  updatedAt: string
+}
+
+/** Una nota de la sección Notas sin su texto (para el árbol). Sin `folderId`, está suelta. */
+export type PageSummary = {
+  id: string
+  folderId: string | null
+  title: string
+  updatedAt: string
+}
+
+export type Page = PageSummary & {
+  content: string
+  createdAt: string
+}
+
+/** Todo el árbol de la sección Notas: carpetas y notas (sin el texto). */
+export type PagesTree = {
+  folders: Folder[]
+  pages: PageSummary[]
+}
+
 export type ApiErrorBody = {
   error: { code: string; message: string }
 }

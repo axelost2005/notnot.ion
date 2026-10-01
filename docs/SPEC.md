@@ -13,6 +13,7 @@ App personal para organizar el laburo por cliente. Cada cliente o categoría tie
 - **Columna**: por defecto "Por hacer", "En curso" y "Hecho". Exactamente una por tablero es la de terminadas (`isDone`, default "Hecho").
 - **Tarjeta**: una tarea. Título, descripción opcional, columna y orden. Puede venir de una nota.
 - **Nota**: texto libre dentro de un tablero. Se crea, se lee y se borra; no se edita en el MVP.
+- **Sección Notas**: aparte de los tableros, para guardar lo que no es una tarea. Carpetas (con carpetas adentro) y notas con título y texto, sueltas o en una carpeta. En el código son `Folder` y `Page`.
 
 ## Modelo de datos
 | Modelo | Campos |
@@ -22,6 +23,8 @@ App personal para organizar el laburo por cliente. Cada cliente o categoría tie
 | Task | id, boardId, columnId, title, description?, position, completedAt?, archivedAt?, noteId?, noteLine?, createdAt, updatedAt |
 | Note | id, boardId, content, createdAt |
 | Image | id, taskId, pathname, contentType, size, width, height, createdAt |
+| Folder | id, parentId?, name, createdAt, updatedAt |
+| Page | id, folderId?, title, content, createdAt, updatedAt |
 
 - Cada tablero tiene al menos 1 columna normal y exactamente 1 `isDone`.
 - `Task.columnId` siempre pertenece a `Task.boardId`.
@@ -32,6 +35,7 @@ App personal para organizar el laburo por cliente. Cada cliente o categoría tie
 - Slug: minúsculas, sin acentos, espacios → guiones ("Pepito Pérez" → `pepito-perez`). Si choca, `-2`, `-3`… Se regenera al renombrar.
 - Color: paleta fija de 8.
 - Límites: nombre de tablero 1–40, título 1–200, descripción ≤ 5000, nota 1–5000, máximo 50 tareas por nota, 20 imágenes por tarjeta (2000 px y 4 MB como mucho cada una).
+- Sección Notas: sin `parentId`/`folderId`, en la raíz. Borrar una carpeta borra en cascada lo que tiene adentro. Una carpeta no puede ir dentro de sí misma (409). Carpeta 1–60 caracteres; título de nota ≤ 200 (puede quedar vacío: "Sin título"); texto ≤ 50.000.
 - Imágenes: el archivo vive en un store privado de Vercel Blob (`pathname`) y la fila en la base. Borrar una tarjeta o un tablero borra sus imágenes (filas en cascada; los archivos los borra la API después).
 
 ## Notas → tareas (el corazón de la app)
@@ -95,12 +99,19 @@ REST + JSON bajo `/api`. Toda entrada se valida con los schemas de `shared`. Err
 | POST | `/tasks/:id/images?width=&height=` | Sube una imagen (el cuerpo es el archivo: WebP, JPEG o PNG, hasta 4 MB) y devuelve `{ id, width, height }` |
 | GET | `/images/:id` | La imagen, con `Cache-Control: private, max-age=31536000, immutable` |
 | DELETE | `/images/:id` | Borra la imagen y su archivo |
+| GET | `/folders` | El árbol de la sección Notas: `{ folders, pages }` (las notas sin el texto) |
+| POST | `/folders` | `{ name, parentId? }` |
+| PATCH / DELETE | `/folders/:id` | Renombrar o mover (`parentId`) / borrar con lo de adentro |
+| POST | `/pages` | `{ title?, folderId? }` |
+| GET / PATCH / DELETE | `/pages/:id` | Una nota con su texto / guardar título, texto o carpeta / borrar |
 
 La web manda en cada pedido `X-Day-Start` con la medianoche de hoy en el dispositivo (ISO). Al leer un tablero, General, notas o historial, la API pasa al historial las terminadas antes de esa hora. Sin el header (o si está a más de 48 h de la hora del server) no archiva nada: no hace falta ninguna tarea programada.
 
 ## UI
-- Rutas: `/unlock`, `/b/:slug` (la web resuelve slug → id con la lista de tableros) y `/notas/:slug` (la ventana de notas). `/` redirige al último tablero abierto o a General.
-- Desktop: sidebar (General fijo arriba con el total de abiertas, tableros con color y contador de abiertas, archivados colapsados, "+ Nuevo tablero", "Bloquear"), kanban al centro con scroll horizontal, panel de notas a la derecha (~360px, plegable).
+- Rutas: `/unlock`, `/b/:slug` (la web resuelve slug → id con la lista de tableros), `/notas/:slug` (la ventana de notas) y `/p/:id` (una nota de la sección Notas). `/` redirige al último tablero abierto o a General.
+- Desktop: sidebar (General fijo arriba con el total de abiertas, tableros con color y contador de abiertas, archivados colapsados, "+ Nuevo tablero", la sección Notas, "Bloquear"), kanban al centro con scroll horizontal, panel de notas a la derecha (~360px, plegable).
+- Sección Notas en la sidebar: árbol plegable (se recuerda qué carpetas están abiertas), carpetas primero y orden alfabético. "+" crea una nota o una carpeta; el "…" de cada fila tiene crear adentro (carpetas), renombrar, "Mover a…" y borrar. Una carpeta nueva queda lista para escribirle el nombre; una nota se renombra en su título. Borrar una carpeta vacía no pregunta; con contenido, pide confirmación y dice qué se lleva.
+- Nota (`/p/:id`): título y texto plano. Se guarda sola (un rato después de la última tecla, al ir a otra nota y al esconder la pestaña) y lo avisa ("Guardando…", "Guardado"). Arriba, dónde está (Notas / carpeta), "Mover a…" y borrar. En el celu, el título del header abre la sidebar, como en los tableros.
 - Header del tablero: "Historial" (panel lateral con las terminadas, agrupadas por día; en General, las de todos con el chip de su tablero) y, en desktop, "Abrir las notas en otra ventana".
 - Ventana de notas (`/notas/:slug`): una ventana chica aparte (`window.open`, ~400×640) con solo el panel de notas y un selector de tablero arriba (desplegable propio, con el punto de color de cada tablero). Cambiar de tablero cambia dónde se escriben las notas y a dónde van las tareas sin `@`. Lo que cambia en una ventana se refresca en las otras (BroadcastChannel).
 - General: tres columnas fijas por estado con las tarjetas de todos los tableros activos. "Por hacer" = la primera columna normal de cada tablero, "En curso" = las otras normales, "Hecho" = la de terminadas. Cada tarjeta muestra el chip de su tablero (las de General no llevan). Dentro de cada columna van agrupadas por tablero, en el orden de la sidebar. Arrastrar una tarjeta a otra columna la mueve al final de esa columna en su propio tablero ("En curso" va a la segunda columna normal; si el tablero no tiene, avisa y no la mueve). No se reordena dentro de una columna ni se editan las columnas de General. "Agregar tarjeta" en cada columna crea una tarea de General en la columna que corresponde.

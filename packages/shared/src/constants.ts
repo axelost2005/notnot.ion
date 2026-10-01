@@ -12,6 +12,9 @@ export const LIMITS = {
   imageMaxSide: 2000,
   /** Por pedido. Las funciones de Vercel aceptan hasta 4,5 MB. */
   imageBytes: 4 * 1024 * 1024,
+  folderName: 60,
+  pageTitle: 200,
+  pageContent: 50_000,
 } as const
 
 /** Formatos que acepta la API (la web los convierte a WebP, o a JPEG si el navegador no puede). */
