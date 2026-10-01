@@ -12,6 +12,7 @@ import { imagesRouter } from './routes/images'
 import { notesRouter } from './routes/notes'
 import { pagesRouter } from './routes/pages'
 import { paymentsRouter } from './routes/payments'
+import { receivablesRouter } from './routes/receivables'
 import { createUnlockRouter, sessionRouter } from './routes/session'
 import { tasksRouter } from './routes/tasks'
 
@@ -44,6 +45,7 @@ export function createApp() {
   api.use(foldersRouter)
   api.use(pagesRouter)
   api.use(paymentsRouter)
+  api.use(receivablesRouter)
   api.use(notFoundHandler)
 
   app.use('/api', api)

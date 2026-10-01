@@ -18,10 +18,11 @@ model Board {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 
-  columns  Column[]
-  tasks    Task[]
-  notes    Note[]
-  payments Payment[]
+  columns     Column[]
+  tasks       Task[]
+  notes       Note[]
+  payments    Payment[]
+  receivables Receivable[]
 }
 
 model Column {
@@ -132,20 +133,45 @@ model Page {
 
 /// Un pago que me hicieron (Finanzas). Solo ingresos, en ARS o USD.
 model Payment {
-  id          String   @id @default(uuid(7)) @db.Uuid
-  date        DateTime @db.Date
-  amountCents BigInt
-  currency    String
+  id           String   @id @default(uuid(7)) @db.Uuid
+  date         DateTime @db.Date
+  amountCents  BigInt
+  currency     String
   // El cliente es un tablero. Si se borra el tablero, el pago queda sin cliente.
-  boardId     String?  @db.Uuid
-  category    String?
-  description String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  boardId      String?  @db.Uuid
+  category     String?
+  description  String?
+  // Lo que me debían y este pago cubre (o parte). Si se borra, el pago queda suelto.
+  receivableId String?  @db.Uuid
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  board  Board?  @relation(fields: [boardId], references: [id], onDelete: SetNull)
-  images Image[]
+  board      Board?      @relation(fields: [boardId], references: [id], onDelete: SetNull)
+  receivable Receivable? @relation(fields: [receivableId], references: [id], onDelete: SetNull)
+  images     Image[]
 
   @@index([date])
+  @@index([boardId])
+  @@index([receivableId])
+}
+
+/// Algo que me deben (Finanzas → Por cobrar). Lo cobrado son los pagos que apuntan acá, en la misma
+/// moneda (lo controla la API).
+model Receivable {
+  id          String    @id @default(uuid(7)) @db.Uuid
+  description String
+  amountCents BigInt
+  currency    String
+  // El cliente es un tablero. Si se borra el tablero, queda sin cliente.
+  boardId     String?   @db.Uuid
+  // El día que me lo tienen que pagar.
+  dueDate     DateTime? @db.Date
+  note        String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  board    Board?    @relation(fields: [boardId], references: [id], onDelete: SetNull)
+  payments Payment[]
+
   @@index([boardId])
 }
