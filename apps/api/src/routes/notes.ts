@@ -1,10 +1,11 @@
 import { createNoteSchema, idParamsSchema, notesQuerySchema } from '@notnot/shared'
 import { Router } from 'express'
+import { archiveBeforeToday } from '../middleware/archive'
 import { createNote, deleteNote, listNotes } from '../services/notes'
 
 export const notesRouter = Router()
 
-notesRouter.get('/boards/:id/notes', async (req, res) => {
+notesRouter.get('/boards/:id/notes', archiveBeforeToday, async (req, res) => {
   const { id } = idParamsSchema.parse(req.params)
   const { before } = notesQuerySchema.parse(req.query)
   res.json(await listNotes(id, before))

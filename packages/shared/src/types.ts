@@ -34,6 +34,8 @@ export type Task = {
   description: string | null
   position: string
   completedAt: string | null
+  /** Terminada antes de hoy: está en el historial y no en el tablero. */
+  archivedAt: string | null
   noteId: string | null
   noteLine: number | null
   /** Tablero donde está la nota de origen (puede ser otro). */
@@ -55,6 +57,8 @@ export type NoteTask = {
   title: string
   boardId: string
   done: boolean
+  /** Está en el historial: no hay tarjeta para abrir en el tablero. */
+  archived: boolean
 }
 
 export type Note = {
@@ -68,6 +72,12 @@ export type Note = {
 /** De la más nueva a la más vieja. `nextCursor` pide la página anterior. */
 export type NotesPage = {
   notes: Note[]
+  nextCursor: string | null
+}
+
+/** Terminadas, de la más reciente a la más vieja. `nextCursor` pide la página anterior. */
+export type HistoryPage = {
+  tasks: Task[]
   nextCursor: string | null
 }
 

@@ -67,8 +67,9 @@ export async function moveTask(id: string, input: MoveTaskInput): Promise<Task> 
     throw badRequest('La columna no es de ese tablero')
   }
 
+  // Los vecinos son los que se ven: las del historial siguen en la columna pero no cuentan.
   const siblings = await prisma.task.findMany({
-    where: { columnId: column.id, id: { not: id } },
+    where: { columnId: column.id, id: { not: id }, archivedAt: null },
     select: { id: true, position: true },
   })
   if (!isValidSlot(siblings, slot)) {
@@ -83,6 +84,8 @@ export async function moveTask(id: string, input: MoveTaskInput): Promise<Task> 
       position: positionForSlot(siblings, slot),
       // Se marca al entrar a la de terminadas y se limpia al salir.
       completedAt: column.isDone ? (task.completedAt ?? new Date()) : null,
+      // Moverla la saca del historial.
+      archivedAt: null,
     },
     include: withNoteBoard,
   })
@@ -91,26 +94,39 @@ export async function moveTask(id: string, input: MoveTaskInput): Promise<Task> 
 
 /**
  * Tildar: al final de la columna de terminadas. Destildar: arriba de la primera columna
- * normal (vuelve a quedar a la vista).
+ * normal (vuelve a quedar a la vista, aunque estuviera en el historial).
  */
 export async function toggleTaskDone(id: string): Promise<Task> {
-  const task = await prisma.task.findUnique({ where: { id }, include: { column: true } })
+  const task = await prisma.task.findUnique({ where: { id } })
   if (!task) throw notFound('La tarjeta no existe')
+  // Lo mismo que muestra la nota. Una del historial puede haber quedado en una columna que
+  // dejó de ser la de terminadas, pero sigue terminada.
+  const done = task.completedAt !== null
 
   const columns = await prisma.column.findMany({
     where: { boardId: task.boardId },
     include: { tasks: { where: { id: { not: id } }, select: { position: true } } },
   })
-  const target = task.column.isDone
+  const target = done
     ? sortByPosition(columns.filter((c) => !c.isDone))[0]
     : columns.find((c) => c.isDone)
   if (!target) throw conflict('Al tablero le falta la columna para moverla')
 
   const updated = await prisma.task.update({
     where: { id },
-    data: task.column.isDone
-      ? { columnId: target.id, position: positionBeforeFirst(target.tasks), completedAt: null }
-      : { columnId: target.id, position: positionAfterLast(target.tasks), completedAt: new Date() },
+    data: done
+      ? {
+          columnId: target.id,
+          position: positionBeforeFirst(target.tasks),
+          completedAt: null,
+          archivedAt: null,
+        }
+      : {
+          columnId: target.id,
+          position: positionAfterLast(target.tasks),
+          completedAt: new Date(),
+          archivedAt: null,
+        },
     include: withNoteBoard,
   })
   return toTask(updated)

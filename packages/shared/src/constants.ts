@@ -6,7 +6,14 @@ export const LIMITS = {
   noteContent: 5000,
   tasksPerNote: 50,
   notesPerPage: 50,
+  historyPerPage: 50,
 } as const
+
+/**
+ * La web manda en cada pedido la medianoche de hoy en el dispositivo (ISO). Con eso la API
+ * pasa al historial lo que se terminó antes.
+ */
+export const DAY_START_HEADER = 'X-Day-Start'
 
 /** Paleta fija de tableros. Los valores de color viven en la web. */
 export const BOARD_COLORS = [

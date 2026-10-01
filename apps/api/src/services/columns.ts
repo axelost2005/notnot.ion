@@ -28,10 +28,11 @@ export async function updateColumn(id: string, input: UpdateColumnInput): Promis
 
   if (input.isDone && !column.isDone) {
     // Cambia la de terminadas: las tarjetas de la vieja se reabren y las de la nueva se terminan.
+    // Las del historial no se tocan: siguen terminadas aunque su columna ya no sea esa.
     const now = new Date()
     await prisma.$transaction([
       prisma.task.updateMany({
-        where: { boardId: column.boardId, column: { isDone: true } },
+        where: { boardId: column.boardId, column: { isDone: true }, archivedAt: null },
         data: { completedAt: null },
       }),
       prisma.column.updateMany({
@@ -51,21 +52,25 @@ export async function updateColumn(id: string, input: UpdateColumnInput): Promis
   return toColumn(await prisma.column.findUniqueOrThrow({ where: { id } }))
 }
 
-/** Solo vacías, nunca la de terminadas ni la última normal. */
+/** Solo vacías (a la vista), nunca la de terminadas ni la última normal. */
 export async function deleteColumn(id: string): Promise<void> {
   const column = await prisma.column.findUnique({
     where: { id },
-    include: { _count: { select: { tasks: true } } },
+    include: { _count: { select: { tasks: { where: { archivedAt: null } } } } },
   })
   if (!column) throw notFound('La columna no existe')
   if (column.isDone) throw conflict('Es la columna de terminadas: elegí otra antes de borrarla')
   if (column._count.tasks > 0) throw conflict('La columna tiene tarjetas: movelas o borralas antes')
 
-  const normalColumns = await prisma.column.count({
-    where: { boardId: column.boardId, isDone: false },
-  })
-  if (normalColumns <= 1)
+  const columns = await prisma.column.findMany({ where: { boardId: column.boardId } })
+  if (columns.filter((c) => !c.isDone).length <= 1)
     throw conflict('El tablero necesita al menos una columna además de la de terminadas')
+  const done = columns.find((c) => c.isDone)
+  if (!done) throw conflict('Al tablero le falta la columna de terminadas')
 
-  await prisma.column.delete({ where: { id } })
+  await prisma.$transaction([
+    // Las del historial pueden haber quedado acá (si antes era la de terminadas): no se pierden.
+    prisma.task.updateMany({ where: { columnId: id }, data: { columnId: done.id } }),
+    prisma.column.delete({ where: { id } }),
+  ])
 }

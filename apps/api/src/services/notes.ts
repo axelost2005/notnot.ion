@@ -21,6 +21,7 @@ function toNote(note: NoteWithTasks): Note {
         title: task.title,
         boardId: task.boardId,
         done: task.completedAt !== null,
+        archived: task.archivedAt !== null,
       })),
   }
 }
