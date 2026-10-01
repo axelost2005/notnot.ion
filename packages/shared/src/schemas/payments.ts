@@ -7,24 +7,29 @@ import { idSchema } from './common'
 export const monthSchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, 'Mes inválido')
 
 /** Vacía o solo espacios se guarda como `null`. */
-const optionalText = (max: number) =>
+export const optionalText = (max: number) =>
   z
     .string()
     .max(max, `Máximo ${max} caracteres`)
     .nullable()
     .transform((value) => (value?.trim() ? value.trim() : null))
 
+/** En centavos. */
+export const amountCentsSchema = z
+  .number()
+  .int()
+  .positive('El monto tiene que ser mayor a cero')
+  .max(LIMITS.paymentAmountCents, 'El monto es demasiado grande')
+
 export const createPaymentSchema = z.object({
   date: z.iso.date('Fecha inválida'),
-  amountCents: z
-    .number()
-    .int()
-    .positive('El monto tiene que ser mayor a cero')
-    .max(LIMITS.paymentAmountCents, 'El monto es demasiado grande'),
+  amountCents: amountCentsSchema,
   currency: z.enum(CURRENCIES),
   boardId: idSchema.nullable().optional(),
   category: optionalText(LIMITS.paymentCategory).optional(),
   description: optionalText(LIMITS.paymentDescription).optional(),
+  /** Lo que me debían y esto paga (o parte). */
+  receivableId: idSchema.nullable().optional(),
 })
 
 export const updatePaymentSchema = createPaymentSchema

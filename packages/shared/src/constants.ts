@@ -18,8 +18,10 @@ export const LIMITS = {
   paymentCategory: 40,
   paymentDescription: 1000,
   imagesPerPayment: 20,
-  /** Cien mil millones (en centavos): sobra para cualquier pago. */
+  /** Cien mil millones (en centavos): sobra para cualquier pago o deuda. */
   paymentAmountCents: 10_000_000_000_000,
+  receivableDescription: 200,
+  receivableNote: 1000,
 } as const
 
 /** Formatos que acepta la API (la web los convierte a WebP, o a JPEG si el navegador no puede). */
