@@ -31,4 +31,11 @@
 
 ## Pendientes para vos
 
-- Nada por ahora.
+- **Crear el repo en GitHub y subir todo.** `gh` está logueado, pero crear un repo público quedó bloqueado por los permisos de la sesión, así que todo está en git local (`main`). Desde la raíz del proyecto:
+
+  ```bash
+  gh repo create notnot.ion --public --source . --remote origin --push
+  git push origin --all
+  ```
+
+  El push dispara el CI (`pnpm check`). En local pasa.
