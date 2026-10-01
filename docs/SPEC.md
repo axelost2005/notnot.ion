@@ -8,7 +8,8 @@ App personal para organizar el laburo por cliente. Cada cliente o categoría tie
 - Los datos viven en la API: lo que anotás en el celu aparece en la compu. Sin tiempo real: se refresca al volver a la app.
 
 ## Conceptos
-- **Tablero**: un cliente o categoría ("Pepito", "Personal"). Tiene nombre, slug para `@`, color, columnas, tarjetas y notas. Siempre existe **Inbox** (no se borra ni se archiva) para lo que no es de nadie.
+- **Tablero**: un cliente o categoría ("Pepito", "Personal"). Tiene nombre, slug para `@`, color, columnas, tarjetas y notas. Siempre existe **General** (no se renombra, archiva ni borra): va arriba de todo, su kanban muestra las tarjetas de todos los tableros activos y guarda lo que no es de ningún cliente.
+- **Historial**: cada día arranca con la columna de terminadas vacía. Las tarjetas terminadas antes de hoy (medianoche del dispositivo) salen del tablero y quedan en el historial.
 - **Columna**: por defecto "Por hacer", "En curso" y "Hecho". Exactamente una por tablero es la de terminadas (`isDone`, default "Hecho").
 - **Tarjeta**: una tarea. Título, descripción opcional, columna y orden. Puede venir de una nota.
 - **Nota**: texto libre dentro de un tablero. Se crea, se lee y se borra; no se edita en el MVP.
@@ -16,14 +17,15 @@ App personal para organizar el laburo por cliente. Cada cliente o categoría tie
 ## Modelo de datos
 | Modelo | Campos |
 |---|---|
-| Board | id, name, slug (único), color, position, isInbox, archivedAt?, createdAt, updatedAt |
+| Board | id, name, slug (único), color, position, isGeneral, archivedAt?, createdAt, updatedAt |
 | Column | id, boardId, name, position, isDone, createdAt, updatedAt |
-| Task | id, boardId, columnId, title, description?, position, completedAt?, noteId?, noteLine?, createdAt, updatedAt |
+| Task | id, boardId, columnId, title, description?, position, completedAt?, archivedAt?, noteId?, noteLine?, createdAt, updatedAt |
 | Note | id, boardId, content, createdAt |
 
 - Cada tablero tiene al menos 1 columna normal y exactamente 1 `isDone`.
 - `Task.columnId` siempre pertenece a `Task.boardId`.
 - `completedAt` se setea al entrar a la columna `isDone` y se limpia al salir.
+- `archivedAt` se setea cuando una tarjeta terminada pasa al historial. Las archivadas no se ven en el kanban ni cuentan para las reglas de columnas (vecinos al mover, columna vacía). Destildarla desde su nota o moverla la vuelve al tablero.
 - `position` es una clave de fractional indexing (string): mover actualiza solo la fila movida. Índices en las FKs y en `(columnId, position)`.
 - Borrar un tablero borra en cascada columnas, tareas y notas. Borrar una nota deja sus tareas (`noteId` y `noteLine` en null).
 - Slug: minúsculas, sin acentos, espacios → guiones ("Pepito Pérez" → `pepito-perez`). Si choca, `-2`, `-3`… Se regenera al renombrar.
@@ -44,11 +46,12 @@ Parser puro en `packages/shared`: `parseNote(content, { currentBoardSlug, boards
 Panel de notas:
 - Tipo chat: más nuevas abajo, hora relativa, composer abajo. Carga 50 y trae más al scrollear hacia arriba.
 - Desktop: Enter envía, Shift+Enter hace salto de línea. Mobile: botón enviar.
-- Vista previa bajo el composer: "2 tareas → Pepito, Inbox".
+- El composer arranca con `[] ` y vuelve a `[] ` después de enviar: escribir y dar Enter crea una tarea por vez. Para una nota común se borran los corchetes.
+- Vista previa bajo el composer: "2 tareas → Pepito, General".
 - Chips en el composer: `[ ]` pone el marcador al inicio de la línea actual; `@` abre el autocompletado. En mobile son la forma principal.
 - Autocompletado de `@` con los tableros activos, por nombre o slug.
 - Borrador por tablero guardado en localStorage.
-- Cada línea-tarea se ve como checkbox + título actual de la tarjeta (+ chip del tablero si es otro). Tildar la manda al final de la columna `isDone`; destildar la vuelve arriba de la primera columna normal. Tocar el título abre la tarjeta.
+- Cada línea-tarea se ve como checkbox + título actual de la tarjeta (+ chip del tablero si es otro). Tildar la manda al final de la columna `isDone`; destildar la vuelve arriba de la primera columna normal. Tocar el título abre la tarjeta (salvo que esté en el historial o en la ventana de notas).
 - Si la tarjeta se borró, la línea queda tachada con el texto original.
 - Links clickeables. Borrar una nota pide confirmación.
 
@@ -85,10 +88,17 @@ REST + JSON bajo `/api`. Toda entrada se valida con los schemas de `shared`. Err
 | GET | `/boards/:id/notes?before=` | 50 notas por página, cada una con sus tareas |
 | POST | `/notes` | `{ boardId, content }` → nota + tareas |
 | DELETE | `/notes/:id` | Borra la nota; las tareas quedan |
+| GET | `/general` | Columnas y tarjetas (sin archivar) de todos los tableros activos, para el kanban de General |
+| GET | `/history?boardId=&before=` | Tarjetas del historial, de la más nueva a la más vieja, 50 por página. Sin `boardId`, las de todos los tableros |
+
+La web manda en cada pedido `X-Day-Start` con la medianoche de hoy en el dispositivo (ISO). Al leer un tablero, General, notas o historial, la API pasa al historial las terminadas antes de esa hora. Sin el header (o si está a más de 48 h de la hora del server) no archiva nada: no hace falta ninguna tarea programada.
 
 ## UI
-- Rutas: `/unlock` y `/b/:slug` (la web resuelve slug → id con la lista de tableros). `/` redirige al último tablero abierto o a Inbox.
-- Desktop: sidebar (Inbox fijo arriba, tableros con color y contador de abiertas, archivados colapsados, "+ Nuevo tablero", "Bloquear"), kanban al centro con scroll horizontal, panel de notas a la derecha (~360px, plegable).
+- Rutas: `/unlock`, `/b/:slug` (la web resuelve slug → id con la lista de tableros) y `/notas/:slug` (la ventana de notas). `/` redirige al último tablero abierto o a General.
+- Desktop: sidebar (General fijo arriba con el total de abiertas, tableros con color y contador de abiertas, archivados colapsados, "+ Nuevo tablero", "Bloquear"), kanban al centro con scroll horizontal, panel de notas a la derecha (~360px, plegable).
+- Header del tablero: "Historial" (panel lateral con las terminadas, agrupadas por día; en General, las de todos con el chip de su tablero) y, en desktop, "Abrir las notas en otra ventana".
+- Ventana de notas (`/notas/:slug`): una ventana chica aparte (`window.open`, ~400×640) con solo el panel de notas y un selector de tablero arriba. Cambiar de tablero cambia dónde se escriben las notas y a dónde van las tareas sin `@`. Lo que cambia en una ventana se refresca en las otras (BroadcastChannel).
+- General: tres columnas fijas por estado con las tarjetas de todos los tableros activos. "Por hacer" = la primera columna normal de cada tablero, "En curso" = las otras normales, "Hecho" = la de terminadas. Cada tarjeta muestra el chip de su tablero (las de General no llevan). Dentro de cada columna van agrupadas por tablero, en el orden de la sidebar. Arrastrar una tarjeta a otra columna la mueve al final de esa columna en su propio tablero ("En curso" va a la segunda columna normal; si el tablero no tiene, avisa y no la mueve). No se reordena dentro de una columna ni se editan las columnas de General. "Agregar tarjeta" en "Por hacer" crea una tarea de General.
 - Columna: título, contador, "+ Agregar tarjeta" al pie y menú (renombrar, marcar como terminadas, borrar).
 - Tarjeta: click abre el detalle (título, descripción, mover a otro tablero o columna, borrar, link a la nota de origen).
 - Mobile (<768px): header con selector de tablero, tabs abajo "Tablero" / "Notas", columnas de a una con swipe (scroll-snap). Reordenar dentro de la columna con long-press; cambiar de columna o tablero con "Mover a…".
@@ -99,7 +109,7 @@ REST + JSON bajo `/api`. Toda entrada se valida con los schemas de `shared`. Err
 ## PWA
 - vite-plugin-pwa con `autoUpdate`. Manifest: name "notnot.ion", short_name "notnot", display standalone, colores de tema, íconos 192/512 + maskable, apple-touch-icon.
 - Ícono: un SVG simple propio → PNGs con `@vite-pwa/assets-generator`.
-- Shortcut del manifest "Nueva nota": abre Inbox en Notas con el composer enfocado.
+- Shortcut del manifest "Nueva nota": abre General en Notas con el composer enfocado.
 - Precache del shell; la API va siempre por red (sin offline en el MVP). Banner "Sin conexión" cuando no hay red.
 - Botón "Instalar" cuando el browser lo permita; en iOS, tip "Compartir → Agregar a inicio".
 
@@ -189,10 +199,19 @@ Se hacen de corrido, siguiendo el flujo de `CLAUDE.md`. Cada fase termina cuando
 
 **Listo cuando:** el build de prod servido en local es instalable (manifest y service worker válidos) y el e2e en viewport de 375px captura una nota y mueve una tarjeta con "Mover a…". Instalarla en el celu y en la compu lo hago yo después del deploy.
 
+### Fase 5 — Ventana de notas, General e Historial
+Un PR por paso, en este orden:
+1. Composer que arranca con `[] ` y vuelve a `[] ` al enviar.
+2. Ventana de notas (`/notas/:slug`) con selector de tablero, botón en el header y refresco entre ventanas.
+3. Historial: `archivedAt`, archivado al leer con `X-Day-Start`, `GET /history` y el panel "Historial".
+4. General: Inbox pasa a ser General (`isInbox` → `isGeneral`, nombre y slug `general` si está libre), `GET /general`, su kanban por estado con drag & drop entre columnas, contador total en la sidebar.
+
+**Listo cuando:** el e2e escribe `algo` + Enter y aparece la tarjeta con el composer otra vez en `[] `; abre la ventana de notas, cambia de tablero y la tarea cae en el elegido (y la ventana principal la muestra sin recargar); con el reloj del navegador en mañana, la tarjeta terminada ya no está en "Hecho" y sí en el Historial; General muestra tarjetas de dos tableros con su chip y arrastrar una a "En curso" la mueve en su tablero.
+
 ## Después (no ahora)
 - IA para procesar notas desordenadas (Claude API desde la API, con confirmación antes de crear).
 - Fechas y recordatorios ("mañana", "viernes").
-- Búsqueda, filtros, etiquetas, prioridad y vista "todas mis tareas".
+- Búsqueda, filtros, etiquetas y prioridad.
 - Offline completo y tiempo real entre dispositivos.
 - Link de solo lectura para que un cliente vea su tablero.
 - Atajos de teclado, editar notas, reordenar tableros.
