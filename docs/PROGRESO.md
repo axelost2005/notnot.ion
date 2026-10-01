@@ -2,7 +2,7 @@
 
 ## Fase actual
 
-**Fase 3 — Notas → tareas: cerrada.** Sigue la Fase 4 (PWA y mobile).
+**Fase 4 — PWA y mobile: cerrada.** Las cinco fases (0 a 4) están hechas. Falta solo lo que depende de vos (ver "Pendientes para vos").
 
 ## Hecho
 
@@ -40,6 +40,14 @@
 - El detalle de una tarjeta que salió de una nota tiene "Ver la nota", que abre el tablero de la nota con esa nota resaltada (`?nota=<id>`).
 - e2e (`apps/web/e2e/notes.spec.ts`): el "Listo cuando" completo (Inbox → `@tablero`, al final de "Por hacer", tildar → "Hecho", mover en el tablero → checkbox, borrar la nota deja la tarjeta), composer, tachado y links, scroll infinito y link a la nota de origen.
 
+### Fase 4 — PWA y mobile
+
+- PWA con `vite-plugin-pwa` (`autoUpdate`): manifest (nombre, `short_name`, standalone, colores, íconos 192/512 + maskable, apple-touch-icon), atajo "Nueva nota" (abre Inbox en Notas con el composer enfocado), service worker que precachea solo el shell (la API va siempre por red), banner "Sin conexión" y botón "Instalar app" cuando el navegador lo permite, con el tip "Compartir → Agregar a inicio" en iOS.
+- Íconos: `apps/web/public/icon.svg` (el `[ ]` de la marca) → PNGs con `@vite-pwa/assets-generator` (`pnpm --filter @notnot/web icons`).
+- Mobile (< 768 px): el título del tablero es el selector (abre la lista de tableros), tabs "Tablero" / "Notas" abajo, columnas de a una con swipe (scroll-snap), reordenar con long-press y "Mover a…" en el detalle de la tarjeta para cambiar de columna o tablero.
+- README final con capturas (`pnpm --filter @notnot/web capturas` las regenera con datos de ejemplo que después borra).
+- e2e: la PWA contra el build de producción servido en local (manifest, íconos, service worker controlando la página y **sin errores de instalabilidad según Chrome**, vía CDP), la API no pasa por el fallback del SW, mobile en 375 px (captura una nota con el botón enviar y mueve la tarjeta con "Mover a…"), selector de tablero, atajo "Nueva nota" y banner sin conexión.
+
 ## Decisiones
 
 - **Versiones**: lo último estable que funciona junto. TypeScript 6.0 (typescript-eslint todavía no soporta TS 7), Prisma 7.10 (Prisma 8 está en RC), React Router 8 en modo data, Vite 8, Vitest 5, ESLint 10, Tailwind 4, Zod 4, shadcn CLI 4.
@@ -66,7 +74,13 @@
 - **Tachado**: una línea con marcador que ya no tiene tarea se muestra tachada (la tarjeta se borró). Si era una línea con marcador que nunca tuvo título (por ejemplo `[] @otro` con un tablero que después se borró), también se ve tachada: caso raro y sin consecuencias.
 - **Autocompletado de `@`**: se cierra cuando lo escrito ya es un slug exacto, así Enter envía en vez de volver a elegir el tablero.
 - **`noteBoardId`** en la respuesta de cada tarea: dice en qué tablero está la nota de origen, para el link "Ver la nota".
-- **Panel en mobile**: queda oculto debajo de 768 px hasta la Fase 4 (tabs "Tablero" / "Notas").
+- **Panel de notas**: en desktop arranca abierto solo desde 1280 px si no hay preferencia guardada (en una tablet le come todo el lugar al tablero); el botón "Notas" del header lo abre o pliega y se recuerda. Las columnas miden 264 px para que entren tres al lado del panel en una pantalla de 1440.
+- **PWA**: los íconos se generan con el CLI de `@vite-pwa/assets-generator` 1.x (la versión que acepta `vite-plugin-pwa` 1.3) y se commitean. El manifest usa el fondo claro como `theme_color`; en el HTML hay un `theme-color` por esquema (claro/oscuro). La API nunca se cachea y el fallback de la SPA excluye `/api/`.
+- **Atajo "Nueva nota"**: apunta a `/?nueva-nota`; la redirección de `/` busca Inbox por `isInbox` (no por slug) y abre `/b/inbox?vista=notas&escribir=1`.
+- **Vistas en la URL**: `?vista=notas` elige la pestaña Notas en mobile (y abre el panel en desktop), `?escribir=1` enfoca el composer, `?nota=<id>` resalta una nota y `?tarjeta=<id>` abre una tarjeta.
+- **"Mover a…"**: en el detalle tiene su propio botón "Mover" (deja la tarjeta al final de la columna elegida); "Guardar" queda solo para título y descripción.
+- **Bundle**: las dependencias van en un chunk aparte (`vendor`, ~200 kB gzip) y el código de la app en otro (~21 kB gzip): un deploy solo vuelve a bajar lo que cambió. El aviso de tamaño de Vite se subió a 700 kB porque el chunk de librerías es grande por naturaleza.
+- **e2e de la PWA**: el proyecto `pwa` de Playwright hace `vite build` + `vite preview` (puerto 4173) y usa la API de dev a través del proxy de la preview.
 - **Dev**: si corrés comandos de pnpm con la app levantada, pnpm 11 puede regenerar el cliente de Prisma y `node --watch` reinicia la API (algún pedido puede dar 502 en ese momento).
 
 ## Pendientes para vos
@@ -82,3 +96,5 @@
   El build de producción aplica las migraciones en `main` antes de publicar. `APP_SECRET` y `SESSION_SECRET` de producción ya están cargados en Vercel (el código te lo paso por chat; no está en el repo).
 
 - **Conectar el repo a Vercel** (opcional, después de lo anterior): `vercel git connect` para que cada push a `main` despliegue solo.
+
+- **Instalarla en el celu y en la compu** después del deploy a producción (ver "Instalarla" en el README).
