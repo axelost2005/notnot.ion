@@ -4,8 +4,10 @@ import { env } from './env'
 import { errorHandler, notFoundHandler } from './middleware/errors'
 import { requireSession } from './middleware/session'
 import { boardsRouter } from './routes/boards'
+import { columnsRouter } from './routes/columns'
 import { healthRouter } from './routes/health'
 import { createUnlockRouter, sessionRouter } from './routes/session'
+import { tasksRouter } from './routes/tasks'
 
 export function createApp() {
   const app = express()
@@ -26,6 +28,8 @@ export function createApp() {
   api.use(requireSession)
   api.use(sessionRouter)
   api.use(boardsRouter)
+  api.use(columnsRouter)
+  api.use(tasksRouter)
   api.use(notFoundHandler)
 
   app.use('/api', api)
