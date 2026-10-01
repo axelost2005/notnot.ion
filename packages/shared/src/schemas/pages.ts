@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { LIMITS } from '../constants'
+import { BOARD_COLORS, FOLDER_ICONS, LIMITS } from '../constants'
 import { idSchema } from './common'
 
 export const folderNameSchema = z
@@ -16,8 +16,14 @@ export const createFolderSchema = z.object({
   parentId: locationSchema.optional(),
 })
 
+/** Color e ícono: `null` vuelve a como se ve sin elegir. */
 export const updateFolderSchema = z
-  .object({ name: folderNameSchema, parentId: locationSchema })
+  .object({
+    name: folderNameSchema,
+    parentId: locationSchema,
+    color: z.enum(BOARD_COLORS).nullable(),
+    icon: z.enum(FOLDER_ICONS).nullable(),
+  })
   .partial()
   .refine((input) => Object.keys(input).length > 0, 'No hay nada para cambiar')
 
