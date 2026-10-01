@@ -64,3 +64,17 @@ export async function deleteE2EPages(request: APIRequestContext) {
     if (folder.name.startsWith('e2e-')) await request.delete(`/api/folders/${folder.id}`)
   }
 }
+
+/** Borra los pagos de un mes que dejaron los tests (categoría o descripción con `e2e-`). */
+export async function deleteE2EPayments(request: APIRequestContext, month: string) {
+  const res = await request.get(`/api/payments?month=${month}`)
+  const payments = (await res.json()) as {
+    id: string
+    category: string | null
+    description: string | null
+  }[]
+  for (const payment of payments) {
+    const mark = `${payment.category ?? ''} ${payment.description ?? ''}`
+    if (mark.includes('e2e-')) await request.delete(`/api/payments/${payment.id}`)
+  }
+}

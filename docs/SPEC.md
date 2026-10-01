@@ -14,6 +14,7 @@ App personal para organizar el laburo por cliente. Cada cliente o categoría tie
 - **Tarjeta**: una tarea. Título, descripción opcional, columna y orden. Puede venir de una nota.
 - **Nota**: texto libre dentro de un tablero. Se crea, se lee y se borra; no se edita en el MVP.
 - **Sección Notas**: aparte de los tableros, para guardar lo que no es una tarea. Carpetas (con carpetas adentro) y notas con título y texto, sueltas o en una carpeta. En el código son `Folder` y `Page`.
+- **Finanzas**: los pagos que me hicieron (solo ingresos, en ARS o USD), con cliente (un tablero), categoría y comprobantes, para poder mostrar qué se pagó y qué no. En el código, `Payment`.
 
 ## Modelo de datos
 | Modelo | Campos |
@@ -22,9 +23,10 @@ App personal para organizar el laburo por cliente. Cada cliente o categoría tie
 | Column | id, boardId, name, position, isDone, createdAt, updatedAt |
 | Task | id, boardId, columnId, title, description?, position, completedAt?, archivedAt?, noteId?, noteLine?, createdAt, updatedAt |
 | Note | id, boardId, content, createdAt |
-| Image | id, taskId, pathname, contentType, size, width, height, createdAt |
+| Image | id, taskId?, paymentId?, pathname, contentType, size, width, height, createdAt |
 | Folder | id, parentId?, name, createdAt, updatedAt |
 | Page | id, folderId?, title, content, createdAt, updatedAt |
+| Payment | id, date (día), amountCents, currency, boardId?, category?, description?, createdAt, updatedAt |
 
 - Cada tablero tiene al menos 1 columna normal y exactamente 1 `isDone`.
 - `Task.columnId` siempre pertenece a `Task.boardId`.
@@ -36,7 +38,8 @@ App personal para organizar el laburo por cliente. Cada cliente o categoría tie
 - Color: paleta fija de 8.
 - Límites: nombre de tablero 1–40, título 1–200, descripción ≤ 5000, nota 1–5000, máximo 50 tareas por nota, 20 imágenes por tarjeta (2000 px y 4 MB como mucho cada una).
 - Sección Notas: sin `parentId`/`folderId`, en la raíz. Borrar una carpeta borra en cascada lo que tiene adentro. Una carpeta no puede ir dentro de sí misma (409). Carpeta 1–60 caracteres; título de nota ≤ 200 (puede quedar vacío: "Sin título"); texto ≤ 50.000.
-- Imágenes: el archivo vive en un store privado de Vercel Blob (`pathname`) y la fila en la base. Borrar una tarjeta o un tablero borra sus imágenes (filas en cascada; los archivos los borra la API después).
+- Imágenes: el archivo vive en un store privado de Vercel Blob (`pathname`) y la fila en la base. Cada imagen es de una tarjeta o de un pago (un CHECK lo asegura). Borrar una tarjeta, un tablero o un pago borra sus imágenes (filas en cascada; los archivos los borra la API después).
+- Pagos: monto en centavos (mayor a cero), moneda `ARS` o `USD`, fecha sin hora. Borrar el tablero cliente deja el pago sin cliente. Categoría ≤ 40 y descripción ≤ 1000 (vacías quedan en `null`); hasta 20 comprobantes por pago.
 
 ## Notas → tareas (el corazón de la app)
 Parser puro en `packages/shared`: `parseNote(content, { currentBoardSlug, boards })` devuelve las líneas tipadas (`text` o `task` con título y slug destino). Lo usa la API para crear (es la autoridad) y la web para la vista previa.
@@ -104,13 +107,19 @@ REST + JSON bajo `/api`. Toda entrada se valida con los schemas de `shared`. Err
 | PATCH / DELETE | `/folders/:id` | Renombrar o mover (`parentId`) / borrar con lo de adentro |
 | POST | `/pages` | `{ title?, folderId? }` |
 | GET / PATCH / DELETE | `/pages/:id` | Una nota con su texto / guardar título, texto o carpeta / borrar |
+| GET | `/payments?month=2026-10` | Los pagos de un mes, del más nuevo al más viejo, con sus comprobantes |
+| GET | `/payments/summary` | Los meses con pagos (y cuántos) y las categorías ya usadas |
+| POST | `/payments` | `{ date, amountCents, currency, boardId?, category?, description? }` |
+| PATCH / DELETE | `/payments/:id` | Editar / borrar (con sus comprobantes) |
+| POST | `/payments/:id/images?width=&height=` | Sube un comprobante (igual que las imágenes de las tarjetas) |
 
 La web manda en cada pedido `X-Day-Start` con la medianoche de hoy en el dispositivo (ISO). Al leer un tablero, General, notas o historial, la API pasa al historial las terminadas antes de esa hora. Sin el header (o si está a más de 48 h de la hora del server) no archiva nada: no hace falta ninguna tarea programada.
 
 ## UI
-- Rutas: `/unlock`, `/b/:slug` (la web resuelve slug → id con la lista de tableros), `/notas/:slug` (la ventana de notas) y `/p/:id` (una nota de la sección Notas). `/` redirige al último tablero abierto o a General.
+- Rutas: `/unlock`, `/b/:slug` (la web resuelve slug → id con la lista de tableros), `/notas/:slug` (la ventana de notas), `/p/:id` (una nota de la sección Notas) y `/finanzas/:mes` (`/finanzas` abre el mes actual). `/` redirige al último tablero abierto o a General.
 - Desktop: sidebar (General fijo arriba con el total de abiertas, tableros con color y contador de abiertas, archivados colapsados, "+ Nuevo tablero", la sección Notas, "Bloquear"), kanban al centro con scroll horizontal, panel de notas a la derecha (~360px, plegable).
 - Sección Notas en la sidebar: árbol plegable (se recuerda qué carpetas están abiertas), carpetas primero y orden alfabético. "+" crea una nota o una carpeta; el "…" de cada fila tiene crear adentro (carpetas), renombrar, "Mover a…" y borrar. Una carpeta nueva queda lista para escribirle el nombre; una nota se renombra en su título. Borrar una carpeta vacía no pregunta; con contenido, pide confirmación y dice qué se lleva.
+- Finanzas (`/finanzas/2026-10`): el mes con flechas para ir y volver y la lista de los meses con pagos; lo cobrado en el mes por moneda; la lista por fecha o agrupada por categoría con subtotales (`?por=categoria`). "Anotar un pago" y tocar uno abren el mismo formulario: monto como se escribe acá ("150.000", "1.234,50"), moneda, fecha, cliente, categoría (con las ya usadas como sugerencia), descripción y comprobantes (pegar, arrastrar o adjuntar; en uno nuevo se suben al guardarlo).
 - Nota (`/p/:id`): título y texto plano. Se guarda sola (un rato después de la última tecla, al ir a otra nota y al esconder la pestaña) y lo avisa ("Guardando…", "Guardado"). Arriba, dónde está (Notas / carpeta), "Mover a…" y borrar. En el celu, el título del header abre la sidebar, como en los tableros.
 - Header del tablero: "Historial" (panel lateral con las terminadas, agrupadas por día; en General, las de todos con el chip de su tablero) y, en desktop, "Abrir las notas en otra ventana".
 - Ventana de notas (`/notas/:slug`): una ventana chica aparte (`window.open`, ~400×640) con solo el panel de notas y un selector de tablero arriba (desplegable propio, con el punto de color de cada tablero). Cambiar de tablero cambia dónde se escriben las notas y a dónde van las tareas sin `@`. Lo que cambia en una ventana se refresca en las otras (BroadcastChannel).

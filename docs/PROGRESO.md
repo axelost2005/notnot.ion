@@ -2,7 +2,7 @@
 
 ## Fase actual
 
-**Fase 6 — Correcciones, imágenes, Notas y Finanzas: en curso.** Pasos 1 (correcciones), 2 (imágenes) y 3 (sección Notas) hechos. Las fases 0 a 5 están hechas y la app está en producción.
+**Fase 6 — Correcciones, imágenes, Notas y Finanzas: cerrada.** Las fases 0 a 6 están hechas y la app está en producción.
 
 ## Hecho
 
@@ -63,6 +63,8 @@
 
 - **Paso 3, sección Notas.** Modelos `Folder` (con `parentId`, en cascada) y `Page` (migración `notes_section`, solo agrega tablas). `GET /folders` trae el árbol entero (notas sin texto); carpetas y notas se crean, renombran, mueven y borran con su ruta. `canMoveFolder`, `descendantFolderIds`, `folderPath` y el orden alfabético en `shared`, con tests. En la web: sección "Notas" en la sidebar (árbol plegable, "+" y "…" por fila, renombrar en el lugar, "Mover a…" con el selector propio y la ruta de cada carpeta, borrar con confirmación si tiene contenido) y `/p/:id` con título y texto que se guardan solos. En el celu se llega desde el mismo panel lateral. e2e: `pages.spec.ts`.
 
+- **Paso 4, Finanzas.** Modelo `Payment` (migración `payments`: agrega la tabla, `Image.paymentId` y un CHECK para que cada imagen sea de una tarjeta o de un pago; `Image.taskId` pasa a opcional, sin tocar datos). `GET /payments?month=`, `GET /payments/summary`, `POST/PATCH/DELETE /payments/:id` y `POST /payments/:id/images` (la misma subida que las tarjetas). `parseAmount` (montos en formato argentino), `shiftMonth`, `totalsByCurrency` y `groupByCategory` en `shared`, con tests. En la web: "Finanzas" en la sidebar y `/finanzas/:mes` con el mes, los totales por moneda, la lista por fecha o por categoría y el formulario del pago con los comprobantes (reusa `ImageGallery`, `ImageViewer` y `useImageDrop`). e2e: `finance.spec.ts`. README con capturas nuevas (sección Notas y Finanzas, y las tarjetas nuevas).
+
 ## Decisiones
 
 - **Versiones**: lo último estable que funciona junto. TypeScript 6.0 (typescript-eslint todavía no soporta TS 7), Prisma 7.10 (Prisma 8 está en RC), React Router 8 en modo data, Vite 8, Vitest 5, ESLint 10, Tailwind 4, Zod 4, shadcn CLI 4.
@@ -116,8 +118,15 @@
 - **Guardado automático**: 800 ms después de la última tecla, al ir a otra nota y al esconder la pestaña (`keepalive` si el pedido pesa menos de 64 kB, así termina aunque se cierre). Esos guardados son `silent`: no avisan a las otras ventanas ni refrescan General en cada tecla. El cache de la nota se actualiza antes de mandar, así volver enseguida a la nota muestra lo último escrito. Si falla, avisa y se reintenta con la próxima tecla.
 - **Texto largo**: 50.000 caracteres por nota. `/api/pages` tiene su propio límite de JSON (512 kB); el resto de la API sigue en 100 kB.
 - **Carpetas abiertas**: se recuerdan en el dispositivo (`localStorage`) y al abrir una nota se abren las carpetas que llevan a ella.
+- **Finanzas, solo ingresos**: como pediste, es un registro de lo que te pagaron (no hay egresos ni saldo). Los totales del mes van por moneda, sin convertir.
+- **Montos**: en centavos (`BigInt` en la base, número en la API) para no perder decimales al sumar. Se escriben como acá: "150.000" son ciento cincuenta mil y "1.234,50" lleva coma decimal; un punto con uno o dos dígitos después ("15.50") también se toma como decimal.
+- **Comprobantes de un pago nuevo**: se pueden pegar o adjuntar antes de guardar; esperan en la pantalla y se suben apenas se crea el pago.
+- **Categorías**: texto libre. Las sugerencias son las ya usadas (sin repetir mayúsculas/minúsculas) que contienen lo que vas escribiendo, como botones abajo del campo: no hay lista desplegable del sistema (la misma que se veía mal en Windows oscuro).
+- **Cliente**: los tableros activos (sin General). Si se borra el tablero, el pago queda "sin cliente".
 - **Dev**: si corrés comandos de pnpm con la app levantada, pnpm 11 puede regenerar el cliente de Prisma y `node --watch` reinicia la API (algún pedido puede dar 502 en ese momento).
 
 ## Pendientes para vos
 
 - **Instalarla en el celu y en la compu** (ver "Instalarla" en el README). El código de producción te lo pasé por chat; no está en el repo.
+- **Probar en producción lo de la Fase 6** con tus datos: imágenes en una tarjeta, la sección Notas y un pago con comprobante. Las subidas las probé en el preview (mismo código, store de dev); en producción no puedo entrar porque no tengo el código.
+- **Opcional**: en Vercel, los dos `BLOB_READ_WRITE_TOKEN` quedaron como variables "no sensibles" (así las creó el CLI). Si querés que no se puedan volver a leer desde el dashboard, marcalas como sensibles (Settings → Environment Variables).

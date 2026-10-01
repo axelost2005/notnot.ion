@@ -14,13 +14,20 @@ Un solo usuario, sin cuentas: la app se abre con un código. Funciona en la web 
 
 - **Tableros**: uno por cliente o categoría, con columnas "Por hacer", "En curso" y "Hecho" (podés agregar, renombrar y elegir cuál es la de terminadas).
 - **General**: siempre está arriba. Junta las tarjetas de todos los tableros por estado, cada una con el chip de su tablero, y guarda lo que no es de ningún cliente. Arrastrar una tarjeta a otra columna le cambia el estado en su tablero.
-- **Tarjetas**: se crean al pie de cada columna y se mueven arrastrando (con el mouse, con espacio y flechas, o con un toque largo en el celu) o desde el detalle con "Mover a…".
+- **Tarjetas**: se crean al pie de cada columna, se tildan con su checkbox (igual que desde la nota) y se mueven arrastrando a cualquier parte de la columna (con el mouse, con espacio y flechas, o con un toque largo en el celu: quedarse en el borde pasa a la columna de al lado) o desde el detalle con "Mover a…".
+- **Imágenes**: en el detalle de una tarjeta, pegá una captura (Ctrl+V), arrastrá una imagen o tocá "Adjuntar" (en el celu, galería o cámara). Se achican antes de subirse, se agrandan al tocarlas y son privadas: solo se ven con el candado abierto.
 - **Notas**: escribís en el panel de la derecha (en el celu, en la pestaña "Notas"). El composer ya arranca con `[] `: escribís, das Enter y se crea la tarjeta, listo para la siguiente. Cada línea que empieza con `[]`, `[ ]`, `- []`, `- [ ]` o `* [ ]` se vuelve tarjeta al final de "Por hacer"; para una nota común, borrás los corchetes. Con `@tablero` la mandás a otro tablero; sin `@`, queda en el tablero donde escribís. Abajo del composer se ve antes de enviar: "2 tareas → Pepito, General".
 - Tildar una línea de la nota manda la tarjeta a "Hecho"; moverla en el tablero actualiza el tilde. Borrar una nota deja sus tarjetas.
 - **Notas en otra ventana**: el botón al lado de "Notas" las abre solas en una ventana chica, con un selector de tablero arriba, para tenerlas al costado en una reunión. En Windows, PowerToys la deja siempre encima con Win+Ctrl+T.
 - **Historial**: cada día arranca con "Hecho" vacío. Lo terminado antes de hoy pasa al Historial (botón en el header), agrupado por día; en General se ve el de todos los tableros.
+- **Sección Notas** (en la sidebar, abajo de los tableros): para lo que no es una tarea. Carpetas con carpetas adentro y notas con título y texto, que se guardan solas mientras escribís. Se crean, renombran, mueven ("Mover a…") y borran desde el "…" de cada una.
+- **Finanzas**: los pagos que te hicieron, en pesos o dólares, organizados por mes. Cada uno con fecha, monto, cliente (uno de los tableros), categoría, descripción y comprobantes. Arriba, lo cobrado en el mes por moneda; la lista se ve por fecha o agrupada por categoría.
 
 ![General: las tarjetas de todos los tableros por estado](docs/capturas/escritorio-general.png)
+
+| Sección Notas                                           | Finanzas                                                |
+| ------------------------------------------------------- | ------------------------------------------------------- |
+| ![Una nota abierta](docs/capturas/escritorio-notas.png) | ![Pagos del mes](docs/capturas/escritorio-finanzas.png) |
 
 ## Stack
 
@@ -50,12 +57,13 @@ En desarrollo, Vite manda `/api` a la API: web y API quedan en el mismo origen, 
 
 ### Variables de entorno
 
-| Variable         | Para qué                                                      |
-| ---------------- | ------------------------------------------------------------- |
-| `DATABASE_URL`   | Conexión pooled de Neon. La usa la app.                       |
-| `DIRECT_URL`     | Conexión directa de Neon. La usa Prisma para migrar.          |
-| `APP_SECRET`     | El código del candado: una frase de 4 o más palabras.         |
-| `SESSION_SECRET` | Firma la cookie de sesión. Rotarlo cierra todas las sesiones. |
+| Variable                | Para qué                                                                               |
+| ----------------------- | -------------------------------------------------------------------------------------- |
+| `DATABASE_URL`          | Conexión pooled de Neon. La usa la app.                                                |
+| `DIRECT_URL`            | Conexión directa de Neon. La usa Prisma para migrar.                                   |
+| `APP_SECRET`            | El código del candado: una frase de 4 o más palabras.                                  |
+| `SESSION_SECRET`        | Firma la cookie de sesión. Rotarlo cierra todas las sesiones.                          |
+| `BLOB_READ_WRITE_TOKEN` | Store privado de Vercel Blob (imágenes y comprobantes). En local, el del store de dev. |
 
 ## Scripts
 
@@ -79,7 +87,7 @@ En desarrollo, Vite manda `/api` a la API: web y API quedan en el mismo origen, 
 
 Vercel sirve la web y la API en el mismo origen: `pnpm build:vercel` aplica las migraciones, crea General si no existe, hace el build y arma `.vercel/output` con la web estática y la API como una función (`/api/*`). La configuración está en `vercel.json` y `scripts/build-vercel.mjs`.
 
-Neon tiene un branch `dev` para local y previews, y `production` (el principal) para producción. El repo está conectado a Vercel: cada push a `main` despliega a producción y cada rama tiene su preview.
+Neon tiene un branch `dev` para local y previews, y `production` (el principal) para producción. Las imágenes van a Vercel Blob privado, también separado: `notnot-ion-dev` para local y previews, `notnot-ion-prod` para producción. El repo está conectado a Vercel: cada push a `main` despliega a producción y cada rama tiene su preview.
 
 ## Instalarla
 

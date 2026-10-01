@@ -1,6 +1,6 @@
 import type { BoardSummary } from '@notnot/shared'
 import { useQuery } from '@tanstack/react-query'
-import { ChevronRight, Lock, Plus } from 'lucide-react'
+import { ChevronRight, Lock, Plus, Wallet } from 'lucide-react'
 import { useState } from 'react'
 import { NavLink } from 'react-router'
 import { BrandMark } from '@/components/BrandMark'
@@ -98,6 +98,21 @@ export function Sidebar({ onNavigate }: Props) {
           )}
         </nav>
         <NotesSection onNavigate={onNavigate} />
+        <nav aria-label="Finanzas" className="mt-5">
+          <NavLink
+            to="/finanzas"
+            onClick={onNavigate}
+            className={({ isActive }) =>
+              cn(
+                'flex h-8 items-center gap-2.5 rounded-md px-2 outline-none hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-ring',
+                isActive && 'bg-sidebar-accent font-medium text-sidebar-accent-foreground',
+              )
+            }
+          >
+            <Wallet aria-hidden="true" className="size-3.5 shrink-0 text-muted-foreground" />
+            Finanzas
+          </NavLink>
+        </nav>
       </div>
 
       <div className="grid shrink-0 gap-px border-t border-sidebar-border p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
