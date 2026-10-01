@@ -8,7 +8,7 @@ import {
 } from '@notnot/shared'
 import { prisma } from '../db'
 import { badRequest, conflict, notFound } from '../middleware/errors'
-import { toTask } from './boards'
+import { toTask, withNoteBoard } from './boards'
 
 type NewTask = { columnId: string; title: string; description?: string | null }
 type TaskChanges = { title?: string; description?: string | null }
@@ -30,6 +30,7 @@ export async function createTask(input: NewTask): Promise<Task> {
       position: positionAfterLast(column.tasks),
       completedAt: column.isDone ? new Date() : null,
     },
+    include: withNoteBoard,
   })
   return toTask(task)
 }
@@ -38,6 +39,7 @@ export async function updateTask(id: string, changes: TaskChanges): Promise<Task
   const task = await prisma.task.update({
     where: { id },
     data: { title: changes.title, description: changes.description },
+    include: withNoteBoard,
   })
   return toTask(task)
 }
@@ -82,6 +84,7 @@ export async function moveTask(id: string, input: MoveTaskInput): Promise<Task> 
       // Se marca al entrar a la de terminadas y se limpia al salir.
       completedAt: column.isDone ? (task.completedAt ?? new Date()) : null,
     },
+    include: withNoteBoard,
   })
   return toTask(moved)
 }
@@ -108,6 +111,7 @@ export async function toggleTaskDone(id: string): Promise<Task> {
     data: task.column.isDone
       ? { columnId: target.id, position: positionBeforeFirst(target.tasks), completedAt: null }
       : { columnId: target.id, position: positionAfterLast(target.tasks), completedAt: new Date() },
+    include: withNoteBoard,
   })
   return toTask(updated)
 }

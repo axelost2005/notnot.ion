@@ -23,6 +23,11 @@ export function hasTaskMarker(line: string): boolean {
   return MARKER.test(line)
 }
 
+/** La línea sin el marcador de tarea (para mostrar el texto original). */
+export function stripTaskMarker(line: string): string {
+  return line.replace(MARKER, '').trim()
+}
+
 const tidy = (text: string) => text.replace(/\s+/g, ' ').trim()
 
 /**

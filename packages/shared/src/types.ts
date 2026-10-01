@@ -36,6 +36,8 @@ export type Task = {
   completedAt: string | null
   noteId: string | null
   noteLine: number | null
+  /** Tablero donde está la nota de origen (puede ser otro). */
+  noteBoardId: string | null
   createdAt: string
   updatedAt: string
 }

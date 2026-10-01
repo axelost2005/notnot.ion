@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { hasTaskMarker, parseNote, type ParsedLine } from './parseNote'
+import { hasTaskMarker, parseNote, stripTaskMarker, type ParsedLine } from './parseNote'
 
 const boards = [
   { slug: 'inbox', archived: false },
@@ -184,5 +184,12 @@ describe('hasTaskMarker', () => {
   it('detecta el marcador aunque no haya tarea', () => {
     expect(hasTaskMarker('  - [ ] algo')).toBe(true)
     expect(hasTaskMarker('algo')).toBe(false)
+  })
+})
+
+describe('stripTaskMarker', () => {
+  it('saca el marcador y los espacios', () => {
+    expect(stripTaskMarker('  - [ ] llamar @pepito')).toBe('llamar @pepito')
+    expect(stripTaskMarker('sin marcador')).toBe('sin marcador')
   })
 })
