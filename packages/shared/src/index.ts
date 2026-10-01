@@ -1,4 +1,5 @@
 export * from './constants'
+export * from './general/lanes'
 export * from './ordering/moves'
 export * from './ordering/ordering'
 export * from './parser/parseNote'

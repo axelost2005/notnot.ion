@@ -4,6 +4,7 @@ import type {
   BoardSummary,
   Column,
   CreateBoardInput,
+  GeneralBoard,
   Task,
   UpdateBoardInput,
 } from '@notnot/shared'
@@ -27,7 +28,7 @@ export function toBoard(board: Db.Board): Board {
     slug: board.slug,
     color: isBoardColor(board.color) ? board.color : 'gray',
     position: board.position,
-    isInbox: board.isInbox,
+    isGeneral: board.isGeneral,
     archivedAt: board.archivedAt?.toISOString() ?? null,
     createdAt: board.createdAt.toISOString(),
     updatedAt: board.updatedAt.toISOString(),
@@ -67,11 +68,11 @@ export function toTask(task: Db.Task & { note?: { boardId: string } | null }): T
 
 const openTaskCount = { _count: { select: { tasks: { where: { completedAt: null } } } } } as const
 
-/** Activos y archivados, Inbox primero, con la cantidad de tareas abiertas. */
+/** Activos y archivados, General primero, con la cantidad de tareas abiertas. */
 export async function listBoards(): Promise<BoardSummary[]> {
   const boards = await prisma.board.findMany({ include: openTaskCount })
   return sortByPosition(boards)
-    .sort((a, b) => Number(b.isInbox) - Number(a.isInbox))
+    .sort((a, b) => Number(b.isGeneral) - Number(a.isGeneral))
     .map((board) => ({ ...toBoard(board), openTaskCount: board._count.tasks }))
 }
 
@@ -92,6 +93,18 @@ export async function getBoard(id: string): Promise<BoardDetail> {
     ...toBoard(board),
     columns: sortByPosition(board.columns).map(toColumn),
     tasks: sortByPosition(board.tasks).map(toTask),
+  }
+}
+
+/** Para el kanban de General: lo de todos los tableros activos, sin el historial. */
+export async function getGeneral(): Promise<GeneralBoard> {
+  const boards = await prisma.board.findMany({
+    where: { archivedAt: null },
+    include: { columns: true, tasks: { where: { archivedAt: null }, include: withNoteBoard } },
+  })
+  return {
+    columns: boards.flatMap((board) => sortByPosition(board.columns).map(toColumn)),
+    tasks: boards.flatMap((board) => sortByPosition(board.tasks).map(toTask)),
   }
 }
 
@@ -119,8 +132,8 @@ export async function createBoard(input: CreateBoardInput): Promise<BoardSummary
 export async function updateBoard(id: string, input: UpdateBoardInput): Promise<BoardSummary> {
   const board = await prisma.board.findUnique({ where: { id } })
   if (!board) throw notFound('El tablero no existe')
-  if (board.isInbox && (input.name !== undefined || input.archived !== undefined)) {
-    throw conflict('Inbox no se puede renombrar ni archivar')
+  if (board.isGeneral && (input.name !== undefined || input.archived !== undefined)) {
+    throw conflict('General no se puede renombrar ni archivar')
   }
 
   const data: Db.Prisma.BoardUpdateInput = {}
@@ -143,11 +156,11 @@ export async function updateBoard(id: string, input: UpdateBoardInput): Promise<
   return getBoardSummary(id)
 }
 
-/** Borra en cascada columnas, tareas y notas. Inbox no se borra. */
+/** Borra en cascada columnas, tareas y notas. General no se borra. */
 export async function deleteBoard(id: string): Promise<void> {
-  const board = await prisma.board.findUnique({ where: { id }, select: { isInbox: true } })
+  const board = await prisma.board.findUnique({ where: { id }, select: { isGeneral: true } })
   if (!board) throw notFound('El tablero no existe')
-  if (board.isInbox) throw conflict('Inbox no se puede borrar')
+  if (board.isGeneral) throw conflict('General no se puede borrar')
   await prisma.$transaction([
     // Las tareas de otros tableros que salieron de sus notas pierden el vínculo con la nota.
     prisma.task.updateMany({

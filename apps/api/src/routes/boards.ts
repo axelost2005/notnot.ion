@@ -1,7 +1,14 @@
 import { createBoardSchema, idParamsSchema, updateBoardSchema } from '@notnot/shared'
 import { Router } from 'express'
 import { archiveBeforeToday } from '../middleware/archive'
-import { createBoard, deleteBoard, getBoard, listBoards, updateBoard } from '../services/boards'
+import {
+  createBoard,
+  deleteBoard,
+  getBoard,
+  getGeneral,
+  listBoards,
+  updateBoard,
+} from '../services/boards'
 
 export const boardsRouter = Router()
 
@@ -12,6 +19,10 @@ boardsRouter.get('/boards', async (_req, res) => {
 boardsRouter.post('/boards', async (req, res) => {
   const input = createBoardSchema.parse(req.body)
   res.status(201).json(await createBoard(input))
+})
+
+boardsRouter.get('/general', archiveBeforeToday, async (_req, res) => {
+  res.json(await getGeneral())
 })
 
 boardsRouter.get('/boards/:id', archiveBeforeToday, async (req, res) => {

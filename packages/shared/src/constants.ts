@@ -39,7 +39,8 @@ export const DEFAULT_COLUMNS = [
   { name: 'Hecho', isDone: true },
 ] as const
 
-export const INBOX = { name: 'Inbox', slug: 'inbox', color: 'gray' } as const satisfies {
+/** El tablero que está siempre: arriba de todo, con las tarjetas de todos los tableros. */
+export const GENERAL = { name: 'General', slug: 'general', color: 'gray' } as const satisfies {
   name: string
   slug: string
   color: BoardColor
