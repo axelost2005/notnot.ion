@@ -11,7 +11,6 @@ import { Trash2 } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router'
 import { toast } from 'sonner'
-import { NativeSelect } from '@/components/NativeSelect'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -34,7 +33,15 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { boardQuery, boardsQuery } from '../boards/api'
+import { BoardSelect } from '../boards/BoardSelect'
 import { useDeleteTask, useMoveTask, useUpdateTask } from './api'
 
 type Props = {
@@ -188,29 +195,28 @@ function TaskDetailForm({
       <fieldset className="grid gap-2">
         <legend className="mb-2 text-sm leading-none font-medium">Mover a…</legend>
         <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
-          <NativeSelect
+          <BoardSelect
             aria-label="Tablero"
+            boards={activeBoards}
             value={targetBoardId}
-            onChange={(event) => setTargetBoardId(event.target.value)}
-          >
-            {activeBoards.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.name}
-              </option>
-            ))}
-          </NativeSelect>
-          <NativeSelect
-            aria-label="Columna"
+            onValueChange={setTargetBoardId}
+          />
+          <Select
             value={columnId}
             disabled={targetColumns.length === 0}
-            onChange={(event) => setTargetColumnId(event.target.value)}
+            onValueChange={setTargetColumnId}
           >
-            {targetColumns.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </NativeSelect>
+            <SelectTrigger aria-label="Columna" className="w-full min-w-0">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {targetColumns.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Button
             type="button"
             variant="outline"
