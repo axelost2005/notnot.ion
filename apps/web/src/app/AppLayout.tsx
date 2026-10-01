@@ -26,7 +26,7 @@ export function AppLayout() {
       <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
         <SheetContent side="left" className="w-72 gap-0 p-0" showCloseButton={false}>
           <SheetTitle className="sr-only">Menú</SheetTitle>
-          <SheetDescription className="sr-only">Tableros y notas.</SheetDescription>
+          <SheetDescription className="sr-only">Tableros, notas y finanzas.</SheetDescription>
           <Sidebar onNavigate={() => setMenuOpen(false)} />
         </SheetContent>
       </Sheet>
