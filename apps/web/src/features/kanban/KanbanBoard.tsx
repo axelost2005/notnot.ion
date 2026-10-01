@@ -189,7 +189,7 @@ export function KanbanBoard({ board }: { board: BoardDetail }) {
       }}
     >
       {/* En mobile, una columna por vez con swipe (scroll-snap). */}
-      <div className="flex min-h-0 flex-1 items-start gap-3 overflow-x-auto p-4 max-md:snap-x max-md:snap-mandatory max-md:scroll-px-4 max-md:[scrollbar-width:none]">
+      <div className="flex min-h-0 flex-1 items-start gap-3 overflow-x-auto p-3 max-md:snap-x max-md:p-4 max-md:snap-mandatory max-md:scroll-px-4 max-md:[scrollbar-width:none]">
         {columns.map((column) => {
           const columnTasks = (items[column.id] ?? [])
             .map((id) => tasksById.get(id))
