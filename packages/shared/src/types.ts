@@ -135,8 +135,28 @@ export type Payment = {
   boardId: string | null
   category: string | null
   description: string | null
+  /** Lo que me debían y este pago cubre (o parte). */
+  receivableId: string | null
   /** Los comprobantes. */
   images: ImageInfo[]
+  createdAt: string
+  updatedAt: string
+}
+
+/** Algo que me deben (Por cobrar). `dueDate` es el día que vence; el monto, en centavos. */
+export type Receivable = {
+  id: string
+  description: string
+  amountCents: number
+  currency: Currency
+  /** El cliente: uno de los tableros. */
+  boardId: string | null
+  dueDate: string | null
+  note: string | null
+  /** La suma de sus pagos (van en su misma moneda). */
+  paidCents: number
+  /** Sus pagos, del más viejo al más nuevo. */
+  payments: { id: string; date: string; amountCents: number }[]
   createdAt: string
   updatedAt: string
 }

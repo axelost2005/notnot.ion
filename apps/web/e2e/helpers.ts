@@ -78,3 +78,13 @@ export async function deleteE2EPayments(request: APIRequestContext, month: strin
     if (mark.includes('e2e-')) await request.delete(`/api/payments/${payment.id}`)
   }
 }
+
+/** Borra lo por cobrar que dejaron los tests (concepto con `e2e-`). Sus pagos quedan sueltos. */
+export async function deleteE2EReceivables(request: APIRequestContext) {
+  const res = await request.get('/api/receivables')
+  const receivables = (await res.json()) as { id: string; description: string }[]
+  for (const receivable of receivables) {
+    if (receivable.description.includes('e2e-'))
+      await request.delete(`/api/receivables/${receivable.id}`)
+  }
+}

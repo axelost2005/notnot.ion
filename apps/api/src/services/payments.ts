@@ -10,7 +10,7 @@ import {
 } from '@notnot/shared'
 import { prisma } from '../db'
 import type * as Db from '../generated/prisma/client'
-import { notFound } from '../middleware/errors'
+import { conflict, notFound } from '../middleware/errors'
 import { deleteBlobs, imagePathnames, toImageInfo } from './images'
 
 // Finanzas: los pagos que me hicieron, con sus comprobantes (imágenes).
@@ -24,19 +24,22 @@ type PaymentRow = Db.Payment & { images: { id: string; width: number; height: nu
 const isCurrency = (value: string): value is Currency =>
   (CURRENCIES as readonly string[]).includes(value)
 
+export const toCurrency = (value: string): Currency => (isCurrency(value) ? value : 'ARS')
+
 /** La fecha se guarda como día (sin hora): viaja como "2026-10-15". */
-const toDay = (date: Date) => date.toISOString().slice(0, 10)
-const fromDay = (day: string) => new Date(`${day}T00:00:00.000Z`)
+export const toDay = (date: Date) => date.toISOString().slice(0, 10)
+export const fromDay = (day: string) => new Date(`${day}T00:00:00.000Z`)
 
 function toPayment(payment: PaymentRow): Payment {
   return {
     id: payment.id,
     date: toDay(payment.date),
     amountCents: Number(payment.amountCents),
-    currency: isCurrency(payment.currency) ? payment.currency : 'ARS',
+    currency: toCurrency(payment.currency),
     boardId: payment.boardId,
     category: payment.category,
     description: payment.description,
+    receivableId: payment.receivableId,
     images: payment.images.map(toImageInfo),
     createdAt: payment.createdAt.toISOString(),
     updatedAt: payment.updatedAt.toISOString(),
@@ -74,14 +77,27 @@ export async function getPaymentsSummary(): Promise<PaymentsSummary> {
   }
 }
 
-async function assertClient(boardId: string | null | undefined) {
+export async function assertClient(boardId: string | null | undefined) {
   if (!boardId) return
   const board = await prisma.board.findUnique({ where: { id: boardId }, select: { id: true } })
   if (!board) throw notFound('El cliente no existe')
 }
 
+/** El pago de algo que me deben va en su misma moneda: si no, lo cobrado no se puede sumar. */
+async function assertReceivable(receivableId: string | null | undefined, currency: string) {
+  if (!receivableId) return
+  const receivable = await prisma.receivable.findUnique({
+    where: { id: receivableId },
+    select: { currency: true },
+  })
+  if (!receivable) throw notFound('Lo que te deben ya no existe')
+  if (receivable.currency !== currency)
+    throw conflict('El pago tiene que ser en la misma moneda que lo que te deben')
+}
+
 export async function createPayment(input: PaymentData): Promise<Payment> {
   await assertClient(input.boardId)
+  await assertReceivable(input.receivableId, input.currency)
   const payment = await prisma.payment.create({
     data: {
       date: fromDay(input.date),
@@ -90,6 +106,7 @@ export async function createPayment(input: PaymentData): Promise<Payment> {
       boardId: input.boardId ?? null,
       category: input.category ?? null,
       description: input.description ?? null,
+      receivableId: input.receivableId ?? null,
     },
     include: paymentInclude,
   })
@@ -98,6 +115,18 @@ export async function createPayment(input: PaymentData): Promise<Payment> {
 
 export async function updatePayment(id: string, input: PaymentChanges): Promise<Payment> {
   await assertClient(input.boardId)
+  if (input.receivableId !== undefined || input.currency !== undefined) {
+    // Lo que no cambia sale de cómo está ahora.
+    const current = await prisma.payment.findUnique({
+      where: { id },
+      select: { currency: true, receivableId: true },
+    })
+    if (!current) throw notFound()
+    await assertReceivable(
+      input.receivableId === undefined ? current.receivableId : input.receivableId,
+      input.currency ?? current.currency,
+    )
+  }
   const payment = await prisma.payment.update({
     where: { id },
     data: {
@@ -107,6 +136,7 @@ export async function updatePayment(id: string, input: PaymentChanges): Promise<
       boardId: input.boardId,
       category: input.category,
       description: input.description,
+      receivableId: input.receivableId,
     },
     include: paymentInclude,
   })

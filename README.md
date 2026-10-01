@@ -21,13 +21,16 @@ Un solo usuario, sin cuentas: la app se abre con un código. Funciona en la web 
 - **Notas en otra ventana**: el botón al lado de "Notas" las abre solas en una ventana chica, con un selector de tablero arriba, para tenerlas al costado en una reunión. En Windows, PowerToys la deja siempre encima con Win+Ctrl+T.
 - **Historial**: cada día arranca con "Hecho" vacío. Lo terminado antes de hoy pasa al Historial (botón en el header), agrupado por día; en General se ve el de todos los tableros.
 - **Sección Notas** (en la sidebar, abajo de los tableros): para lo que no es una tarea. Carpetas con carpetas adentro y notas con título y texto, que se guardan solas mientras escribís. Se crean, renombran, mueven ("Mover a…") y borran desde el "…" de cada una.
-- **Finanzas**: los pagos que te hicieron, en pesos o dólares, organizados por mes. Cada uno con fecha, monto, cliente (uno de los tableros), categoría, descripción y comprobantes. Arriba, lo cobrado en el mes por moneda; la lista se ve por fecha o agrupada por categoría.
+- **Finanzas → Cobrado**: los pagos que te hicieron, en pesos o dólares, organizados por mes. Cada uno con fecha, monto, cliente (uno de los tableros), categoría, descripción y comprobantes. Arriba, lo cobrado en el mes por moneda; la lista se ve por fecha o agrupada por categoría.
+- **Finanzas → Por cobrar**: lo que te deben, con el día que vence. Lo vencido queda arriba y marcado, y en la sidebar, al lado de Finanzas, ves cuánto vence hoy o ya venció. "Me pagaron" anota el pago ya completo (si fue una parte, cambiás el monto y queda lo que falta); cuando está todo, pasa a "Cobradas" con la lista de sus pagos.
 
 ![General: las tarjetas de todos los tableros por estado](docs/capturas/escritorio-general.png)
 
 | Sección Notas                                           | Finanzas                                                |
 | ------------------------------------------------------- | ------------------------------------------------------- |
 | ![Una nota abierta](docs/capturas/escritorio-notas.png) | ![Pagos del mes](docs/capturas/escritorio-finanzas.png) |
+
+![Por cobrar: lo vencido arriba, lo que falta y "Me pagaron"](docs/capturas/escritorio-por-cobrar.png)
 
 ## Stack
 

@@ -1,9 +1,15 @@
 import type { BoardSummary, Payment } from '@notnot/shared'
-import { groupByCategory, monthSchema, shiftMonth, totalsByCurrency } from '@notnot/shared'
+import {
+  groupByCategory,
+  monthSchema,
+  remainingCents,
+  shiftMonth,
+  totalsByCurrency,
+} from '@notnot/shared'
 import { useQuery } from '@tanstack/react-query'
 import { ChevronDown, ChevronLeft, ChevronRight, Paperclip, Plus, Wallet } from 'lucide-react'
-import { useState } from 'react'
-import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router'
+import { useState, type ReactNode } from 'react'
+import { Link, Navigate, useMatch, useNavigate, useParams, useSearchParams } from 'react-router'
 import { useLayout } from '@/app/layoutContext'
 import { ErrorState } from '@/components/ErrorState'
 import { Button } from '@/components/ui/button'
@@ -15,10 +21,11 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
+import { cn } from '@/lib/utils'
 import { boardsQuery } from '../boards/api'
 import { BoardChip } from '../boards/BoardChip'
-import { paymentsQuery, paymentsSummaryQuery } from './api'
-import { currentMonth, dayParts, formatMoney, monthLabel, monthName } from './format'
+import { paymentsQuery, paymentsSummaryQuery, receivablesQuery } from './api'
+import { currencyName, currentMonth, dayParts, formatMoney, monthLabel, monthName } from './format'
 import { PaymentDialog } from './PaymentDialog'
 
 /** `/finanzas` abre el mes actual. */
@@ -45,77 +52,106 @@ function FinanceMonth({ month }: { month: string }) {
   const boardsById = new Map(boards.data?.map((board) => [board.id, board]))
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      <title>{`Finanzas, ${monthLabel(month).toLowerCase()} – notnot.ion`}</title>
-      <FinanceHeader onNew={() => setOpen('new')} />
-      <div className="min-h-0 flex-1 overflow-y-auto">
-        <div className="mx-auto w-full max-w-3xl px-6 py-6 max-md:px-4 max-md:py-4">
-          <MonthBar month={month} byCategory={byCategory} />
-          {payments.isPending ? (
-            <ListSkeleton />
-          ) : payments.isError ? (
-            <ErrorState
-              title="No se pudieron cargar los pagos."
-              message={payments.error.message}
-              onRetry={() => void payments.refetch()}
-            />
-          ) : payments.data.length === 0 ? (
-            <div className="mt-10">
-              <p className="font-medium">No hay pagos anotados en {monthName(month)}.</p>
-              <p className="mt-1 text-[13px] text-muted-foreground">
-                Anotá lo que te pagaron y adjuntá el comprobante: después sirve para mostrar qué se
-                pagó y qué no.
-              </p>
-              <Button variant="outline" size="sm" className="mt-4" onClick={() => setOpen('new')}>
-                <Plus />
-                Anotar un pago
-              </Button>
-            </div>
-          ) : (
-            <>
-              <Totals payments={payments.data} />
-              {byCategory ? (
-                groupByCategory(payments.data).map((group) => (
-                  <section
-                    key={group.category ?? ''}
-                    aria-label={group.category ?? 'Sin categoría'}
-                  >
-                    <header className="mt-6 flex items-baseline justify-between gap-3 border-b pb-2">
-                      <h2 className="truncate text-sm font-semibold">
-                        {group.category ?? 'Sin categoría'}
-                      </h2>
-                      <p className="shrink-0 text-[13px] text-muted-foreground tabular-nums">
-                        {group.totals
-                          .map((total) => formatMoney(total.totalCents, total.currency))
-                          .join(' · ')}
-                      </p>
-                    </header>
-                    <PaymentList
-                      payments={group.payments}
-                      boardsById={boardsById}
-                      showCategory={false}
-                      onOpen={setOpen}
-                    />
-                  </section>
-                ))
-              ) : (
+    <FinanceFrame
+      title={`Finanzas, ${monthLabel(month).toLowerCase()} – notnot.ion`}
+      action={
+        <Button size="sm" onClick={() => setOpen('new')}>
+          <Plus />
+          Anotar un pago
+        </Button>
+      }
+    >
+      <MonthBar month={month} byCategory={byCategory} />
+      {payments.isPending ? (
+        <ListSkeleton />
+      ) : payments.isError ? (
+        <ErrorState
+          title="No se pudieron cargar los pagos."
+          message={payments.error.message}
+          onRetry={() => void payments.refetch()}
+        />
+      ) : payments.data.length === 0 ? (
+        <div className="mt-10">
+          <p className="font-medium">No hay pagos anotados en {monthName(month)}.</p>
+          <p className="mt-1 text-[13px] text-muted-foreground">
+            Anotá lo que te pagaron y adjuntá el comprobante: después sirve para mostrar qué se pagó
+            y qué no.
+          </p>
+          <Button variant="outline" size="sm" className="mt-4" onClick={() => setOpen('new')}>
+            <Plus />
+            Anotar un pago
+          </Button>
+        </div>
+      ) : (
+        <>
+          <Totals
+            className="mt-6"
+            totals={totalsByCurrency(payments.data)}
+            label={(total) =>
+              `Cobrado en ${currencyName(total.currency)} · ${total.count} ${total.count === 1 ? 'pago' : 'pagos'}`
+            }
+          />
+          {byCategory ? (
+            groupByCategory(payments.data).map((group) => (
+              <section key={group.category ?? ''} aria-label={group.category ?? 'Sin categoría'}>
+                <header className="mt-6 flex items-baseline justify-between gap-3 border-b pb-2">
+                  <h2 className="truncate text-sm font-semibold">
+                    {group.category ?? 'Sin categoría'}
+                  </h2>
+                  <p className="shrink-0 text-[13px] text-muted-foreground tabular-nums">
+                    {group.totals
+                      .map((total) => formatMoney(total.totalCents, total.currency))
+                      .join(' · ')}
+                  </p>
+                </header>
                 <PaymentList
-                  payments={payments.data}
+                  payments={group.payments}
                   boardsById={boardsById}
-                  showCategory
+                  showCategory={false}
                   onOpen={setOpen}
                 />
-              )}
-            </>
+              </section>
+            ))
+          ) : (
+            <PaymentList
+              payments={payments.data}
+              boardsById={boardsById}
+              showCategory
+              onOpen={setOpen}
+            />
           )}
+        </>
+      )}
+      <PaymentDialog payment={openPayment} month={month} onClose={() => setOpen(null)} />
+    </FinanceFrame>
+  )
+}
+
+/** Lo que comparten Cobrado y Por cobrar: el header con su botón y las pestañas. */
+export function FinanceFrame({
+  title,
+  action,
+  children,
+}: {
+  title: string
+  action: ReactNode
+  children: ReactNode
+}) {
+  return (
+    <div className="flex h-full min-h-0 flex-col">
+      <title>{title}</title>
+      <FinanceHeader action={action} />
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="mx-auto w-full max-w-3xl px-6 py-6 max-md:px-4 max-md:py-4">
+          <FinanceTabs />
+          {children}
         </div>
       </div>
-      <PaymentDialog payment={openPayment} month={month} onClose={() => setOpen(null)} />
     </div>
   )
 }
 
-function FinanceHeader({ onNew }: { onNew: () => void }) {
+function FinanceHeader({ action }: { action: ReactNode }) {
   const { openBoardsMenu } = useLayout()
 
   return (
@@ -134,11 +170,39 @@ function FinanceHeader({ onNew }: { onNew: () => void }) {
         <ChevronDown className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
         <span className="sr-only">(abrir el menú)</span>
       </button>
-      <Button size="sm" className="ml-auto" onClick={onNew}>
-        <Plus />
-        Anotar un pago
-      </Button>
+      <div className="ml-auto">{action}</div>
     </header>
+  )
+}
+
+/** Cobrado (los pagos por mes) y Por cobrar (con cuántas hay pendientes). */
+function FinanceTabs() {
+  const receivables = useQuery(receivablesQuery)
+  const onReceivables = useMatch('/finanzas/por-cobrar') !== null
+  const pending = receivables.data?.filter((r) => remainingCents(r) > 0).length ?? 0
+  const tabs = [
+    { to: '/finanzas', label: 'Cobrado', active: !onReceivables, count: 0 },
+    { to: '/finanzas/por-cobrar', label: 'Por cobrar', active: onReceivables, count: pending },
+  ]
+
+  return (
+    <nav aria-label="Secciones de Finanzas" className="mb-6 flex gap-6 border-b">
+      {tabs.map((tab) => (
+        <Link
+          key={tab.to}
+          to={tab.to}
+          aria-current={tab.active ? 'page' : undefined}
+          className="-mb-px flex h-9 items-center gap-1.5 rounded-t-sm border-b-2 border-transparent text-sm text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring aria-[current=page]:border-foreground aria-[current=page]:font-medium aria-[current=page]:text-foreground"
+        >
+          {tab.label}
+          {tab.count > 0 && (
+            <span className="text-xs font-normal text-muted-foreground tabular-nums">
+              {tab.count}
+            </span>
+          )}
+        </Link>
+      ))}
+    </nav>
   )
 }
 
@@ -216,16 +280,23 @@ function MonthBar({ month, byCategory }: { month: string; byCategory: boolean })
   )
 }
 
-/** Lo que entró en el mes, por moneda. */
-function Totals({ payments }: { payments: Payment[] }) {
+type CurrencyTotal = ReturnType<typeof totalsByCurrency>[number]
+
+/** Un total grande por moneda: lo cobrado en el mes o lo que te deben. */
+export function Totals({
+  totals,
+  label,
+  className,
+}: {
+  totals: CurrencyTotal[]
+  label: (total: CurrencyTotal) => string
+  className?: string
+}) {
   return (
-    <dl className="mt-6 flex flex-wrap gap-x-10 gap-y-4 border-b pb-6">
-      {totalsByCurrency(payments).map((total) => (
+    <dl className={cn('flex flex-wrap gap-x-10 gap-y-4 border-b pb-6', className)}>
+      {totals.map((total) => (
         <div key={total.currency} className="grid gap-1">
-          <dt className="text-xs text-muted-foreground">
-            Cobrado en {total.currency === 'ARS' ? 'pesos' : 'dólares'} · {total.count}{' '}
-            {total.count === 1 ? 'pago' : 'pagos'}
-          </dt>
+          <dt className="text-xs text-muted-foreground">{label(total)}</dt>
           <dd className="text-[clamp(1.5rem,1.2rem+1vw,2rem)] leading-none font-semibold tracking-tight tabular-nums">
             {formatMoney(total.totalCents, total.currency)}
           </dd>
@@ -293,9 +364,9 @@ function PaymentList({
   )
 }
 
-function ListSkeleton() {
+export function ListSkeleton({ label = 'Cargando pagos' }: { label?: string }) {
   return (
-    <div className="mt-6 grid gap-4" aria-label="Cargando pagos">
+    <div className="mt-6 grid gap-4" aria-label={label}>
       <Skeleton className="h-8 w-40" />
       {[72, 56, 64].map((width) => (
         <Skeleton key={width} className="h-10" style={{ width: `${width}%` }} />
