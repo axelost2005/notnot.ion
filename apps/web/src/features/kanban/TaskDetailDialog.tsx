@@ -92,9 +92,9 @@ function TaskDetailForm({
   const activeBoards = (boards.data ?? []).filter((b) => b.archivedAt === null || b.id === board.id)
   // La nota de origen puede estar en otro tablero.
   const noteBoard = task.noteId ? boards.data?.find((b) => b.id === task.noteBoardId) : undefined
-  const pending = update.isPending || move.isPending
+  const canMove = columnId !== '' && columnId !== task.columnId
 
-  async function onSave(event: FormEvent) {
+  function onSave(event: FormEvent) {
     event.preventDefault()
     const parsedTitle = taskTitleSchema.safeParse(title)
     if (!parsedTitle.success) {
@@ -106,31 +106,31 @@ function TaskDetailForm({
     if (parsedTitle.data !== task.title) changes.title = parsedTitle.data
     const newDescription = description.trim() ? description.trim() : null
     if (newDescription !== task.description) changes.description = newDescription
+    if (Object.keys(changes).length === 0) return onClose()
 
-    try {
-      if (Object.keys(changes).length > 0) await update.mutateAsync({ id: task.id, ...changes })
-      if (columnId && columnId !== task.columnId) {
-        await move.mutateAsync({
-          task,
-          columnId,
-          boardId: targetBoardId,
-          prevId: null,
-          nextId: null,
-        })
-        if (targetBoardId !== board.id) {
-          const name = boards.data?.find((b) => b.id === targetBoardId)?.name
-          toast.success(name ? `Tarjeta movida a ${name}` : 'Tarjeta movida')
-        }
-      }
-    } catch {
-      // El error ya se mostró en un toast; el diálogo queda abierto para reintentar.
-      return
-    }
-    onClose()
+    // Si falla, el error sale en un toast y el diálogo queda abierto para reintentar.
+    update.mutate({ id: task.id, ...changes }, { onSuccess: onClose })
+  }
+
+  /** "Mover a…": al final de la columna elegida, en este u otro tablero. */
+  function onMove() {
+    if (!canMove) return
+    move.mutate(
+      { task, columnId, boardId: targetBoardId, prevId: null, nextId: null },
+      {
+        onSuccess: () => {
+          if (targetBoardId !== board.id) {
+            const name = boards.data?.find((b) => b.id === targetBoardId)?.name
+            toast.success(name ? `Tarjeta movida a ${name}` : 'Tarjeta movida')
+          }
+          onClose()
+        },
+      },
+    )
   }
 
   return (
-    <form onSubmit={(event) => void onSave(event)} className="grid gap-5" noValidate>
+    <form onSubmit={onSave} className="grid gap-5" noValidate>
       <DialogHeader>
         <DialogTitle>Tarjeta</DialogTitle>
         <DialogDescription>
@@ -186,8 +186,8 @@ function TaskDetailForm({
       </div>
 
       <fieldset className="grid gap-2">
-        <legend className="mb-2 text-sm leading-none font-medium">Mover a</legend>
-        <div className="grid gap-2 sm:grid-cols-2">
+        <legend className="mb-2 text-sm leading-none font-medium">Mover a…</legend>
+        <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
           <NativeSelect
             aria-label="Tablero"
             value={targetBoardId}
@@ -211,6 +211,14 @@ function TaskDetailForm({
               </option>
             ))}
           </NativeSelect>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={!canMove || move.isPending}
+            onClick={onMove}
+          >
+            {move.isPending ? 'Moviendo…' : 'Mover'}
+          </Button>
         </div>
       </fieldset>
 
@@ -226,8 +234,8 @@ function TaskDetailForm({
               Cancelar
             </Button>
           </DialogClose>
-          <Button type="submit" disabled={pending}>
-            {pending ? 'Guardando…' : 'Guardar'}
+          <Button type="submit" disabled={update.isPending}>
+            {update.isPending ? 'Guardando…' : 'Guardar'}
           </Button>
         </div>
       </DialogFooter>

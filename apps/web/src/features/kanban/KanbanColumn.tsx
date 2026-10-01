@@ -22,7 +22,7 @@ export function KanbanColumn({ boardId, column, tasks, deleteBlockedReason, onOp
     <section
       aria-labelledby={`column-${column.id}`}
       className={cn(
-        'flex h-full w-68 shrink-0 flex-col rounded-lg bg-lane transition-colors',
+        'flex h-full w-68 shrink-0 flex-col rounded-lg bg-lane transition-colors max-md:w-[85vw] max-md:snap-start',
         isOver && 'bg-accent',
       )}
     >

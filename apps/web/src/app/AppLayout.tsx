@@ -1,14 +1,14 @@
 import { useQuery } from '@tanstack/react-query'
-import { Menu } from 'lucide-react'
 import { useState } from 'react'
 import { Navigate, Outlet, useLocation } from 'react-router'
 import { BrandMark } from '@/components/BrandMark'
 import { ErrorState } from '@/components/ErrorState'
-import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet'
 import { Sidebar } from '@/features/boards/Sidebar'
 import { sessionQuery } from '@/features/lock/api'
+import { OfflineBanner } from '@/features/pwa/OfflineBanner'
 import { isApiError } from '@/lib/api'
+import type { LayoutContext } from './layoutContext'
 
 export function AppLayout() {
   const session = useQuery(sessionQuery)
@@ -36,30 +36,21 @@ export function AppLayout() {
     )
   }
 
-  return (
-    <div className="flex h-dvh overflow-hidden">
-      <aside className="hidden w-60 shrink-0 border-r border-sidebar-border md:block">
-        <Sidebar />
-      </aside>
+  const context: LayoutContext = { openBoardsMenu: () => setMenuOpen(true) }
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <div className="flex h-11 shrink-0 items-center gap-2 border-b px-2 md:hidden">
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label="Abrir tableros"
-            onClick={() => setMenuOpen(true)}
-          >
-            <Menu />
-          </Button>
-          <BrandMark />
-          <span className="font-semibold tracking-tight">notnot.ion</span>
-        </div>
-        <main className="min-h-0 flex-1">
-          <Outlet />
+  return (
+    <div className="flex h-dvh flex-col overflow-hidden">
+      <OfflineBanner />
+      <div className="flex min-h-0 flex-1">
+        <aside className="hidden w-60 shrink-0 border-r border-sidebar-border md:block">
+          <Sidebar />
+        </aside>
+        <main className="flex min-w-0 flex-1 flex-col">
+          <Outlet context={context} />
         </main>
       </div>
 
+      {/* En mobile, la lista de tableros se abre desde el header del tablero. */}
       <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
         <SheetContent side="left" className="w-72 gap-0 p-0" showCloseButton={false}>
           <SheetTitle className="sr-only">Tableros</SheetTitle>
