@@ -9,6 +9,9 @@ export class ApiError extends Error {
   }
 }
 
+export const isApiError = (error: unknown, status?: number): error is ApiError =>
+  error instanceof ApiError && (status === undefined || error.status === status)
+
 type RequestOptions = Omit<RequestInit, 'body'> & { json?: unknown }
 
 function readError(body: unknown): { code?: string; message?: string } {
@@ -21,22 +24,23 @@ function readError(body: unknown): { code?: string; message?: string } {
   }
 }
 
-/** Llama a la API del mismo origen. Tira `ApiError` si la respuesta no es 2xx. */
+/** Llama a la API del mismo origen. Tira `ApiError` si no hay red o la respuesta no es 2xx. */
 export async function api<T>(path: string, { json, headers, ...init }: RequestOptions = {}) {
-  const res = await fetch(`/api${path}`, {
-    ...init,
-    headers: json === undefined ? headers : { 'Content-Type': 'application/json', ...headers },
-    body: json === undefined ? undefined : JSON.stringify(json),
-  })
+  let res: Response
+  try {
+    res = await fetch(`/api${path}`, {
+      ...init,
+      headers: json === undefined ? headers : { 'Content-Type': 'application/json', ...headers },
+      body: json === undefined ? undefined : JSON.stringify(json),
+    })
+  } catch {
+    throw new ApiError(0, 'NETWORK', 'No hay conexión con el servidor')
+  }
 
   if (!res.ok) {
     const body: unknown = await res.json().catch(() => null)
     const { code, message } = readError(body)
-    throw new ApiError(
-      res.status,
-      code ?? 'UNKNOWN',
-      message ?? 'No se pudo conectar con el servidor',
-    )
+    throw new ApiError(res.status, code ?? 'UNKNOWN', message ?? 'El servidor no respondió bien')
   }
 
   if (res.status === 204) return undefined as T

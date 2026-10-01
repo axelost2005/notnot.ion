@@ -8,3 +8,4 @@ apps/web/test-results/
 apps/web/playwright-report/
 docs/SPEC.md
 CLAUDE.md
+.playwright-mcp/
