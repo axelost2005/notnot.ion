@@ -106,6 +106,50 @@ test('carpetas con carpetas adentro y notas que se guardan solas, se mueven, ren
   await expect(notes(page).getByRole('link', { name: loose })).toBeVisible()
 })
 
+test('una carpeta con color e ícono: se ve en la sidebar, sigue al recargar y vuelve a como estaba', async ({
+  page,
+}) => {
+  const name = e2eName('clientes')
+  await page.request.post('/api/folders', { data: { name } })
+  await page.goto('/b/general')
+  // El ícono de la fila es el segundo (el primero es la flecha).
+  const icon = notes(page).getByRole('button', { name, exact: true }).locator('svg').nth(1)
+  const plainFolder = /(^|\s)lucide-folder(\s|$)/
+  await expect(icon).toHaveClass(plainFolder)
+
+  await rowAction(page, `Opciones de la carpeta ${name}`, 'Personalizar')
+  const dialog = page.getByRole('dialog', { name: 'Personalizar la carpeta' })
+  await dialog.getByTitle('Azul').click()
+  await dialog.getByTitle('Maletín').click()
+  await expect(dialog.getByRole('radio', { name: 'Azul' })).toBeChecked()
+  await expect(dialog.getByRole('radio', { name: 'Maletín' })).toBeChecked()
+  await dialog.getByRole('button', { name: 'Guardar' }).click()
+  await expect(dialog).toBeHidden()
+  await expect(icon).toHaveClass(/lucide-briefcase/)
+  await expect(icon).toHaveAttribute('style', /--board-blue/)
+
+  await page.reload()
+  await expect(icon).toHaveClass(/lucide-briefcase/)
+  await expect(icon).toHaveAttribute('style', /--board-blue/)
+
+  // De vuelta a como estaba: el gris de siempre y el ícono de carpeta.
+  await rowAction(page, `Opciones de la carpeta ${name}`, 'Personalizar')
+  await expect(dialog.getByRole('radio', { name: 'Maletín' })).toBeChecked()
+  await dialog.getByTitle('Gris').click()
+  await dialog.getByTitle('Carpeta', { exact: true }).click()
+  await dialog.getByRole('button', { name: 'Guardar' }).click()
+  await expect(dialog).toBeHidden()
+  await expect(icon).toHaveClass(plainFolder)
+  await expect(icon).not.toHaveAttribute('style', /.+/)
+  const tree = (await (await page.request.get('/api/folders')).json()) as {
+    folders: { name: string; color: string | null; icon: string | null }[]
+  }
+  expect(tree.folders.find((folder) => folder.name === name)).toMatchObject({
+    color: null,
+    icon: null,
+  })
+})
+
 test.describe('celu', () => {
   test.use({ viewport: { width: 375, height: 740 }, isMobile: true, hasTouch: true })
 

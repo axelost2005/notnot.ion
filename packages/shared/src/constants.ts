@@ -53,6 +53,39 @@ export function isBoardColor(value: string): value is BoardColor {
   return (BOARD_COLORS as readonly string[]).includes(value)
 }
 
+/** Íconos que puede tener una carpeta de la sección Notas (sin ícono, es la carpeta de siempre). */
+export const FOLDER_ICONS = [
+  'briefcase',
+  'users',
+  'user',
+  'code',
+  'palette',
+  'camera',
+  'video',
+  'music',
+  'book',
+  'graduation',
+  'lightbulb',
+  'star',
+  'heart',
+  'home',
+  'calendar',
+  'cart',
+  'plane',
+  'food',
+  'gym',
+  'key',
+  'globe',
+  'rocket',
+  'archive',
+] as const
+
+export type FolderIcon = (typeof FOLDER_ICONS)[number]
+
+export function isFolderIcon(value: string): value is FolderIcon {
+  return (FOLDER_ICONS as readonly string[]).includes(value)
+}
+
 export const DEFAULT_COLUMNS = [
   { name: 'Por hacer', isDone: false },
   { name: 'En curso', isDone: false },

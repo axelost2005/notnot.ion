@@ -16,6 +16,7 @@ import {
   FolderInput,
   FolderOpen,
   FolderPlus,
+  Palette,
   Pencil,
   Plus,
   Trash2,
@@ -51,6 +52,8 @@ import {
   useUpdateFolder,
   useUpdatePage,
 } from './api'
+import { FOLDER_ICON_OPTIONS } from './folderIcons'
+import { FolderGlyph, FolderStyleDialog } from './FolderStyleDialog'
 import { MoveDialog, type Movable } from './MoveDialog'
 import { setFolderOpen, useOpenFolders } from './openFolders'
 
@@ -67,6 +70,8 @@ type TreeContext = {
   newFolder: (parentId: string | null) => void
   askMove: (item: Movable) => void
   askDelete: (item: Movable) => void
+  /** "Personalizar": color e ícono de una carpeta. */
+  askStyle: (folderId: string) => void
   onNavigate?: () => void
 }
 
@@ -90,6 +95,7 @@ export function NotesSection({ onNavigate }: Props) {
   const [renamingId, setRenamingId] = useState<string | null>(null)
   const [moving, setMoving] = useState<Movable | null>(null)
   const [deleting, setDeleting] = useState<Movable | null>(null)
+  const [stylingId, setStylingId] = useState<string | null>(null)
 
   function newPage(folderId: string | null) {
     createPage.mutate(
@@ -162,6 +168,7 @@ export function NotesSection({ onNavigate }: Props) {
         newFolder,
         askMove: setMoving,
         askDelete,
+        askStyle: setStylingId,
         onNavigate,
       }
     : null
@@ -216,6 +223,10 @@ export function NotesSection({ onNavigate }: Props) {
             : updatePage.mutateAsync({ id: item.id, folderId: parentId })
         }
         onClose={() => setMoving(null)}
+      />
+      <FolderStyleDialog
+        folder={tree.data?.folders.find((folder) => folder.id === stylingId) ?? null}
+        onClose={() => setStylingId(null)}
       />
       <DeleteDialog
         item={deleting}
@@ -272,7 +283,8 @@ function FolderRow({
   const update = useUpdateFolder()
   const renameInput = useRef<HTMLInputElement>(null)
   const open = context.openIds.has(folder.id)
-  const Icon = open ? FolderOpen : FolderIcon
+  // Un ícono elegido queda igual abierta o cerrada (la flecha ya lo dice).
+  const Icon = folder.icon ? FOLDER_ICON_OPTIONS[folder.icon].Icon : open ? FolderOpen : FolderIcon
   const item: Movable = {
     kind: 'folder',
     id: folder.id,
@@ -308,7 +320,7 @@ function FolderRow({
                 open && 'rotate-90',
               )}
             />
-            <Icon aria-hidden="true" className="-ml-1 size-3.5 shrink-0 text-muted-foreground" />
+            <FolderGlyph Icon={Icon} color={folder.color} className="-ml-1 size-3.5" />
             <span className="truncate">{folder.name}</span>
           </button>
         )}
@@ -334,6 +346,10 @@ function FolderRow({
           <DropdownMenuItem onSelect={() => context.setRenamingId(folder.id)}>
             <Pencil />
             Renombrar
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => context.askStyle(folder.id)}>
+            <Palette />
+            Personalizar
           </DropdownMenuItem>
           <DropdownMenuItem onSelect={() => context.askMove(item)}>
             <FolderInput />

@@ -1,4 +1,4 @@
-import type { BoardColor } from './constants'
+import type { BoardColor, FolderIcon } from './constants'
 import type { Currency } from './finance/finance'
 
 // Respuestas de la API. Las fechas viajan como string ISO.
@@ -102,6 +102,9 @@ export type Folder = {
   id: string
   parentId: string | null
   name: string
+  /** Sin color ni ícono, se ve como siempre (gris, con el ícono de carpeta). */
+  color: BoardColor | null
+  icon: FolderIcon | null
   createdAt: string
   updatedAt: string
 }

@@ -2,7 +2,7 @@
 
 ## Fase actual
 
-**Fase 7 — Por cobrar y carpetas personalizadas: en curso.** El paso 1 (Por cobrar) está hecho; falta el paso 2 (carpetas con color e ícono). Las fases 0 a 6 están en producción.
+**Fase 7 — Por cobrar y carpetas personalizadas: cerrada.** Las fases 0 a 7 están hechas y la app está en producción.
 
 ## Hecho
 
@@ -69,6 +69,8 @@
 
 - **Paso 1, Por cobrar.** Modelo `Receivable` y `Payment.receivableId` (migración `receivables`: agrega la tabla y una columna opcional, sin tocar datos). `GET/POST /receivables` y `PATCH/DELETE /receivables/:id`; cada una viene con lo cobrado y sus pagos. Los pagos aceptan `receivableId` (en la misma moneda, si no 409). `remainingCents`, `daysBetween`, `groupReceivables` y `dueCount` en `shared`, con tests. En la web: Finanzas con pestañas **Cobrado** y **Por cobrar** (`/finanzas/por-cobrar`): lo que te deben por moneda, vencidas (marcadas), por vencer, sin fecha y las cobradas plegadas; "Me pagaron" abre el pago ya completo con lo que falta; el formulario de un pago deja vincularlo o desvincularlo; la sidebar muestra al lado de Finanzas cuánto vence hoy o ya venció. En el celu, el monto baja a su propia línea y "Me pagaron" queda como ícono. e2e: `receivables.spec.ts`. README con la captura nueva.
 
+- **Paso 2, carpetas personalizadas.** `Folder.color` y `Folder.icon` (migración `folder_style`: dos columnas opcionales, sin tocar datos); `PATCH /folders/:id` los acepta (`null` vuelve a como estaba) y la API ignora valores que no conoce. `FOLDER_ICONS` en `shared`. En la web: "Personalizar" en el "…" de cada carpeta abre un diálogo con la fila como va a quedar, los 8 colores de los tableros y 23 íconos; la sidebar muestra el ícono con su color. e2e en `pages.spec.ts`. Capturas del README con carpetas de color.
+
 ## Decisiones
 
 - **Versiones**: lo último estable que funciona junto. TypeScript 6.0 (typescript-eslint todavía no soporta TS 7), Prisma 7.10 (Prisma 8 está en RC), React Router 8 en modo data, Vite 8, Vitest 5, ESLint 10, Tailwind 4, Zod 4, shadcn CLI 4.
@@ -133,6 +135,7 @@
 - **Misma moneda**: un pago vinculado va en la moneda de lo que te deben (si no, la API da 409 y el formulario traba la moneda). Si te pagan en pesos algo que era en dólares, se anota el pago suelto y se ajusta o borra lo que te debían.
 - **Vencimientos**: el día lo pone el dispositivo, como el historial. El número de la sidebar cuenta lo que vence hoy además de lo vencido, para acordarte de reclamarlo ese mismo día.
 - **"Me pagaron"**: abre el mismo formulario de "Anotar un pago" con lo que falta, la moneda, el cliente y el concepto, y la fecha de hoy. Si fue una parte, se cambia el monto y queda el resto.
+- **Carpetas, color e ícono**: elegiste color e ícono (no emoji). Los colores son los mismos 8 de los tableros, y el gris es "sin color": se guarda como `null` y la carpeta queda como siempre. Los íconos son 23 de lucide (la misma librería del resto de la app) más la carpeta de siempre; un ícono elegido no cambia al abrir la carpeta (la flecha ya lo muestra). Al abrir el diálogo, el foco va al color elegido.
 - **Dev**: si corrés comandos de pnpm con la app levantada, pnpm 11 puede regenerar el cliente de Prisma y `node --watch` reinicia la API (algún pedido puede dar 502 en ese momento).
 
 ## Pendientes para vos

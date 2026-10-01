@@ -40,6 +40,8 @@ describe('validaciones', () => {
     ['post', '/api/folders', { name: 'Clientes', parentId: 'raiz' }],
     ['patch', `/api/folders/${ID}`, {}],
     ['patch', '/api/folders/123', { name: 'Clientes' }],
+    ['patch', `/api/folders/${ID}`, { color: 'fucsia' }],
+    ['patch', `/api/folders/${ID}`, { icon: 'dragon' }],
     ['post', '/api/pages', { title: 'x'.repeat(LIMITS.pageTitle + 1) }],
     ['post', '/api/pages', { folderId: 'raiz' }],
     ['patch', `/api/pages/${ID}`, {}],
