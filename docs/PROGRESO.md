@@ -93,7 +93,7 @@
   vercel deploy --prod
   ```
 
-  El build de producción aplica las migraciones en `main` antes de publicar. `APP_SECRET` y `SESSION_SECRET` de producción ya están cargados en Vercel (el código te lo paso por chat; no está en el repo).
+  El build de producción aplica las migraciones en `main` y crea Inbox (si no existe) antes de publicar. `APP_SECRET` y `SESSION_SECRET` de producción ya están cargados en Vercel (el código te lo paso por chat; no está en el repo).
 
 - **Conectar el repo a Vercel** (opcional, después de lo anterior): `vercel git connect` para que cada push a `main` despliegue solo.
 
