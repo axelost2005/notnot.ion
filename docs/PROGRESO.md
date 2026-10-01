@@ -2,7 +2,7 @@
 
 ## Fase actual
 
-**Fase 4 — PWA y mobile: cerrada.** Las cinco fases (0 a 4) están hechas y la app está en producción. Falta solo instalarla (ver "Pendientes para vos").
+**Fase 5 — Ventana de notas, General e Historial: en curso.** Las fases 0 a 4 están hechas y la app está en producción. De la Fase 5 está hecho el paso 1 (composer con `[] `); siguen la ventana de notas, el Historial y General.
 
 ## Hecho
 
@@ -48,6 +48,10 @@
 - README final con capturas (`pnpm --filter @notnot/web capturas` las regenera con datos de ejemplo que después borra).
 - e2e: la PWA contra el build de producción servido en local (manifest, íconos, service worker controlando la página y **sin errores de instalabilidad según Chrome**, vía CDP), la API no pasa por el fallback del SW, mobile en 375 px (captura una nota con el botón enviar y mueve la tarjeta con "Mover a…"), selector de tablero, atajo "Nueva nota" y banner sin conexión.
 
+### Fase 5 — Ventana de notas, General e Historial
+
+- Composer: arranca con `[] ` y vuelve a `[] ` (con el foco puesto) después de enviar, así cada Enter crea una tarjeta. e2e: dos tareas seguidas con Enter y Enter con los corchetes solos no manda nada.
+
 ## Decisiones
 
 - **Versiones**: lo último estable que funciona junto. TypeScript 6.0 (typescript-eslint todavía no soporta TS 7), Prisma 7.10 (Prisma 8 está en RC), React Router 8 en modo data, Vite 8, Vitest 5, ESLint 10, Tailwind 4, Zod 4, shadcn CLI 4.
@@ -81,6 +85,7 @@
 - **"Mover a…"**: en el detalle tiene su propio botón "Mover" (deja la tarjeta al final de la columna elegida); "Guardar" queda solo para título y descripción.
 - **Bundle**: las dependencias van en un chunk aparte (`vendor`, ~200 kB gzip) y el código de la app en otro (~21 kB gzip): un deploy solo vuelve a bajar lo que cambió. El aviso de tamaño de Vite se subió a 700 kB porque el chunk de librerías es grande por naturaleza.
 - **e2e de la PWA**: el proyecto `pwa` de Playwright hace `vite build` + `vite preview` (puerto 4173) y usa la API de dev a través del proxy de la preview.
+- **Composer con `[] `**: si queda solo el marcador, no se envía ni se guarda como borrador. Shift+Enter sigue siendo un salto de línea común (no continúa la lista).
 - **Dev**: si corrés comandos de pnpm con la app levantada, pnpm 11 puede regenerar el cliente de Prisma y `node --watch` reinicia la API (algún pedido puede dar 502 en ese momento).
 
 ## Pendientes para vos

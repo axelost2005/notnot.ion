@@ -29,18 +29,19 @@ test('en 375 px captura una nota y mueve la tarjeta con "Mover a…"', async ({ 
   // Nada se sale de la pantalla.
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375)
 
-  // Notas: en touch, Enter hace salto de línea y se envía con el botón.
+  // Notas: arranca con [] y, en touch, Enter hace salto de línea y se envía con el botón.
   await page.getByRole('tab', { name: 'Notas' }).tap()
   const composer = page.getByRole('combobox', { name: `Nueva nota en ${board.name}` })
+  await expect(composer).toHaveValue('[] ')
   await composer.tap()
-  await composer.pressSequentially('Llamada con el proveedor')
-  await composer.press('Enter')
-  await page.getByRole('button', { name: 'Convertir la línea en tarea' }).tap()
   await composer.pressSequentially('pedir presupuesto')
-  await expect(composer).toHaveValue('Llamada con el proveedor\n[] pedir presupuesto')
+  await composer.press('Enter')
+  await composer.pressSequentially('al proveedor nuevo')
+  await expect(composer).toHaveValue('[] pedir presupuesto\nal proveedor nuevo')
   await expect(page.getByText(`1 tarea → ${board.name}`)).toBeVisible()
   await page.getByRole('button', { name: 'Enviar nota' }).tap()
   await expect(page.getByRole('checkbox', { name: 'Tildar pedir presupuesto' })).toBeVisible()
+  await expect(composer).toHaveValue('[] ')
 
   // Tablero: la tarjeta está en "Por hacer"; con "Mover a…" pasa a "En curso".
   await page.getByRole('tab', { name: 'Tablero' }).tap()
