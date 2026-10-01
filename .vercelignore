@@ -1,0 +1,11 @@
+.env
+.env.*
+!.env.example
+node_modules
+.vercel
+dist
+coverage
+apps/api/src/generated
+apps/web/test-results
+apps/web/playwright-report
+.playwright-mcp

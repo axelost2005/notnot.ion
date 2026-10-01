@@ -22,6 +22,10 @@ export const BOARD_COLORS = [
 
 export type BoardColor = (typeof BOARD_COLORS)[number]
 
+export function isBoardColor(value: string): value is BoardColor {
+  return (BOARD_COLORS as readonly string[]).includes(value)
+}
+
 export const DEFAULT_COLUMNS = [
   { name: 'Por hacer', isDone: false },
   { name: 'En curso', isDone: false },

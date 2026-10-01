@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "pnpm --filter @notnot/api --filter @notnot/web --parallel dev",
     "build": "pnpm -r build",
+    "build:vercel": "pnpm db:deploy && pnpm build && node scripts/build-vercel.mjs",
     "check": "pnpm lint && pnpm typecheck && pnpm test",
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
@@ -16,6 +17,7 @@
     "test": "vitest run",
     "e2e": "pnpm --filter @notnot/web e2e",
     "db:migrate": "pnpm --filter @notnot/api db:migrate",
+    "db:deploy": "pnpm --filter @notnot/api db:deploy",
     "db:seed": "pnpm --filter @notnot/api db:seed",
     "db:studio": "pnpm --filter @notnot/api db:studio"
   },

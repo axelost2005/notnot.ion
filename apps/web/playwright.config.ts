@@ -1,4 +1,9 @@
+import { existsSync } from 'node:fs'
 import { defineConfig, devices } from '@playwright/test'
+
+// El código del candado (APP_SECRET) sale del .env de la raíz.
+const rootEnv = new URL('../../.env', import.meta.url)
+if (existsSync(rootEnv)) process.loadEnvFile(rootEnv)
 
 const baseURL = process.env.E2E_BASE_URL ?? 'http://localhost:5173'
 
