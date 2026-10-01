@@ -2,7 +2,7 @@ import type { HistoryPage } from '@notnot/shared'
 import { LIMITS } from '@notnot/shared'
 import { prisma } from '../db'
 import { notFound } from '../middleware/errors'
-import { toTask, withNoteBoard } from './boards'
+import { taskInclude, toTask } from './boards'
 
 /** Las terminadas antes de `dayStart` (la medianoche del dispositivo) pasan al historial. */
 export async function archiveDoneTasks(dayStart: Date): Promise<void> {
@@ -24,7 +24,7 @@ export async function listHistory(boardId?: string, before?: string): Promise<Hi
     orderBy: [{ completedAt: 'desc' }, { id: 'desc' }],
     take: LIMITS.historyPerPage + 1,
     ...(before ? { cursor: { id: before }, skip: 1 } : {}),
-    include: withNoteBoard,
+    include: taskInclude,
   })
   const page = tasks.slice(0, LIMITS.historyPerPage)
   return {

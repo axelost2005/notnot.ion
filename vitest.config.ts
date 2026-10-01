@@ -14,6 +14,7 @@ export default defineConfig({
             DATABASE_URL: 'postgresql://test:test@localhost:5432/test',
             APP_SECRET: 'caballo bateria grapa correcta',
             SESSION_SECRET: 'test-session-secret-con-mas-de-32-caracteres',
+            BLOB_READ_WRITE_TOKEN: 'vercel_blob_rw_test_token',
           },
         },
       },

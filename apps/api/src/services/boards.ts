@@ -20,6 +20,7 @@ import {
 import { prisma } from '../db'
 import type * as Db from '../generated/prisma/client'
 import { conflict, notFound } from '../middleware/errors'
+import { deleteBlobs, imagePathnames, toImageInfo } from './images'
 
 export function toBoard(board: Db.Board): Board {
   return {
@@ -45,10 +46,18 @@ export function toColumn(column: Db.Column): Column {
   }
 }
 
-/** Para saber en qué tablero vive la nota de origen de una tarea. */
-export const withNoteBoard = { note: { select: { boardId: true } } } as const
+/** Lo que acompaña a cada tarea: el tablero de su nota de origen y sus imágenes. */
+export const taskInclude = {
+  note: { select: { boardId: true } },
+  images: { select: { id: true, width: true, height: true }, orderBy: { createdAt: 'asc' } },
+} as const
 
-export function toTask(task: Db.Task & { note?: { boardId: string } | null }): Task {
+type TaskRow = Db.Task & {
+  note: { boardId: string } | null
+  images: { id: string; width: number; height: number }[]
+}
+
+export function toTask(task: TaskRow): Task {
   return {
     id: task.id,
     boardId: task.boardId,
@@ -61,6 +70,7 @@ export function toTask(task: Db.Task & { note?: { boardId: string } | null }): T
     noteId: task.noteId,
     noteLine: task.noteLine,
     noteBoardId: task.note?.boardId ?? null,
+    images: task.images.map(toImageInfo),
     createdAt: task.createdAt.toISOString(),
     updatedAt: task.updatedAt.toISOString(),
   }
@@ -86,7 +96,7 @@ async function getBoardSummary(id: string): Promise<BoardSummary> {
 export async function getBoard(id: string): Promise<BoardDetail> {
   const board = await prisma.board.findUnique({
     where: { id },
-    include: { columns: true, tasks: { where: { archivedAt: null }, include: withNoteBoard } },
+    include: { columns: true, tasks: { where: { archivedAt: null }, include: taskInclude } },
   })
   if (!board) throw notFound('El tablero no existe')
   return {
@@ -100,7 +110,7 @@ export async function getBoard(id: string): Promise<BoardDetail> {
 export async function getGeneral(): Promise<GeneralBoard> {
   const boards = await prisma.board.findMany({
     where: { archivedAt: null },
-    include: { columns: true, tasks: { where: { archivedAt: null }, include: withNoteBoard } },
+    include: { columns: true, tasks: { where: { archivedAt: null }, include: taskInclude } },
   })
   return {
     columns: boards.flatMap((board) => sortByPosition(board.columns).map(toColumn)),
@@ -156,11 +166,12 @@ export async function updateBoard(id: string, input: UpdateBoardInput): Promise<
   return getBoardSummary(id)
 }
 
-/** Borra en cascada columnas, tareas y notas. General no se borra. */
+/** Borra en cascada columnas, tareas (con sus imágenes) y notas. General no se borra. */
 export async function deleteBoard(id: string): Promise<void> {
   const board = await prisma.board.findUnique({ where: { id }, select: { isGeneral: true } })
   if (!board) throw notFound('El tablero no existe')
   if (board.isGeneral) throw conflict('General no se puede borrar')
+  const images = await imagePathnames({ boardId: id })
   await prisma.$transaction([
     // Las tareas de otros tableros que salieron de sus notas pierden el vínculo con la nota.
     prisma.task.updateMany({
@@ -169,4 +180,5 @@ export async function deleteBoard(id: string): Promise<void> {
     }),
     prisma.board.delete({ where: { id } }),
   ])
+  await deleteBlobs(images)
 }

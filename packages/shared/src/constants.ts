@@ -7,7 +7,17 @@ export const LIMITS = {
   tasksPerNote: 50,
   notesPerPage: 50,
   historyPerPage: 50,
+  imagesPerTask: 20,
+  /** La web las achica antes de subirlas: el lado más largo queda en esto como mucho. */
+  imageMaxSide: 2000,
+  /** Por pedido. Las funciones de Vercel aceptan hasta 4,5 MB. */
+  imageBytes: 4 * 1024 * 1024,
 } as const
+
+/** Formatos que acepta la API (la web los convierte a WebP, o a JPEG si el navegador no puede). */
+export const IMAGE_TYPES = ['image/webp', 'image/jpeg', 'image/png'] as const
+
+export type ImageType = (typeof IMAGE_TYPES)[number]
 
 /**
  * La web manda en cada pedido la medianoche de hoy en el dispositivo (ISO). Con eso la API
