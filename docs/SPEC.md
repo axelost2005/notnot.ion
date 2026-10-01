@@ -25,7 +25,7 @@ App personal para organizar el laburo por cliente. Cada cliente o categoría tie
 | Task | id, boardId, columnId, title, description?, position, completedAt?, archivedAt?, noteId?, noteLine?, createdAt, updatedAt |
 | Note | id, boardId, content, createdAt |
 | Image | id, taskId?, paymentId?, pathname, contentType, size, width, height, createdAt |
-| Folder | id, parentId?, name, createdAt, updatedAt |
+| Folder | id, parentId?, name, color?, icon?, createdAt, updatedAt |
 | Page | id, folderId?, title, content, createdAt, updatedAt |
 | Payment | id, date (día), amountCents, currency, boardId?, category?, description?, receivableId?, createdAt, updatedAt |
 | Receivable | id, description, amountCents, currency, boardId?, dueDate? (día), note?, createdAt, updatedAt |
@@ -39,7 +39,7 @@ App personal para organizar el laburo por cliente. Cada cliente o categoría tie
 - Slug: minúsculas, sin acentos, espacios → guiones ("Pepito Pérez" → `pepito-perez`). Si choca, `-2`, `-3`… Se regenera al renombrar.
 - Color: paleta fija de 8.
 - Límites: nombre de tablero 1–40, título 1–200, descripción ≤ 5000, nota 1–5000, máximo 50 tareas por nota, 20 imágenes por tarjeta (2000 px y 4 MB como mucho cada una).
-- Sección Notas: sin `parentId`/`folderId`, en la raíz. Borrar una carpeta borra en cascada lo que tiene adentro. Una carpeta no puede ir dentro de sí misma (409). Carpeta 1–60 caracteres; título de nota ≤ 200 (puede quedar vacío: "Sin título"); texto ≤ 50.000.
+- Sección Notas: sin `parentId`/`folderId`, en la raíz. Borrar una carpeta borra en cascada lo que tiene adentro. Una carpeta no puede ir dentro de sí misma (409). Carpeta 1–60 caracteres, con color (uno de los 8 de los tableros) e ícono (de una lista fija) opcionales; título de nota ≤ 200 (puede quedar vacío: "Sin título"); texto ≤ 50.000.
 - Imágenes: el archivo vive en un store privado de Vercel Blob (`pathname`) y la fila en la base. Cada imagen es de una tarjeta o de un pago (un CHECK lo asegura). Borrar una tarjeta, un tablero o un pago borra sus imágenes (filas en cascada; los archivos los borra la API después).
 - Pagos: monto en centavos (mayor a cero), moneda `ARS` o `USD`, fecha sin hora. Borrar el tablero cliente deja el pago sin cliente. Categoría ≤ 40 y descripción ≤ 1000 (vacías quedan en `null`); hasta 20 comprobantes por pago.
 - Por cobrar: concepto 1–200, monto como el de los pagos, vence (día) y nota ≤ 1000 opcionales. Lo cobrado es la suma de sus pagos (`Payment.receivableId`), que van en su misma moneda (si no, 409); cuando cubren el monto, está cobrada. Borrarla deja sus pagos, sin el vínculo. Borrar el tablero cliente la deja sin cliente.
@@ -107,7 +107,7 @@ REST + JSON bajo `/api`. Toda entrada se valida con los schemas de `shared`. Err
 | DELETE | `/images/:id` | Borra la imagen y su archivo |
 | GET | `/folders` | El árbol de la sección Notas: `{ folders, pages }` (las notas sin el texto) |
 | POST | `/folders` | `{ name, parentId? }` |
-| PATCH / DELETE | `/folders/:id` | Renombrar o mover (`parentId`) / borrar con lo de adentro |
+| PATCH / DELETE | `/folders/:id` | Renombrar, mover (`parentId`), color o ícono (`null` vuelve a como estaba) / borrar con lo de adentro |
 | POST | `/pages` | `{ title?, folderId? }` |
 | GET / PATCH / DELETE | `/pages/:id` | Una nota con su texto / guardar título, texto o carpeta / borrar |
 | GET | `/payments?month=2026-10` | Los pagos de un mes, del más nuevo al más viejo, con sus comprobantes |
@@ -124,7 +124,7 @@ La web manda en cada pedido `X-Day-Start` con la medianoche de hoy en el disposi
 ## UI
 - Rutas: `/unlock`, `/b/:slug` (la web resuelve slug → id con la lista de tableros), `/notas/:slug` (la ventana de notas), `/p/:id` (una nota de la sección Notas), `/finanzas/:mes` (`/finanzas` abre el mes actual) y `/finanzas/por-cobrar`. `/` redirige al último tablero abierto o a General.
 - Desktop: sidebar (General fijo arriba con el total de abiertas, tableros con color y contador de abiertas, archivados colapsados, "+ Nuevo tablero", la sección Notas, Finanzas con cuánto por cobrar vence hoy o ya venció, "Bloquear"), kanban al centro con scroll horizontal, panel de notas a la derecha (~360px, plegable).
-- Sección Notas en la sidebar: árbol plegable (se recuerda qué carpetas están abiertas), carpetas primero y orden alfabético. "+" crea una nota o una carpeta; el "…" de cada fila tiene crear adentro (carpetas), renombrar, "Mover a…" y borrar. Una carpeta nueva queda lista para escribirle el nombre; una nota se renombra en su título. Borrar una carpeta vacía no pregunta; con contenido, pide confirmación y dice qué se lleva.
+- Sección Notas en la sidebar: árbol plegable (se recuerda qué carpetas están abiertas), carpetas primero y orden alfabético. "+" crea una nota o una carpeta; el "…" de cada fila tiene crear adentro (carpetas), renombrar, "Personalizar" (carpetas: color e ícono, con la fila como va a quedar), "Mover a…" y borrar. Sin elegir, una carpeta se ve gris con el ícono de carpeta. Una carpeta nueva queda lista para escribirle el nombre; una nota se renombra en su título. Borrar una carpeta vacía no pregunta; con contenido, pide confirmación y dice qué se lleva.
 - Finanzas tiene dos pestañas: **Cobrado** (los pagos por mes) y **Por cobrar** (con cuántas hay pendientes).
 - Cobrado (`/finanzas/2026-10`): el mes con flechas para ir y volver y la lista de los meses con pagos; lo cobrado en el mes por moneda; la lista por fecha o agrupada por categoría con subtotales (`?por=categoria`). "Anotar un pago" y tocar uno abren el mismo formulario: monto como se escribe acá ("150.000", "1.234,50"), moneda, fecha, cliente, categoría (con las ya usadas como sugerencia), descripción y comprobantes (pegar, arrastrar o adjuntar; en uno nuevo se suben al guardarlo). Si hay algo por cobrar, el formulario deja vincular el pago (o desvincularlo); vinculado, la moneda es la de lo que te deben.
 - Por cobrar (`/finanzas/por-cobrar`): lo que te deben en total por moneda y la lista: primero lo vencido (marcado, "venció hace 3 días"), después lo que vence, por fecha ("vence hoy", "vence en 5 días"), y al final lo que no tiene fecha; las cobradas, aparte y plegadas. Cada fila: el día que vence, concepto, cliente, lo que falta (y de cuánto, si ya pagaron una parte) y "Me pagaron", que abre el formulario de un pago ya completo (lo que falta, la moneda, el cliente y el concepto) para ajustar el monto y adjuntar el comprobante. Tocar una abre su formulario: concepto, monto y moneda, vence, cliente, nota y los pagos que tiene.

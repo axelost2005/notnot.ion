@@ -68,13 +68,16 @@ try {
   // Sección Notas: carpetas y una nota abierta.
   const clients = await call('POST', '/api/folders', { name: 'Clientes' })
   folders.push(clients.id)
+  await call('PATCH', `/api/folders/${clients.id}`, { color: 'blue', icon: 'briefcase' })
   const lumenFolder = await call('POST', '/api/folders', {
     name: 'Estudio Lumen',
     parentId: clients.id,
   })
+  await call('PATCH', `/api/folders/${lumenFolder.id}`, { color: 'violet', icon: 'palette' })
   await call('POST', '/api/folders', { name: 'Café Altamira', parentId: clients.id })
   const ideas = await call('POST', '/api/folders', { name: 'Ideas' })
   folders.push(ideas.id)
+  await call('PATCH', `/api/folders/${ideas.id}`, { color: 'amber', icon: 'lightbulb' })
   const access = await call('POST', '/api/pages', {
     title: 'Accesos y datos del proyecto',
     folderId: lumenFolder.id,
