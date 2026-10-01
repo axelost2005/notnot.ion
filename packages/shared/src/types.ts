@@ -8,7 +8,7 @@ export type Board = {
   slug: string
   color: BoardColor
   position: string
-  isInbox: boolean
+  isGeneral: boolean
   archivedAt: string | null
   createdAt: string
   updatedAt: string
@@ -45,6 +45,12 @@ export type Task = {
 }
 
 export type BoardDetail = Board & {
+  columns: Column[]
+  tasks: Task[]
+}
+
+/** El kanban de General: las columnas y las tarjetas (sin archivar) de los tableros activos. */
+export type GeneralBoard = {
   columns: Column[]
   tasks: Task[]
 }

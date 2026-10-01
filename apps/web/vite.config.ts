@@ -38,7 +38,7 @@ export default defineConfig({
           {
             name: 'Nueva nota',
             short_name: 'Nota',
-            description: 'Abre Inbox para escribir una nota',
+            description: 'Abre General para escribir una nota',
             url: '/?nueva-nota',
             icons: [{ src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' }],
           },

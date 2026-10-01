@@ -7,10 +7,11 @@ import type {
   UpdateColumnInput,
   UpdateTaskInput,
 } from '@notnot/shared'
-import { positionForSlot } from '@notnot/shared'
+import { positionAfterLast, positionForSlot, type GeneralBoard } from '@notnot/shared'
 import { useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { boardQuery, boardsQuery } from '../boards/api'
+import { generalQuery } from '../general/api'
 import { refreshNotes } from '../notes/api'
 
 function updateBoardCache(
@@ -34,6 +35,11 @@ export function useCreateTask(boardId: string) {
         ...board,
         tasks: [...board.tasks, task],
       }))
+      // Si se agregó desde General, que aparezca sin esperar a que se refresque.
+      queryClient.setQueryData(
+        generalQuery.queryKey,
+        (general) => general && { ...general, tasks: [...general.tasks, task] },
+      )
       void refreshCounts(queryClient)
     },
   })
@@ -78,6 +84,25 @@ export type MoveTaskVariables = Slot & {
 
 const MOVE_KEY = ['move-task']
 
+/**
+ * La misma movida en el kanban de General. Ahí no se reordena: si va al final de la columna
+ * (General, "Mover a…") se calcula; si no, alcanza con cambiarle la columna.
+ */
+function moveInGeneral(general: GeneralBoard, variables: MoveTaskVariables): GeneralBoard {
+  const { task, columnId, boardId, prevId, nextId } = variables
+  const column = general.columns.find((c) => c.id === columnId)
+  if (!column) return general
+  const siblings = general.tasks.filter((t) => t.columnId === columnId && t.id !== task.id)
+  const position = prevId === null && nextId === null ? positionAfterLast(siblings) : task.position
+  const completedAt = column.isDone ? (task.completedAt ?? new Date().toISOString()) : null
+  return {
+    ...general,
+    tasks: general.tasks.map((t) =>
+      t.id === task.id ? { ...t, boardId, columnId, position, completedAt } : t,
+    ),
+  }
+}
+
 /** Optimista: la tarjeta cambia de lugar al toque y vuelve si la API dice que no. */
 export function useMoveTask() {
   const queryClient = useQueryClient()
@@ -88,10 +113,17 @@ export function useMoveTask() {
         method: 'POST',
         json: { columnId, boardId, prevId, nextId },
       }),
-    onMutate: async ({ task, columnId, boardId, prevId, nextId }) => {
+    onMutate: async (variables) => {
+      const { task, columnId, boardId, prevId, nextId } = variables
       const key = boardQuery(task.boardId).queryKey
       await queryClient.cancelQueries({ queryKey: key })
+      await queryClient.cancelQueries({ queryKey: generalQuery.queryKey })
       const previous = queryClient.getQueryData(key)
+      const general = queryClient.getQueryData(generalQuery.queryKey)
+      queryClient.setQueryData(
+        generalQuery.queryKey,
+        (data) => data && moveInGeneral(data, variables),
+      )
 
       updateBoardCache(queryClient, task.boardId, (board) => {
         if (boardId !== task.boardId) {
@@ -109,12 +141,13 @@ export function useMoveTask() {
           ),
         }
       })
-      return { previous }
+      return { previous, general }
     },
     onError: (_error, { task }, context) => {
       if (context?.previous) {
         queryClient.setQueryData(boardQuery(task.boardId).queryKey, context.previous)
       }
+      if (context?.general) queryClient.setQueryData(generalQuery.queryKey, context.general)
     },
     onSuccess: (moved, { task }) => {
       if (moved.boardId !== task.boardId) return

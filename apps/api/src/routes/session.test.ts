@@ -64,16 +64,18 @@ describe('candado', () => {
     expect(res.status).toBe(200)
   })
 
-  it.each(['/api/session', '/api/boards', '/api/boards/0190a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b'])(
-    'GET %s sin cookie devuelve 401',
-    async (path) => {
-      const res = await request(createApp()).get(path)
-      expect(res.status).toBe(401)
-      expect(res.body).toEqual({
-        error: { code: 'UNAUTHORIZED', message: 'La app está bloqueada' },
-      })
-    },
-  )
+  it.each([
+    '/api/session',
+    '/api/boards',
+    '/api/boards/0190a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b',
+    '/api/general',
+  ])('GET %s sin cookie devuelve 401', async (path) => {
+    const res = await request(createApp()).get(path)
+    expect(res.status).toBe(401)
+    expect(res.body).toEqual({
+      error: { code: 'UNAUTHORIZED', message: 'La app está bloqueada' },
+    })
+  })
 
   it('una ruta que no existe también da 401 sin cookie', async () => {
     const res = await request(createApp()).get('/api/no-existe')

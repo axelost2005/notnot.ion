@@ -24,9 +24,11 @@ export function Sidebar({ onNavigate }: Props) {
   const lock = useLock()
   const [creating, setCreating] = useState(false)
 
-  const inbox = boards.data?.find((b) => b.isInbox)
-  const active = boards.data?.filter((b) => !b.isInbox && b.archivedAt === null) ?? []
-  const archived = boards.data?.filter((b) => !b.isInbox && b.archivedAt !== null) ?? []
+  const general = boards.data?.find((b) => b.isGeneral)
+  const active = boards.data?.filter((b) => !b.isGeneral && b.archivedAt === null) ?? []
+  const archived = boards.data?.filter((b) => !b.isGeneral && b.archivedAt !== null) ?? []
+  // General muestra las tarjetas de todos los tableros activos: su contador es el total.
+  const totalOpen = active.reduce((sum, b) => sum + b.openTaskCount, general?.openTaskCount ?? 0)
 
   return (
     <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
@@ -51,9 +53,9 @@ export function Sidebar({ onNavigate }: Props) {
           </div>
         ) : (
           <>
-            {inbox && (
+            {general && (
               <ul className="grid gap-px">
-                <BoardLink board={inbox} onNavigate={onNavigate} />
+                <BoardLink board={general} count={totalOpen} onNavigate={onNavigate} />
               </ul>
             )}
 
@@ -112,7 +114,14 @@ export function Sidebar({ onNavigate }: Props) {
   )
 }
 
-function BoardLink({ board, onNavigate }: { board: BoardSummary; onNavigate?: () => void }) {
+type BoardLinkProps = {
+  board: BoardSummary
+  /** Tareas abiertas a mostrar, si no son las del tablero. */
+  count?: number
+  onNavigate?: () => void
+}
+
+function BoardLink({ board, count = board.openTaskCount, onNavigate }: BoardLinkProps) {
   return (
     <li>
       <NavLink
@@ -129,12 +138,12 @@ function BoardLink({ board, onNavigate }: { board: BoardSummary; onNavigate?: ()
       >
         <span aria-hidden="true" className="size-2 shrink-0 rounded-full bg-(--board)" />
         <span className="min-w-0 flex-1 truncate">{board.name}</span>
-        {board.openTaskCount > 0 && (
+        {count > 0 && (
           <span
             className="text-xs text-muted-foreground tabular-nums"
-            aria-label={`${board.openTaskCount} abiertas`}
+            aria-label={`${count} abiertas`}
           >
-            {board.openTaskCount}
+            {count}
           </span>
         )}
       </NavLink>

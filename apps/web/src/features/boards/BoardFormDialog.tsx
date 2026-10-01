@@ -52,7 +52,7 @@ function BoardForm({ board, onDone }: { board?: BoardSummary; onDone: () => void
   const [color, setColor] = useState<BoardColor>(board?.color ?? 'blue')
   const [submitted, setSubmitted] = useState(false)
 
-  const isInbox = board?.isInbox ?? false
+  const isGeneral = board?.isGeneral ?? false
   const parsed = boardNameSchema.safeParse(name)
   const nameError = submitted && !parsed.success ? parsed.error.issues[0]?.message : undefined
   const pending = create.isPending || update.isPending
@@ -78,7 +78,7 @@ function BoardForm({ board, onDone }: { board?: BoardSummary; onDone: () => void
     }
 
     const changes: UpdateBoardInput = {}
-    if (!isInbox && parsed.data !== board.name) changes.name = parsed.data
+    if (!isGeneral && parsed.data !== board.name) changes.name = parsed.data
     if (color !== board.color) changes.color = color
     if (Object.keys(changes).length === 0) return onDone()
 
@@ -113,8 +113,8 @@ function BoardForm({ board, onDone }: { board?: BoardSummary; onDone: () => void
           value={name}
           onChange={(event) => setName(event.target.value)}
           maxLength={LIMITS.boardName}
-          disabled={isInbox}
-          autoFocus={!isInbox}
+          disabled={isGeneral}
+          autoFocus={!isGeneral}
           autoComplete="off"
           aria-invalid={nameError ? true : undefined}
           aria-describedby="board-name-help"
@@ -127,8 +127,8 @@ function BoardForm({ board, onDone }: { board?: BoardSummary; onDone: () => void
           }
         >
           {nameError ??
-            (isInbox ? (
-              'Inbox no se renombra.'
+            (isGeneral ? (
+              'General no se renombra.'
             ) : mention ? (
               <>
                 En las notas: <span className="font-mono text-foreground">@{mention}</span>

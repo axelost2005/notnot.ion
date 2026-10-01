@@ -30,9 +30,9 @@ export function BoardActionsMenu({ board }: { board: BoardSummary }) {
         <DropdownMenuContent align="end" className="w-48">
           <DropdownMenuItem onSelect={() => setEditing(true)}>
             <Pencil />
-            {board.isInbox ? 'Cambiar color' : 'Editar nombre y color'}
+            {board.isGeneral ? 'Cambiar color' : 'Editar nombre y color'}
           </DropdownMenuItem>
-          {!board.isInbox && (
+          {!board.isGeneral && (
             <>
               <DropdownMenuItem
                 onSelect={() => update.mutate({ id: board.id, archived: !archived })}
@@ -51,7 +51,7 @@ export function BoardActionsMenu({ board }: { board: BoardSummary }) {
       </DropdownMenu>
 
       <BoardFormDialog open={editing} onOpenChange={setEditing} board={board} />
-      {!board.isInbox && (
+      {!board.isGeneral && (
         <DeleteBoardDialog board={board} open={deleting} onOpenChange={setDeleting} />
       )}
     </>

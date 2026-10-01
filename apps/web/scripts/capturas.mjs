@@ -62,7 +62,10 @@ try {
   })
   await call('POST', `/api/tasks/${note.tasks[0].id}/toggle-done`)
 
-  async function shoot(file, { width, height, dark = false, mobile = false, view = '' }) {
+  async function shoot(
+    file,
+    { width, height, dark = false, mobile = false, path = `/b/${lumen.slug}`, notes = true },
+  ) {
     const context = await browser.newContext({
       baseURL: BASE,
       viewport: { width, height },
@@ -72,13 +75,16 @@ try {
       hasTouch: mobile,
     })
     await context.addCookies(cookies)
-    // El panel de notas abierto en escritorio.
-    await context.addInitScript(() => localStorage.setItem('notnot:notes-open', 'true'))
+    // El panel de notas abierto (o cerrado) en escritorio.
+    await context.addInitScript(
+      (open) => localStorage.setItem('notnot:notes-open', String(open)),
+      notes,
+    )
     const page = await context.newPage()
-    await page.goto(`/b/${lumen.slug}${view}`)
+    await page.goto(path)
     // En mobile una de las dos vistas está oculta: alcanza con que estén cargadas.
     await page.getByText('Maqueta de la home').first().waitFor({ state: 'attached' })
-    await page.getByText('Ideas para la home').first().waitFor({ state: 'attached' })
+    if (notes) await page.getByText('Ideas para la home').first().waitFor({ state: 'attached' })
     await page.waitForTimeout(400)
     await page.screenshot({ path: fileURLToPath(new URL(file, OUT)) })
     await context.close()
@@ -87,8 +93,19 @@ try {
 
   await shoot('escritorio-claro.png', { width: 1440, height: 860 })
   await shoot('escritorio-oscuro.png', { width: 1440, height: 860, dark: true })
+  await shoot('escritorio-general.png', {
+    width: 1440,
+    height: 860,
+    path: '/b/general',
+    notes: false,
+  })
   await shoot('mobile-tablero.png', { width: 390, height: 844, mobile: true })
-  await shoot('mobile-notas.png', { width: 390, height: 844, mobile: true, view: '?vista=notas' })
+  await shoot('mobile-notas.png', {
+    width: 390,
+    height: 844,
+    mobile: true,
+    path: `/b/${lumen.slug}?vista=notas`,
+  })
 } finally {
   for (const id of created) await call('DELETE', `/api/boards/${id}`)
   await browser.close()
