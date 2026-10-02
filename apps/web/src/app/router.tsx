@@ -5,6 +5,7 @@ import { UnlockPage } from '@/features/lock/UnlockPage'
 import { FinanceRedirect, FinanceView } from '@/features/finance/FinanceView'
 import { ReceivablesView } from '@/features/finance/ReceivablesView'
 import { NotesWindow } from '@/features/notes/NotesWindow'
+import { NotesHome } from '@/features/pages/NotesHome'
 import { PageView } from '@/features/pages/PageView'
 import { AppLayout } from './AppLayout'
 import { SessionGate } from './SessionGate'
@@ -21,7 +22,8 @@ export const router = createBrowserRouter([
         children: [
           { index: true, Component: RootRedirect },
           { path: 'b/:slug', Component: BoardPage },
-          // Una nota de la sección Notas (`/notas/:slug` es la ventana de notas de un tablero).
+          // La sección Notas y una de sus notas (`/notas/:slug` es la ventana de notas de un tablero).
+          { path: 'p', Component: NotesHome },
           { path: 'p/:id', Component: PageView },
           { path: 'finanzas', Component: FinanceRedirect },
           { path: 'finanzas/por-cobrar', Component: ReceivablesView },

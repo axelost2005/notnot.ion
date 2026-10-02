@@ -1,7 +1,7 @@
 import type { Folder, Page } from '@notnot/shared'
 import { folderPath, LIMITS } from '@notnot/shared'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Ellipsis, FolderInput, NotebookText, Trash2 } from 'lucide-react'
+import { ChevronLeft, Ellipsis, FolderInput, NotebookText, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router'
 import { ErrorState } from '@/components/ErrorState'
@@ -196,12 +196,18 @@ function PageHeader({
   const name = page.title || 'Sin título'
 
   return (
-    <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4 max-md:pr-2">
+    <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4 max-md:px-2">
+      {/* En el celu, de vuelta a la lista de notas (la de la barra de abajo). */}
+      <Button asChild variant="ghost" size="icon" className="text-muted-foreground md:hidden">
+        <Link to="/p" aria-label="Volver a Notas">
+          <ChevronLeft />
+        </Link>
+      </Button>
       <nav
         aria-label="Ubicación"
         className="flex min-w-0 items-center gap-1.5 text-[13px] text-muted-foreground"
       >
-        <NotebookText aria-hidden="true" className="size-4 shrink-0" />
+        <NotebookText aria-hidden="true" className="size-4 shrink-0 max-md:hidden" />
         <span className="shrink-0">Notas</span>
         {path.map((folder) => (
           <span key={folder.id} className="flex min-w-0 items-center gap-1.5">
@@ -258,7 +264,7 @@ function PageHeader({
               disabled={remove.isPending}
               onClick={() =>
                 remove.mutate(page.id, {
-                  onSuccess: () => void navigate('/', { replace: true }),
+                  onSuccess: () => void navigate('/p', { replace: true }),
                 })
               }
             >
@@ -278,7 +284,7 @@ function PageNotFound() {
       <p className="font-medium">Esta nota no existe.</p>
       <p className="text-[13px] text-muted-foreground">Puede que la hayan borrado.</p>
       <Button asChild variant="outline" size="sm" className="mt-2 justify-self-start">
-        <Link to="/">Ir a General</Link>
+        <Link to="/p">Ir a Notas</Link>
       </Button>
     </div>
   )
