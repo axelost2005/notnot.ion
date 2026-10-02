@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
 import { useDeleteColumn, useUpdateColumn } from './api'
+import { laneHeaderClass, laneNameClass } from './LaneSection'
 import { laneTitleClass } from './laneColors'
 
 type Props = {
@@ -28,7 +29,7 @@ export function ColumnHeader({ boardId, column, lane, count, deleteBlockedReason
   const [renaming, setRenaming] = useState(false)
 
   return (
-    <header className="flex h-10 shrink-0 items-center gap-1.5 pr-1 pl-3">
+    <header className={laneHeaderClass}>
       {renaming ? (
         <RenameColumn
           name={column.name}
@@ -38,10 +39,7 @@ export function ColumnHeader({ boardId, column, lane, count, deleteBlockedReason
           }}
         />
       ) : (
-        <h2
-          id={`column-${column.id}`}
-          className={cn('truncate text-[13px] font-medium', laneTitleClass[lane])}
-        >
+        <h2 id={`column-${column.id}`} className={cn(laneNameClass, laneTitleClass[lane])}>
           {column.name}
         </h2>
       )}
@@ -120,7 +118,8 @@ function RenameColumn({ name, onDone }: { name: string; onDone: (name: string | 
         if (event.key === 'Enter') save()
         if (event.key === 'Escape') onDone(null)
       }}
-      className="h-7 min-w-0 flex-1 rounded-md border border-input bg-card px-2 text-[13px] font-medium outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+      // 16 px en el celu: con menos, el iPhone hace zoom al enfocarlo.
+      className="h-7 min-w-0 flex-1 rounded-md border border-input bg-card px-2 text-[13px] font-medium outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 max-md:h-9 max-md:text-base"
     />
   )
 }
