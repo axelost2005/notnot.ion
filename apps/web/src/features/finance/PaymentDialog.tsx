@@ -299,7 +299,7 @@ function PaymentForm({
           maxLength={LIMITS.paymentDescription}
           placeholder="Qué se pagó: un trabajo, una cuota, un adelanto…"
           onChange={(event) => setDescription(event.target.value)}
-          className={cn(fieldClass, 'h-auto resize-y py-1.5')}
+          className={cn(fieldClass, 'h-auto resize-y py-1.5 pointer-coarse:h-auto')}
         />
       </div>
 
@@ -326,7 +326,7 @@ function PaymentForm({
         />
       </div>
 
-      <DialogFooter className="sm:justify-between">
+      <DialogFooter className="justify-between">
         {payment ? (
           <DeleteButton
             label="Borrar pago"
@@ -338,7 +338,7 @@ function PaymentForm({
         ) : (
           <span />
         )}
-        <div className="flex flex-col-reverse gap-2 sm:flex-row">
+        <div className="flex gap-2">
           <Button type="button" variant="outline" onClick={onClose}>
             Cancelar
           </Button>

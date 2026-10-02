@@ -171,13 +171,13 @@ function ReceivableForm({ receivable, onClose }: { receivable?: Receivable; onCl
           maxLength={LIMITS.receivableNote}
           placeholder="Cómo te paga, a quién reclamarle…"
           onChange={(event) => setNote(event.target.value)}
-          className={cn(fieldClass, 'h-auto resize-y py-1.5')}
+          className={cn(fieldClass, 'h-auto resize-y py-1.5 pointer-coarse:h-auto')}
         />
       </div>
 
       {receivable && payments.length > 0 && <Collected receivable={receivable} />}
 
-      <DialogFooter className="sm:justify-between">
+      <DialogFooter className="justify-between">
         {receivable ? (
           <DeleteButton
             label="Borrar"
@@ -193,7 +193,7 @@ function ReceivableForm({ receivable, onClose }: { receivable?: Receivable; onCl
         ) : (
           <span />
         )}
-        <div className="flex flex-col-reverse gap-2 sm:flex-row">
+        <div className="flex gap-2">
           <Button type="button" variant="outline" onClick={onClose}>
             Cancelar
           </Button>

@@ -280,13 +280,13 @@ function TaskDetailForm({
         </div>
       </fieldset>
 
-      <DialogFooter className="sm:justify-between">
+      <DialogFooter className="justify-between">
         <DeleteTaskButton
           title={task.title}
           pending={remove.isPending}
           onConfirm={() => remove.mutate(task.id, { onSuccess: onClose })}
         />
-        <div className="flex flex-col-reverse gap-2 sm:flex-row">
+        <div className="flex gap-2">
           <DialogClose asChild>
             <Button type="button" variant="outline">
               Cancelar

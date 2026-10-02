@@ -27,7 +27,7 @@ type Props = {
 export function HistorySheet({ board, open, onOpenChange }: Props) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full gap-0 sm:max-w-md">
+      <SheetContent side="right" className="gap-0 data-[side=right]:w-full sm:max-w-md">
         <SheetHeader className="border-b">
           <SheetTitle>Historial</SheetTitle>
           <SheetDescription>
@@ -89,7 +89,7 @@ function HistoryList({ boardId, showBoards }: { boardId?: string; showBoards: bo
 
   const now = new Date()
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
+    <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
       {days.map(({ key, tasks }) => (
         <section key={key}>
           <h3 className="sticky top-0 bg-popover pt-4 pb-1.5 text-xs font-medium text-muted-foreground">
