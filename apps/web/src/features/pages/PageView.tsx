@@ -1,10 +1,9 @@
 import type { Folder, Page } from '@notnot/shared'
 import { folderPath, LIMITS } from '@notnot/shared'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { ChevronDown, Ellipsis, FolderInput, NotebookText, Trash2 } from 'lucide-react'
+import { Ellipsis, FolderInput, NotebookText, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router'
-import { useLayout } from '@/app/layoutContext'
 import { ErrorState } from '@/components/ErrorState'
 import {
   AlertDialog,
@@ -188,7 +187,6 @@ function PageHeader({
   folders: Folder[]
   saveState: SaveState
 }) {
-  const { openBoardsMenu } = useLayout()
   const navigate = useNavigate()
   const move = useUpdatePage()
   const remove = useDeletePage()
@@ -198,10 +196,10 @@ function PageHeader({
   const name = page.title || 'Sin título'
 
   return (
-    <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4 max-md:pl-2">
+    <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4 max-md:pr-2">
       <nav
         aria-label="Ubicación"
-        className="flex min-w-0 items-center gap-1.5 text-[13px] text-muted-foreground max-md:hidden"
+        className="flex min-w-0 items-center gap-1.5 text-[13px] text-muted-foreground"
       >
         <NotebookText aria-hidden="true" className="size-4 shrink-0" />
         <span className="shrink-0">Notas</span>
@@ -212,18 +210,6 @@ function PageHeader({
           </span>
         ))}
       </nav>
-      {/* En el celu, el título abre el menú (tableros, notas y finanzas). */}
-      <button
-        type="button"
-        onClick={openBoardsMenu}
-        aria-haspopup="dialog"
-        className="flex h-9 min-w-0 items-center gap-2 rounded-md px-2 text-[15px] font-semibold tracking-tight outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring md:hidden"
-      >
-        <NotebookText aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
-        <span className="truncate">{path.at(-1)?.name ?? 'Notas'}</span>
-        <ChevronDown className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-        <span className="sr-only">(abrir el menú)</span>
-      </button>
 
       <span
         role="status"
