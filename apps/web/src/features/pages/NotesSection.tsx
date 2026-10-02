@@ -175,7 +175,7 @@ export function NotesSection({ onNavigate }: Props) {
 
   return (
     <nav aria-labelledby="notes-heading" className="mt-5">
-      <div className="mb-1 flex h-7 items-center justify-between gap-2 pr-1 pl-2">
+      <div className="mb-1 flex h-7 items-center justify-between gap-2 pr-1 pl-2 pointer-coarse:h-9">
         <h2 id="notes-heading" className="text-xs font-medium text-muted-foreground">
           Notas
         </h2>
@@ -241,7 +241,7 @@ export function NotesSection({ onNavigate }: Props) {
 const indent = (depth: number): CSSProperties => ({ paddingLeft: `${8 + depth * 14}px` })
 
 const ROW_CLASS =
-  'flex h-8 min-w-0 flex-1 items-center gap-2 rounded-md pr-8 outline-none hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-ring pointer-coarse:h-9'
+  'flex h-8 min-w-0 flex-1 items-center gap-2 rounded-md pr-8 outline-none hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-ring pointer-coarse:h-11 pointer-coarse:pr-10'
 
 function TreeLevel({
   context,
@@ -501,7 +501,7 @@ function RenameFolder({
   }
 
   return (
-    <div style={style} className="flex h-8 min-w-0 flex-1 items-center pr-1">
+    <div style={style} className="flex h-8 min-w-0 flex-1 items-center pr-1 pointer-coarse:h-11">
       <input
         ref={inputRef}
         autoFocus
@@ -515,7 +515,7 @@ function RenameFolder({
           if (event.key === 'Enter') save()
           if (event.key === 'Escape') onDone(null)
         }}
-        className="h-7 min-w-0 flex-1 rounded-md border border-input bg-card px-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+        className="h-7 min-w-0 flex-1 rounded-md border border-input bg-card px-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 pointer-coarse:h-9 max-md:text-base"
       />
     </div>
   )

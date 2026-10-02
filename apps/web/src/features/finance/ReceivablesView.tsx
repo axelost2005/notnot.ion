@@ -256,7 +256,7 @@ function ReceivableRow({
         <Button
           variant="outline"
           aria-label={`Me pagaron: ${receivable.description}`}
-          className="shrink-0 max-sm:size-9 max-sm:px-0"
+          className="shrink-0 max-sm:size-10 max-sm:px-0"
           onClick={() => onPay(receivable)}
         >
           <HandCoins aria-hidden="true" />
