@@ -16,12 +16,13 @@ import {
   FolderInput,
   FolderOpen,
   FolderPlus,
+  NotebookText,
   Palette,
   Pencil,
   Plus,
   Trash2,
 } from 'lucide-react'
-import { useRef, useState, type CSSProperties, type ReactNode, type Ref } from 'react'
+import { useId, useRef, useState, type CSSProperties, type ReactNode, type Ref } from 'react'
 import { NavLink, useMatch, useNavigate } from 'react-router'
 import {
   AlertDialog,
@@ -78,10 +79,13 @@ type TreeContext = {
 type Props = {
   /** Para cerrar el panel en el celu al abrir una nota. */
   onNavigate?: () => void
+  /** En `/p`: a pantalla completa, con su header y "Nueva nota" a un toque. */
+  page?: boolean
 }
 
 /** La sección Notas de la sidebar: carpetas (con carpetas adentro) y notas, en un árbol. */
-export function NotesSection({ onNavigate }: Props) {
+export function NotesSection({ onNavigate, page = false }: Props) {
+  const headingId = useId()
   const tree = useQuery(pagesTreeQuery)
   const openIds = useOpenFolders()
   const navigate = useNavigate()
@@ -150,8 +154,8 @@ export function NotesSection({ onNavigate }: Props) {
       item.kind === 'page' ? [item.id] : contentsOf(item.id).pages.map((page) => page.id)
     const options = {
       onSuccess: () => {
-        // Si la nota abierta se borró, a otro lado.
-        if (currentPageId && goneIds.includes(currentPageId)) void navigate('/', { replace: true })
+        // Si la nota abierta se borró, a la lista de notas.
+        if (currentPageId && goneIds.includes(currentPageId)) void navigate('/p', { replace: true })
       },
     }
     if (item.kind === 'page') deletePage.mutate(item.id, options)
@@ -173,47 +177,36 @@ export function NotesSection({ onNavigate }: Props) {
       }
     : null
 
-  return (
-    <nav aria-labelledby="notes-heading" className="mt-5">
-      <div className="mb-1 flex h-7 items-center justify-between gap-2 pr-1 pl-2 pointer-coarse:h-9">
-        <h2 id="notes-heading" className="text-xs font-medium text-muted-foreground">
-          Notas
-        </h2>
-        <NewMenu
-          label="Nueva nota o carpeta"
-          onNewPage={() => newPage(null)}
-          onNewFolder={() => newFolder(null)}
-        />
-      </div>
+  const body = tree.isPending ? (
+    <div className="grid gap-2 px-2 pt-1" aria-label="Cargando notas">
+      {[56, 40].map((width) => (
+        <Skeleton key={width} className="h-5" style={{ width: `${width}%` }} />
+      ))}
+    </div>
+  ) : tree.isError ? (
+    <div className="grid gap-2 px-2 pt-1 text-[13px]">
+      <p className="text-muted-foreground">No se pudieron cargar las notas.</p>
+      <Button variant="outline" size="sm" onClick={() => void tree.refetch()}>
+        Reintentar
+      </Button>
+    </div>
+  ) : context && context.tree.folders.length === 0 && context.tree.pages.length === 0 ? (
+    <p className="px-2 text-[13px] leading-snug text-muted-foreground">
+      Para lo que no es una tarea.{' '}
+      <button
+        type="button"
+        onClick={() => newPage(null)}
+        className="text-foreground underline-offset-2 outline-none hover:underline focus-visible:underline"
+      >
+        Crear una nota
+      </button>
+    </p>
+  ) : (
+    context && <TreeLevel context={context} parentId={null} depth={0} />
+  )
 
-      {tree.isPending ? (
-        <div className="grid gap-2 px-2 pt-1" aria-label="Cargando notas">
-          {[56, 40].map((width) => (
-            <Skeleton key={width} className="h-5" style={{ width: `${width}%` }} />
-          ))}
-        </div>
-      ) : tree.isError ? (
-        <div className="grid gap-2 px-2 pt-1 text-[13px]">
-          <p className="text-muted-foreground">No se pudieron cargar las notas.</p>
-          <Button variant="outline" size="sm" onClick={() => void tree.refetch()}>
-            Reintentar
-          </Button>
-        </div>
-      ) : context && context.tree.folders.length === 0 && context.tree.pages.length === 0 ? (
-        <p className="px-2 text-[13px] leading-snug text-muted-foreground">
-          Para lo que no es una tarea.{' '}
-          <button
-            type="button"
-            onClick={() => newPage(null)}
-            className="text-foreground underline-offset-2 outline-none hover:underline focus-visible:underline"
-          >
-            Crear una nota
-          </button>
-        </p>
-      ) : (
-        context && <TreeLevel context={context} parentId={null} depth={0} />
-      )}
-
+  const dialogs = (
+    <>
       <MoveDialog
         item={moving}
         folders={tree.data?.folders ?? []}
@@ -234,6 +227,63 @@ export function NotesSection({ onNavigate }: Props) {
         onConfirm={confirmDelete}
         onClose={() => setDeleting(null)}
       />
+    </>
+  )
+
+  if (page) {
+    return (
+      <div className="flex h-full min-h-0 flex-col">
+        <header className="flex h-12 shrink-0 items-center gap-2.5 border-b px-4">
+          <NotebookText aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
+          <h1
+            id={headingId}
+            className="text-[15px] font-semibold tracking-tight max-md:text-[17px]"
+          >
+            Notas
+          </h1>
+          <div className="ml-auto flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Nueva carpeta"
+              className="text-muted-foreground"
+              disabled={createFolder.isPending}
+              onClick={() => newFolder(null)}
+            >
+              <FolderPlus />
+            </Button>
+            {/* Un toque y a escribir: la nota queda suelta y después se mueve si hace falta. */}
+            <Button size="sm" disabled={createPage.isPending} onClick={() => newPage(null)}>
+              <Plus />
+              Nueva nota
+            </Button>
+          </div>
+        </header>
+        <nav
+          aria-labelledby={headingId}
+          className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-2 py-2 max-md:text-[15px] md:px-6 md:py-6"
+        >
+          <div className="mx-auto max-w-2xl">{body}</div>
+        </nav>
+        {dialogs}
+      </div>
+    )
+  }
+
+  return (
+    <nav aria-labelledby={headingId} className="mt-5">
+      <div className="mb-1 flex h-7 items-center justify-between gap-2 pr-1 pl-2 pointer-coarse:h-9">
+        <h2 id={headingId} className="text-xs font-medium text-muted-foreground">
+          Notas
+        </h2>
+        <NewMenu
+          label="Nueva nota o carpeta"
+          onNewPage={() => newPage(null)}
+          onNewFolder={() => newFolder(null)}
+        />
+      </div>
+      {body}
+      {dialogs}
     </nav>
   )
 }
@@ -241,7 +291,7 @@ export function NotesSection({ onNavigate }: Props) {
 const indent = (depth: number): CSSProperties => ({ paddingLeft: `${8 + depth * 14}px` })
 
 const ROW_CLASS =
-  'flex h-8 min-w-0 flex-1 items-center gap-2 rounded-md pr-8 outline-none hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-ring pointer-coarse:h-11 pointer-coarse:pr-10'
+  'flex h-8 min-w-0 flex-1 items-center gap-2 rounded-md pr-8 outline-none hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-ring active:bg-sidebar-accent pointer-coarse:h-11 pointer-coarse:pr-10'
 
 function TreeLevel({
   context,

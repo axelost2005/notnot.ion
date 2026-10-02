@@ -191,6 +191,7 @@ try {
       mobile = false,
       path = `/b/${lumen.slug}`,
       notes = true,
+      openFolders = [],
       waitFor = ['Maqueta de la home', ...(notes ? ['Ideas para la home'] : [])],
     },
   ) {
@@ -203,10 +204,13 @@ try {
       hasTouch: mobile,
     })
     await context.addCookies(cookies)
-    // El panel de notas abierto (o cerrado) en escritorio.
+    // El panel de notas abierto (o cerrado) en escritorio, y las carpetas abiertas del árbol.
     await context.addInitScript(
-      (open) => localStorage.setItem('notnot:notes-open', String(open)),
-      notes,
+      ({ open, folders }) => {
+        localStorage.setItem('notnot:notes-open', String(open))
+        localStorage.setItem('notnot:carpetas-abiertas', JSON.stringify(folders))
+      },
+      { open: notes, folders: openFolders },
     )
     const page = await context.newPage()
     await page.goto(path)
@@ -245,11 +249,14 @@ try {
     waitFor: ['Mantenimiento de noviembre'],
   })
   await shoot('mobile-tablero.png', { width: 390, height: 844, mobile: true })
+  // En el celu, "Notas" de la barra de abajo: la sección Notas.
   await shoot('mobile-notas.png', {
     width: 390,
     height: 844,
     mobile: true,
-    path: `/b/${lumen.slug}?vista=notas`,
+    path: '/p',
+    openFolders: [clients.id, lumenFolder.id],
+    waitFor: ['Accesos y datos del proyecto'],
   })
 } finally {
   for (const payment of payments) await call('DELETE', `/api/payments/${payment.id}`)

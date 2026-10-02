@@ -175,4 +175,30 @@ test.describe('celu', () => {
       .tap()
     await expect(page.getByRole('dialog', { name: 'Menú' })).toBeVisible()
   })
+
+  test('"Notas" abajo abre las carpetas y "Nueva nota" deja escribir al toque', async ({
+    page,
+  }) => {
+    const title = e2eName('anotador')
+    await page.goto('/b/general')
+    await page
+      .getByRole('navigation', { name: 'Secciones' })
+      .getByRole('link', { name: 'Notas' })
+      .tap()
+    await expect(page).toHaveURL(/\/p$/)
+
+    await page.getByRole('button', { name: 'Nueva nota', exact: true }).tap()
+    await expect(page).toHaveURL(/\/p\/[^/]+$/)
+    const titleInput = page.getByRole('textbox', { name: 'Título' })
+    await expect(titleInput).toBeFocused()
+    await titleInput.fill(title)
+    await titleInput.press('Enter')
+    await page.keyboard.type('leche, pan y yerba')
+    await expect(page.getByText('Guardado', { exact: true })).toBeVisible()
+
+    // De vuelta en la lista, la nota está (suelta, en la raíz).
+    await page.getByRole('link', { name: 'Volver a Notas' }).tap()
+    await expect(page).toHaveURL(/\/p$/)
+    await expect(notes(page).getByRole('link', { name: title })).toBeVisible()
+  })
 })

@@ -1,6 +1,12 @@
 import type { BoardSummary } from '@notnot/shared'
 import { useQuery } from '@tanstack/react-query'
-import { ChevronDown, History, PanelRight, PictureInPicture2 } from 'lucide-react'
+import {
+  ChevronDown,
+  History,
+  MessageSquareText,
+  PanelRight,
+  PictureInPicture2,
+} from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router'
 import { useLayout } from '@/app/layoutContext'
@@ -61,8 +67,8 @@ function BoardView({ board }: { board: BoardSummary }) {
   const [searchParams, setSearchParams] = useSearchParams()
   const [notesOpen, setNotesOpen] = useState(readPanelOpen)
 
-  // En mobile se ve una cosa por vez (se elige en la barra de abajo). Un link a una nota
-  // (?nota=) va directo a Notas.
+  // En mobile se ve una cosa por vez (el botón de notas del header cambia de una a otra). Un
+  // link a una nota (?nota=) va directo a Notas.
   const tab: Tab =
     searchParams.get('vista') === 'notas' || searchParams.has('nota') ? 'notas' : 'tablero'
   // En desktop el panel va al costado; esos mismos links lo abren aunque estuviera plegado.
@@ -89,6 +95,15 @@ function BoardView({ board }: { board: BoardSummary }) {
     }
   }
 
+  function toggleNotesView() {
+    updateParams((params) => {
+      params.delete('nota')
+      params.delete('escribir')
+      if (tab === 'notas') params.delete('vista')
+      else params.set('vista', 'notas')
+    })
+  }
+
   useEffect(() => {
     writeLastBoard(board.slug)
   }, [board.slug])
@@ -96,7 +111,13 @@ function BoardView({ board }: { board: BoardSummary }) {
   return (
     <div style={boardStyle(board.color)} className="flex h-full min-h-0 flex-col">
       <title>{`${board.name} – notnot.ion`}</title>
-      <BoardHeader board={board} notesOpen={panelOpen} onToggleNotes={toggleNotes} />
+      <BoardHeader
+        board={board}
+        notesOpen={panelOpen}
+        onToggleNotes={toggleNotes}
+        notesView={tab === 'notas'}
+        onToggleNotesView={toggleNotesView}
+      />
       <div className="flex min-h-0 flex-1">
         <div className={cn('flex min-w-0 flex-1 flex-col', tab === 'notas' && 'max-md:hidden')}>
           {board.isGeneral ? <GeneralBoard board={board} /> : <BoardKanban boardId={board.id} />}
@@ -135,11 +156,21 @@ function BoardKanban({ boardId }: { boardId: string }) {
 
 type HeaderProps = {
   board: BoardSummary
+  /** En la compu: el panel de notas al costado. */
   notesOpen: boolean
   onToggleNotes: () => void
+  /** En el celu: las notas en lugar de las columnas. */
+  notesView: boolean
+  onToggleNotesView: () => void
 }
 
-function BoardHeader({ board, notesOpen, onToggleNotes }: HeaderProps) {
+function BoardHeader({
+  board,
+  notesOpen,
+  onToggleNotes,
+  notesView,
+  onToggleNotesView,
+}: HeaderProps) {
   const update = useUpdateBoard()
   const { openBoardsMenu } = useLayout()
   const [historyOpen, setHistoryOpen] = useState(false)
@@ -185,6 +216,17 @@ function BoardHeader({ board, notesOpen, onToggleNotes }: HeaderProps) {
             Desarchivar
           </Button>
         )}
+        {/* En el celu, la barra de abajo lleva a la sección Notas: las del tablero van acá. */}
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label="Notas del tablero"
+          aria-pressed={notesView}
+          onClick={onToggleNotesView}
+          className="text-muted-foreground aria-pressed:bg-accent aria-pressed:text-foreground md:hidden"
+        >
+          <MessageSquareText />
+        </Button>
         <Button
           variant="ghost"
           size="sm"
