@@ -5,7 +5,7 @@ import { boardsQuery } from './api'
 import { readLastBoard } from './lastBoard'
 
 /**
- * `/` abre el último tablero que se usó o, si no hay, General (`/?vista=notas`, en sus notas).
+ * `/` abre el último tablero que se usó o, si no hay, General.
  * `/?nueva-nota` (el atajo de la app instalada) abre General en Notas, listo para escribir.
  */
 export function RootRedirect() {
@@ -34,6 +34,5 @@ export function RootRedirect() {
   if (!target) {
     return <ErrorState title="No hay tableros." message="Corré el seed para crear General." />
   }
-  const view = searchParams.get('vista') === 'notas' ? '?vista=notas' : ''
-  return <Navigate to={`/b/${target.slug}${view}`} replace />
+  return <Navigate to={`/b/${target.slug}`} replace />
 }
