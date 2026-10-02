@@ -128,14 +128,19 @@ La web manda en cada pedido `X-Day-Start` con la medianoche de hoy en el disposi
 - Finanzas tiene dos pestañas: **Cobrado** (los pagos por mes) y **Por cobrar** (con cuántas hay pendientes).
 - Cobrado (`/finanzas/2026-10`): el mes con flechas para ir y volver y la lista de los meses con pagos; lo cobrado en el mes por moneda; la lista por fecha o agrupada por categoría con subtotales (`?por=categoria`). "Anotar un pago" y tocar uno abren el mismo formulario: monto como se escribe acá ("150.000", "1.234,50"), moneda, fecha, cliente, categoría (con las ya usadas como sugerencia), descripción y comprobantes (pegar, arrastrar o adjuntar; en uno nuevo se suben al guardarlo). Si hay algo por cobrar, el formulario deja vincular el pago (o desvincularlo); vinculado, la moneda es la de lo que te deben.
 - Por cobrar (`/finanzas/por-cobrar`): lo que te deben en total por moneda y la lista: primero lo vencido (marcado, "venció hace 3 días"), después lo que vence, por fecha ("vence hoy", "vence en 5 días"), y al final lo que no tiene fecha; las cobradas, aparte y plegadas. Cada fila: el día que vence, concepto, cliente, lo que falta (y de cuánto, si ya pagaron una parte) y "Me pagaron", que abre el formulario de un pago ya completo (lo que falta, la moneda, el cliente y el concepto) para ajustar el monto y adjuntar el comprobante. Tocar una abre su formulario: concepto, monto y moneda, vence, cliente, nota y los pagos que tiene.
-- Nota (`/p/:id`): título y texto plano. Se guarda sola (un rato después de la última tecla, al ir a otra nota y al esconder la pestaña) y lo avisa ("Guardando…", "Guardado"). Arriba, dónde está (Notas / carpeta), "Mover a…" y borrar. En el celu, el título del header abre la sidebar, como en los tableros.
+- Nota (`/p/:id`): título y texto plano. Se guarda sola (un rato después de la última tecla, al ir a otra nota y al esconder la pestaña) y lo avisa ("Guardando…", "Guardado"). Arriba, dónde está (Notas / carpeta), "Mover a…" y borrar. En el celu, la sidebar se abre con "Menú" en la barra de abajo.
 - Header del tablero: "Historial" (panel lateral con las terminadas, agrupadas por día; en General, las de todos con el chip de su tablero) y, en desktop, "Abrir las notas en otra ventana".
 - Ventana de notas (`/notas/:slug`): una ventana chica aparte (`window.open`, ~400×640) con solo el panel de notas y un selector de tablero arriba (desplegable propio, con el punto de color de cada tablero). Cambiar de tablero cambia dónde se escriben las notas y a dónde van las tareas sin `@`. Lo que cambia en una ventana se refresca en las otras (BroadcastChannel).
 - General: tres columnas fijas por estado con las tarjetas de todos los tableros activos. "Por hacer" = la primera columna normal de cada tablero, "En curso" = las otras normales, "Hecho" = la de terminadas. Cada tarjeta muestra el chip de su tablero (las de General no llevan). Dentro de cada columna van agrupadas por tablero, en el orden de la sidebar. Arrastrar una tarjeta a otra columna la mueve al final de esa columna en su propio tablero ("En curso" va a la segunda columna normal; si el tablero no tiene, avisa y no la mueve). No se reordena dentro de una columna ni se editan las columnas de General. "Agregar tarjeta" en cada columna crea una tarea de General en la columna que corresponde.
 - Columna: título con el color de su rol (la primera normal celeste, las otras amarillas, la de terminadas verde), contador, "+ Agregar tarjeta" al pie y menú (renombrar, marcar como terminadas, borrar). Toda la columna recibe lo que se suelta.
 - Tarjeta: una fila con un checkbox (tilda y destilda como desde la nota) y el título en negrita con una línea de la descripción debajo. Click abre el detalle (título, descripción, imágenes, mover a otro tablero o columna, borrar, link a la nota de origen).
 - Imágenes en el detalle: pegar (Ctrl+V), arrastrar o el botón "Adjuntar" (en el celu abre la galería o la cámara); el navegador las achica y las pasa a WebP antes de subirlas. Miniaturas que se borran (con confirmación) y que, al tocarlas, se agrandan desde su lugar (GSAP Flip, sin animación con `prefers-reduced-motion`) sobre el fondo oscurecido; se cierran con click, Esc o tocando afuera.
-- Mobile (<768px): header con selector de tablero, tabs abajo "Tablero" / "Notas", columnas de a una con swipe (scroll-snap). Reordenar dentro de la columna con long-press; arrastrar una tarjeta hasta el borde y esperar pasa a la columna de al lado. También "Mover a…".
+- Mobile (<768px): una sola columna de contenido, sin nada que se salga hacia los costados.
+  - Abajo, la barra de la app: "Tablero" y "Notas" (las dos vistas del tablero abierto o, desde otra sección, del último), "Finanzas" (con cuánto por cobrar vence hoy o ya venció) y "Menú" (la sidebar en un panel: tableros, la sección Notas y bloquear). El título del tablero también abre el menú.
+  - El tablero es una lista: cada columna es un grupo con su título (color de su rol, contador y menú, fijo arriba mientras se recorre el grupo), sus tarjetas como filas y "Agregar tarjeta" al final. En General, igual con sus tres columnas por estado.
+  - Mover: long-press y arrastrar a otro grupo (cerca del borde de abajo o de arriba la lista se mueve sola), o "Mover a…" en el detalle.
+  - Los diálogos (tarjeta, pago, por cobrar, tablero, carpeta…) suben desde abajo como hojas, a todo el ancho; las confirmaciones quedan centradas. El historial ocupa toda la pantalla. Abrir una tarjeta no despliega el teclado.
+  - Con el dedo (`pointer: coarse`), botones, filas y opciones de menú miden 40–44 px. Los campos tienen 16 px de texto: con menos, el iPhone hace zoom al enfocarlos.
 - Estética sobria y prolija tipo Linear, claro/oscuro según el sistema, color de acento por tablero. Estados vacíos y de carga cuidados. Toasts para errores.
 - Accesible: drag & drop con teclado, labels en botones de ícono, foco visible.
 - Datos con TanStack Query: refetch al volver a la app y optimistic updates al mover tarjetas, tildar y crear notas.
@@ -293,6 +298,16 @@ Una rama y un PR por paso. Las migraciones solo agregan.
 2. **Carpetas personalizadas.** En la sección Notas, cada carpeta puede tener uno de los 8 colores de los tableros y un ícono de una lista; sin elegir, queda como ahora. Se cambian desde su "…" → "Personalizar", con una vista previa.
 
    **Listo cuando:** el e2e le pone color e ícono a una carpeta, recarga y siguen; y la vuelve a dejar como estaba.
+
+### Fase 8 — Versión mobile
+En el celu la app se veía como la de la compu achicada (el kanban con la columna siguiente asomando, el menú escondido en el título, diálogos centrados). Pasa a ser una versión pensada para el celu, más ordenada (ver "Mobile" en UI). La compu queda igual.
+
+- Tablero y General como lista vertical agrupada por columna, con el título del grupo fijo arriba.
+- Barra de abajo con Tablero, Notas, Finanzas y Menú.
+- Diálogos como hojas desde abajo; historial a pantalla completa.
+- Tamaños para el dedo y campos de 16 px.
+
+**Listo cuando:** el e2e en 375 px ve las columnas una abajo de la otra a todo el ancho sin scroll horizontal; con la barra de abajo va a Notas, a Finanzas, vuelve al tablero y abre el menú; captura una nota y mueve una tarjeta con "Mover a…"; con long-press baja una tarjeta hasta "En curso" en un tablero y en General; y desde una nota de la sección Notas, "Menú" abre la sidebar.
 
 ## Después (no ahora)
 - Avisos de lo que vence por cobrar (notificaciones push con la app instalada).

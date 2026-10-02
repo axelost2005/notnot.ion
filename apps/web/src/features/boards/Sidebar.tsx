@@ -76,7 +76,7 @@ export function Sidebar({ onNavigate }: Props) {
                   <button
                     type="button"
                     onClick={() => setCreating(true)}
-                    className="flex h-8 w-full items-center gap-2.5 rounded-md px-2 text-muted-foreground outline-none hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                    className="flex h-8 w-full items-center gap-2.5 rounded-md px-2 text-muted-foreground outline-none pointer-coarse:h-11 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     <Plus className="size-3.5" />
                     Nuevo tablero
@@ -86,7 +86,7 @@ export function Sidebar({ onNavigate }: Props) {
 
               {archived.length > 0 && (
                 <Collapsible className="mt-5">
-                  <CollapsibleTrigger className="group flex h-7 w-full items-center gap-1 rounded-md px-2 text-xs font-medium text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">
+                  <CollapsibleTrigger className="group flex h-7 w-full items-center gap-1 rounded-md px-2 text-xs font-medium text-muted-foreground outline-none pointer-coarse:h-10 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring">
                     <ChevronRight className="size-3.5 transition-transform group-data-[state=open]:rotate-90" />
                     Archivados
                     <span className="ml-auto tabular-nums">{archived.length}</span>
@@ -110,7 +110,7 @@ export function Sidebar({ onNavigate }: Props) {
             onClick={onNavigate}
             className={({ isActive }) =>
               cn(
-                'flex h-8 items-center gap-2.5 rounded-md px-2 outline-none hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-ring',
+                'flex h-8 items-center gap-2.5 rounded-md px-2 outline-none pointer-coarse:h-11 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-ring',
                 isActive && 'bg-sidebar-accent font-medium text-sidebar-accent-foreground',
               )
             }
@@ -165,7 +165,7 @@ function BoardLink({ board, count = board.openTaskCount, onNavigate }: BoardLink
         style={boardStyle(board.color)}
         className={({ isActive }) =>
           cn(
-            'relative flex h-8 items-center gap-2.5 rounded-md px-2 outline-none hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-ring',
+            'relative flex h-8 items-center gap-2.5 rounded-md px-2 outline-none pointer-coarse:h-11 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-ring',
             isActive &&
               'bg-sidebar-accent font-medium text-sidebar-accent-foreground before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:rounded-full before:bg-(--board)',
           )

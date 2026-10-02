@@ -7,10 +7,9 @@ import {
   totalsByCurrency,
 } from '@notnot/shared'
 import { useQuery } from '@tanstack/react-query'
-import { ChevronDown, ChevronLeft, ChevronRight, Paperclip, Plus, Wallet } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Paperclip, Plus, Wallet } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { Link, Navigate, useMatch, useNavigate, useParams, useSearchParams } from 'react-router'
-import { useLayout } from '@/app/layoutContext'
 import { ErrorState } from '@/components/ErrorState'
 import { Button } from '@/components/ui/button'
 import {
@@ -152,24 +151,10 @@ export function FinanceFrame({
 }
 
 function FinanceHeader({ action }: { action: ReactNode }) {
-  const { openBoardsMenu } = useLayout()
-
   return (
-    <header className="flex h-12 shrink-0 items-center gap-2.5 border-b px-4 max-md:pl-2">
-      <Wallet aria-hidden="true" className="size-4 shrink-0 text-muted-foreground max-md:hidden" />
-      <h1 className="text-[15px] font-semibold tracking-tight max-md:hidden">Finanzas</h1>
-      {/* En el celu, el título abre el menú (tableros, notas y finanzas). */}
-      <button
-        type="button"
-        onClick={openBoardsMenu}
-        aria-haspopup="dialog"
-        className="flex h-9 min-w-0 items-center gap-2 rounded-md px-2 text-[15px] font-semibold tracking-tight outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring md:hidden"
-      >
-        <Wallet aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
-        Finanzas
-        <ChevronDown className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-        <span className="sr-only">(abrir el menú)</span>
-      </button>
+    <header className="flex h-12 shrink-0 items-center gap-2.5 border-b px-4">
+      <Wallet aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
+      <h1 className="text-[15px] font-semibold tracking-tight max-md:text-[17px]">Finanzas</h1>
       <div className="ml-auto">{action}</div>
     </header>
   )
@@ -270,7 +255,7 @@ function MonthBar({ month, byCategory }: { month: string; byCategory: boolean })
             type="button"
             aria-pressed={option.active}
             onClick={() => view(option.categories)}
-            className="h-7 rounded-md px-2.5 text-[13px] text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring aria-pressed:bg-accent aria-pressed:font-medium aria-pressed:text-foreground"
+            className="h-7 rounded-md px-2.5 text-[13px] text-muted-foreground outline-none pointer-coarse:h-9 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring aria-pressed:bg-accent aria-pressed:font-medium aria-pressed:text-foreground"
           >
             {option.label}
           </button>

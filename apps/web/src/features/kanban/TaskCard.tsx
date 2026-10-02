@@ -15,7 +15,11 @@ type CardProps = {
   board?: BoardSummary
 }
 
-const BOX_CLASS = 'size-4 rounded-[4px] border border-foreground/30 bg-card'
+const BOX_CLASS =
+  'size-4 rounded-[4px] border border-foreground/30 bg-card max-md:size-5 max-md:rounded-[5px]'
+// En el celu, filas más altas: el checkbox y la tarjeta se tocan con el dedo.
+const CHECK_CELL_CLASS = 'py-2.5 pr-2.5 pl-3 max-md:py-3 max-md:pr-3 max-md:pl-4'
+const TEXT_CELL_CLASS = 'min-w-0 flex-1 py-2 pr-3 max-md:py-3 max-md:pr-4'
 
 function CardText({ task, done, board }: CardProps) {
   return (
@@ -30,7 +34,9 @@ function CardText({ task, done, board }: CardProps) {
       </p>
       {task.description && (
         // Una sola línea: los saltos de línea pasan a espacios y el resto se corta con "…".
-        <p className="truncate text-muted-foreground">{task.description.replace(/\s+/g, ' ')}</p>
+        <p className="truncate text-muted-foreground max-md:text-sm">
+          {task.description.replace(/\s+/g, ' ')}
+        </p>
       )}
       {board && <BoardChip board={board} className="mt-1.5 -ml-0.5" />}
     </>
@@ -54,8 +60,8 @@ function TaskCheckbox({ task, done }: { task: Task; done: boolean }) {
 
   return (
     // Fuera de la zona que se arrastra: tocarlo no abre la tarjeta ni empieza a moverla.
-    <label className="flex shrink-0 cursor-pointer self-start py-2.5 pr-2.5 pl-3">
-      <span className="grid size-4 place-items-center">
+    <label className={cn('flex shrink-0 cursor-pointer self-start', CHECK_CELL_CLASS)}>
+      <span className="grid size-4 place-items-center max-md:size-5">
         <input
           type="checkbox"
           checked={checked}
@@ -69,7 +75,7 @@ function TaskCheckbox({ task, done }: { task: Task; done: boolean }) {
         <Check
           aria-hidden="true"
           strokeWidth={3}
-          className="pointer-events-none col-start-1 row-start-1 size-3 text-background opacity-0 peer-checked:opacity-100"
+          className="pointer-events-none col-start-1 row-start-1 size-3 text-background opacity-0 peer-checked:opacity-100 max-md:size-3.5"
         />
       </span>
     </label>
@@ -106,6 +112,8 @@ export function TaskCard({
       style={style}
       className={cn(
         'flex touch-manipulation rounded-md border bg-card text-sm leading-snug hover:border-foreground/20 has-[[data-card-handle]:focus-visible]:ring-2 has-[[data-card-handle]:focus-visible]:ring-ring',
+        // En el celu es una fila del grupo: solo una línea que la separa de la siguiente.
+        'max-md:rounded-none max-md:border-x-0 max-md:border-t-0 max-md:text-[15px] max-md:last:border-b-0 max-md:active:bg-accent/60 max-md:has-[[data-card-handle]:focus-visible]:ring-inset',
         dragging && 'opacity-40',
       )}
     >
@@ -120,7 +128,7 @@ export function TaskCard({
         onKeyUp={(event) => {
           if (event.key === 'Enter') onOpen(task.id)
         }}
-        className="min-w-0 flex-1 cursor-pointer py-2 pr-3 outline-none select-none"
+        className={cn('cursor-pointer outline-none select-none', TEXT_CELL_CLASS)}
       >
         <CardText task={task} done={done} board={board} />
       </div>
@@ -131,8 +139,8 @@ export function TaskCard({
 /** La copia que sigue al puntero mientras se arrastra: solo se ve. */
 export function TaskCardOverlay({ task, done, board }: CardProps) {
   return (
-    <div className="flex rotate-1 rounded-md border bg-card text-sm leading-snug shadow-lg ring-1 ring-foreground/10">
-      <span className="py-2.5 pr-2.5 pl-3">
+    <div className="flex rotate-1 rounded-md border bg-card text-sm leading-snug shadow-lg ring-1 ring-foreground/10 max-md:text-[15px]">
+      <span className={CHECK_CELL_CLASS}>
         <span
           className={cn(
             'grid place-items-center',
@@ -140,10 +148,16 @@ export function TaskCardOverlay({ task, done, board }: CardProps) {
             done && 'border-foreground bg-foreground',
           )}
         >
-          {done && <Check aria-hidden="true" strokeWidth={3} className="size-3 text-background" />}
+          {done && (
+            <Check
+              aria-hidden="true"
+              strokeWidth={3}
+              className="size-3 text-background max-md:size-3.5"
+            />
+          )}
         </span>
       </span>
-      <div className="min-w-0 flex-1 py-2 pr-3">
+      <div className={TEXT_CELL_CLASS}>
         <CardText task={task} done={done} board={board} />
       </div>
     </div>

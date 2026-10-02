@@ -1,13 +1,6 @@
 import type { BoardSummary } from '@notnot/shared'
 import { useQuery } from '@tanstack/react-query'
-import {
-  ChevronDown,
-  Columns3,
-  History,
-  NotebookPen,
-  PanelRight,
-  PictureInPicture2,
-} from 'lucide-react'
+import { ChevronDown, History, PanelRight, PictureInPicture2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router'
 import { useLayout } from '@/app/layoutContext'
@@ -68,7 +61,8 @@ function BoardView({ board }: { board: BoardSummary }) {
   const [searchParams, setSearchParams] = useSearchParams()
   const [notesOpen, setNotesOpen] = useState(readPanelOpen)
 
-  // En mobile se ve una cosa por vez. Un link a una nota (?nota=) va directo a Notas.
+  // En mobile se ve una cosa por vez (se elige en la barra de abajo). Un link a una nota
+  // (?nota=) va directo a Notas.
   const tab: Tab =
     searchParams.get('vista') === 'notas' || searchParams.has('nota') ? 'notas' : 'tablero'
   // En desktop el panel va al costado; esos mismos links lo abren aunque estuviera plegado.
@@ -95,15 +89,6 @@ function BoardView({ board }: { board: BoardSummary }) {
     }
   }
 
-  function selectTab(next: Tab) {
-    updateParams((params) => {
-      params.delete('nota')
-      params.delete('escribir')
-      if (next === 'notas') params.set('vista', 'notas')
-      else params.delete('vista')
-    })
-  }
-
   useEffect(() => {
     writeLastBoard(board.slug)
   }, [board.slug])
@@ -113,10 +98,7 @@ function BoardView({ board }: { board: BoardSummary }) {
       <title>{`${board.name} – notnot.ion`}</title>
       <BoardHeader board={board} notesOpen={panelOpen} onToggleNotes={toggleNotes} />
       <div className="flex min-h-0 flex-1">
-        <div
-          id="vista-tablero"
-          className={cn('flex min-w-0 flex-1 flex-col', tab === 'notas' && 'max-md:hidden')}
-        >
+        <div className={cn('flex min-w-0 flex-1 flex-col', tab === 'notas' && 'max-md:hidden')}>
           {board.isGeneral ? <GeneralBoard board={board} /> : <BoardKanban boardId={board.id} />}
         </div>
         {panelOpen && (
@@ -131,7 +113,6 @@ function BoardView({ board }: { board: BoardSummary }) {
           />
         )}
       </div>
-      <MobileTabs tab={tab} onSelect={selectTab} />
     </div>
   )
 }
@@ -179,7 +160,7 @@ function BoardHeader({ board, notesOpen, onToggleNotes }: HeaderProps) {
           type="button"
           onClick={openBoardsMenu}
           aria-haspopup="dialog"
-          className="flex h-9 max-w-full min-w-0 items-center gap-2 rounded-md px-2 text-[15px] font-semibold tracking-tight outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
+          className="flex h-10 max-w-full min-w-0 items-center gap-2 rounded-md px-2 text-[17px] font-semibold tracking-tight outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring active:bg-accent"
         >
           <span aria-hidden="true" className="size-2.5 shrink-0 rounded-full bg-(--board)" />
           <span className="truncate">{board.name}</span>
@@ -187,8 +168,9 @@ function BoardHeader({ board, notesOpen, onToggleNotes }: HeaderProps) {
           <span className="sr-only">(cambiar de tablero)</span>
         </button>
       </h1>
+      {/* En el celu no entra: "Desarchivar" ya dice que está archivado. */}
       {archived && (
-        <span className="shrink-0 rounded-sm bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
+        <span className="shrink-0 rounded-sm bg-muted px-1.5 py-0.5 text-xs text-muted-foreground max-md:hidden">
           Archivado
         </span>
       )}
@@ -246,36 +228,6 @@ function BoardHeader({ board, notesOpen, onToggleNotes }: HeaderProps) {
         </Tooltip>
       </div>
     </header>
-  )
-}
-
-function MobileTabs({ tab, onSelect }: { tab: Tab; onSelect: (tab: Tab) => void }) {
-  const tabs = [
-    { id: 'tablero', label: 'Tablero', Icon: Columns3 },
-    { id: 'notas', label: 'Notas', Icon: NotebookPen },
-  ] as const
-
-  return (
-    <div
-      role="tablist"
-      aria-label="Vista"
-      className="grid shrink-0 grid-cols-2 border-t bg-background pb-[env(safe-area-inset-bottom)] md:hidden"
-    >
-      {tabs.map(({ id, label, Icon }) => (
-        <button
-          key={id}
-          type="button"
-          role="tab"
-          aria-selected={tab === id}
-          aria-controls={id === 'tablero' ? 'vista-tablero' : undefined}
-          onClick={() => onSelect(id)}
-          className="flex h-14 flex-col items-center justify-center gap-1 text-xs text-muted-foreground outline-none focus-visible:bg-accent aria-selected:text-foreground"
-        >
-          <Icon className="size-5" aria-hidden="true" />
-          {label}
-        </button>
-      ))}
-    </div>
   )
 }
 

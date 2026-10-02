@@ -25,9 +25,9 @@ import { useSearchParams } from 'react-router'
 import { AddColumn } from './AddColumn'
 import { useMoveTask } from './api'
 import { KanbanColumn } from './KanbanColumn'
+import { lanesClass } from './LaneSection'
 import { TaskCardOverlay } from './TaskCard'
 import { TaskDetailDialog } from './TaskDetailDialog'
-import { useEdgePaging } from './useEdgePaging'
 
 type Items = Record<string, string[]>
 
@@ -43,8 +43,6 @@ export function KanbanBoard({ board }: { board: BoardDetail }) {
   const [activeId, setActiveId] = useState<string | null>(null)
   const [drag, setDrag] = useState<DragState | null>(null)
   const lastDragEnd = useRef(0)
-  const scrollerRef = useRef<HTMLDivElement>(null)
-  const canScroll = useEdgePaging(scrollerRef, activeId !== null)
 
   const columns = useMemo(() => sortByPosition(board.columns), [board.columns])
   const tasksById = useMemo(() => new Map(board.tasks.map((t) => [t.id, t])), [board.tasks])
@@ -205,7 +203,6 @@ export function KanbanBoard({ board }: { board: BoardDetail }) {
     <DndContext
       sensors={sensors}
       collisionDetection={collisionDetection}
-      autoScroll={{ canScroll }}
       onDragStart={onDragStart}
       onDragOver={onDragOver}
       onDragEnd={onDragEnd}
@@ -221,11 +218,7 @@ export function KanbanBoard({ board }: { board: BoardDetail }) {
         },
       }}
     >
-      {/* En mobile, una columna por vez con swipe (scroll-snap). */}
-      <div
-        ref={scrollerRef}
-        className="flex min-h-0 flex-1 items-start gap-3 overflow-x-auto p-3 max-md:snap-x max-md:p-4 max-md:snap-mandatory max-md:scroll-px-4 max-md:[scrollbar-width:none]"
-      >
+      <div className={lanesClass}>
         {columns.map((column) => {
           const columnTasks = (items[column.id] ?? [])
             .map((id) => tasksById.get(id))

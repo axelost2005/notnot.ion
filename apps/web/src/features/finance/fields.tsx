@@ -27,7 +27,7 @@ import { boardStyle } from '../boards/colors'
 // Campos que comparten el formulario de un pago y el de algo por cobrar.
 
 export const fieldClass =
-  'h-9 w-full rounded-lg border border-input bg-transparent px-2.5 text-base outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 aria-invalid:border-destructive md:text-sm dark:bg-input/30'
+  'h-9 w-full rounded-lg border border-input bg-transparent px-2.5 text-base outline-none pointer-coarse:h-10 placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 aria-invalid:border-destructive md:text-sm dark:bg-input/30'
 
 export const AMOUNT_ERROR = 'Escribí un monto, por ejemplo 150.000 o 1.234,50'
 
@@ -85,7 +85,7 @@ export function AmountField({
                 onChange={() => onCurrencyChange(option)}
                 className="peer sr-only"
               />
-              <span className="grid h-7 cursor-pointer place-items-center rounded-md px-3 text-sm font-medium text-muted-foreground peer-checked:bg-foreground peer-checked:text-background peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-disabled:cursor-not-allowed">
+              <span className="grid h-7 cursor-pointer place-items-center rounded-md px-3 text-sm pointer-coarse:h-8.5 font-medium text-muted-foreground peer-checked:bg-foreground peer-checked:text-background peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-disabled:cursor-not-allowed">
                 {option}
               </span>
             </label>

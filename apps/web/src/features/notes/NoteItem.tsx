@@ -54,7 +54,7 @@ export function NoteItem({ note, boardsById, currentBoardId, now, highlighted }:
         {!note.pending && <DeleteNoteButton noteId={note.id} boardId={currentBoardId} />}
       </header>
 
-      <div className="grid gap-0.5 text-sm leading-relaxed">
+      <div className="grid gap-0.5 text-sm leading-relaxed max-md:text-[15px]">
         {lines.map((line, index) => {
           const task = taskByLine.get(index)
           if (task) {
@@ -136,7 +136,7 @@ function TaskLine({ task, board, showBoard, disabled }: TaskLineProps) {
         disabled={disabled}
         onChange={onToggle}
         aria-label={`${done ? 'Destildar' : 'Tildar'} ${task.title}`}
-        className="mt-[5px] size-3.5 shrink-0 cursor-pointer accent-foreground disabled:cursor-default"
+        className="mt-[5px] size-3.5 shrink-0 cursor-pointer accent-foreground disabled:cursor-default max-md:mt-[3px] max-md:size-[18px]"
       />
       {!opensCard ? (
         <span className={cn('min-w-0 break-words', done && 'text-muted-foreground')}>

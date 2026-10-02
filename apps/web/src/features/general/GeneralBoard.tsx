@@ -5,7 +5,6 @@ import {
   pointerWithin,
   TouchSensor,
   useDraggable,
-  useDroppable,
   useSensor,
   useSensors,
   type Announcements,
@@ -32,11 +31,11 @@ import { cn } from '@/lib/utils'
 import { boardQuery, boardsQuery } from '../boards/api'
 import { useMoveTask } from '../kanban/api'
 import { AddTaskComposer } from '../kanban/AddTaskComposer'
+import { LaneSection, laneHeaderClass, laneNameClass, lanesClass } from '../kanban/LaneSection'
 import { laneTitleClass } from '../kanban/laneColors'
 import { LanesSkeleton } from '../kanban/LanesSkeleton'
 import { TaskCard, TaskCardOverlay } from '../kanban/TaskCard'
 import { TaskDetailDialog } from '../kanban/TaskDetailDialog'
-import { useEdgePaging } from '../kanban/useEdgePaging'
 import { generalQuery } from './api'
 
 const isLane = (id: UniqueIdentifier): id is Lane => LANES.some((lane) => lane.id === id)
@@ -53,8 +52,6 @@ export function GeneralBoard({ board }: { board: BoardSummary }) {
   const [searchParams, setSearchParams] = useSearchParams()
   const [activeId, setActiveId] = useState<string | null>(null)
   const lastDragEnd = useRef(0)
-  const scrollerRef = useRef<HTMLDivElement>(null)
-  const canScroll = useEdgePaging(scrollerRef, activeId !== null)
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
     // Long-press en touch: un toque corto abre la tarjeta y el scroll sigue funcionando.
@@ -175,7 +172,6 @@ export function GeneralBoard({ board }: { board: BoardSummary }) {
     <DndContext
       sensors={sensors}
       collisionDetection={pointerWithin}
-      autoScroll={{ canScroll }}
       onDragStart={({ active }) => setActiveId(String(active.id))}
       onDragEnd={onDragEnd}
       onDragCancel={() => setActiveId(null)}
@@ -187,11 +183,7 @@ export function GeneralBoard({ board }: { board: BoardSummary }) {
         },
       }}
     >
-      {/* En mobile, una columna por vez con swipe (scroll-snap). */}
-      <div
-        ref={scrollerRef}
-        className="flex min-h-0 flex-1 items-start gap-3 overflow-x-auto p-3 max-md:snap-x max-md:p-4 max-md:snap-mandatory max-md:scroll-px-4 max-md:[scrollbar-width:none]"
-      >
+      <div className={lanesClass}>
         {LANES.map((lane) => {
           const target = generalColumn(lane.id)
           return (
@@ -244,39 +236,29 @@ type LaneProps = {
 }
 
 function GeneralLane({ lane, count, footer, children }: LaneProps) {
-  // Toda la columna recibe tarjetas (también el título y el pie), aunque esté vacía.
-  const { setNodeRef, isOver } = useDroppable({ id: lane.id })
-
   return (
-    <section
-      ref={setNodeRef}
-      aria-labelledby={`lane-${lane.id}`}
-      className={cn(
-        'flex h-full w-66 shrink-0 flex-col rounded-lg bg-lane transition-colors max-md:w-[85vw] max-md:snap-start',
-        isOver && 'bg-accent',
-      )}
+    <LaneSection
+      id={lane.id}
+      labelledBy={`lane-${lane.id}`}
+      header={
+        <header className={laneHeaderClass}>
+          <h2 id={`lane-${lane.id}`} className={cn(laneNameClass, laneTitleClass[lane.id])}>
+            {lane.name}
+          </h2>
+          {lane.id === 'done' && (
+            <Check
+              className="size-3.5 shrink-0 text-muted-foreground"
+              role="img"
+              aria-label="Columna de terminadas"
+            />
+          )}
+          <span className="text-xs text-muted-foreground tabular-nums">{count}</span>
+        </header>
+      }
+      footer={footer}
     >
-      <header className="flex h-10 shrink-0 items-center gap-1.5 pr-1 pl-3">
-        <h2
-          id={`lane-${lane.id}`}
-          className={cn('truncate text-[13px] font-medium', laneTitleClass[lane.id])}
-        >
-          {lane.name}
-        </h2>
-        {lane.id === 'done' && (
-          <Check
-            className="size-3.5 shrink-0 text-muted-foreground"
-            role="img"
-            aria-label="Columna de terminadas"
-          />
-        )}
-        <span className="text-xs text-muted-foreground tabular-nums">{count}</span>
-      </header>
-      <ol className="flex min-h-16 flex-1 flex-col gap-1.5 overflow-y-auto px-2 pb-2">
-        {children}
-      </ol>
-      {footer}
-    </section>
+      {children}
+    </LaneSection>
   )
 }
 

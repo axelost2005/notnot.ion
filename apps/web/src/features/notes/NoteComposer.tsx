@@ -165,7 +165,8 @@ export function NoteComposer({ board, boards, autoFocus }: Props) {
   )
 
   return (
-    <div className="relative shrink-0 border-t p-3">
+    // En el celu, un bloque aparte como el campo de un chat.
+    <div className="relative shrink-0 border-t p-3 max-md:mx-3 max-md:mt-1 max-md:mb-3 max-md:rounded-2xl max-md:border max-md:bg-card max-md:pb-2 max-md:focus-within:border-ring max-md:focus-within:ring-3 max-md:focus-within:ring-ring/20">
       {open && (
         <ul
           id={listId}
@@ -227,7 +228,7 @@ export function NoteComposer({ board, boards, autoFocus }: Props) {
         aria-expanded={open}
         aria-activedescendant={open ? `${listId}-${suggestions[active]!.id}` : undefined}
         role="combobox"
-        className="block max-h-48 min-h-14 w-full resize-none bg-transparent text-base leading-relaxed outline-none field-sizing-content placeholder:text-muted-foreground md:text-sm"
+        className="block max-h-48 min-h-14 w-full resize-none bg-transparent text-base leading-relaxed outline-none field-sizing-content placeholder:text-muted-foreground max-md:min-h-7 md:text-sm"
       />
 
       <div className="mt-2 flex items-center gap-1.5">
