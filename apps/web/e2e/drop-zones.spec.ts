@@ -130,10 +130,11 @@ test.describe('touch', () => {
   test.use({ viewport: { width: 375, height: 740 }, isMobile: true, hasTouch: true })
 
   /**
-   * Long-press, hasta el borde derecho, quedarse ahí hasta que pase a la columna de al lado y
-   * soltar en el medio de esa columna. Con eventos touch reales (CDP): Playwright solo sabe tocar.
+   * En el celu las columnas van una abajo de la otra: long-press, bajar hasta el borde de abajo
+   * (la lista baja sola) hasta que se vea la columna y soltar en el medio de esa columna. Con
+   * eventos touch reales (CDP): Playwright solo sabe tocar.
    */
-  async function dragToNextColumn(page: Page, source: Locator) {
+  async function dragDownTo(page: Page, source: Locator, target: Locator) {
     const client = await page.context().newCDPSession(page)
     const touch = (type: 'touchStart' | 'touchMove' | 'touchEnd', at?: { x: number; y: number }) =>
       client.send('Input.dispatchTouchEvent', {
@@ -151,8 +152,8 @@ test.describe('touch', () => {
     }
 
     const from = await centerOf(source)
-    const edge = { x: 365, y: from.y }
-    const scroller = page.locator('#vista-tablero > div').first()
+    // Arriba de la barra de abajo, en la zona donde la lista baja sola.
+    const edge = { x: from.x, y: 620 }
     await touch('touchStart', from)
     await page.waitForTimeout(400)
     await glide(from, edge)
@@ -160,40 +161,37 @@ test.describe('touch', () => {
       .poll(
         async () => {
           await touch('touchMove', { x: edge.x, y: edge.y + 1 })
-          return scroller.evaluate((element) => element.scrollLeft)
+          return (await target.boundingBox())?.y ?? Infinity
         },
-        { intervals: [50] },
+        { intervals: [50], timeout: 15_000 },
       )
-      .toBeGreaterThan(200)
-    await glide(edge, { x: 187, y: from.y })
+      .toBeLessThan(400)
+    const box = (await target.boundingBox())!
+    await glide(edge, { x: from.x, y: box.y + box.height / 2 })
     await page.waitForTimeout(300)
     await touch('touchEnd')
   }
 
-  test('en un tablero, con long-press y el borde se lleva una tarjeta a "En curso"', async ({
-    page,
-  }) => {
+  test('en un tablero, con long-press se baja una tarjeta hasta "En curso"', async ({ page }) => {
     const board = await seedBoard(page, 'touch')
     await page.goto(`/b/${board.slug}`)
     const source = card(column(page, 'Por hacer'), 'dos')
     await expect(source).toBeVisible()
 
     const moved = moveResponse(page)
-    await dragToNextColumn(page, source)
+    await dragDownTo(page, source, column(page, 'En curso'))
     expect((await moved).ok()).toBe(true)
     await expect.poll(() => titlesIn(page, 'En curso')).toEqual(['dos'])
   })
 
-  test('en General, con long-press y el borde se lleva una tarjeta a "En curso"', async ({
-    page,
-  }) => {
+  test('en General, con long-press se baja una tarjeta hasta "En curso"', async ({ page }) => {
     await seedBoard(page, 'touch-general')
     await page.goto('/b/general')
     const source = card(column(page, 'Por hacer'), 'dos')
     await expect(source).toBeVisible()
 
     const moved = moveResponse(page)
-    await dragToNextColumn(page, source)
+    await dragDownTo(page, source, column(page, 'En curso'))
     expect((await moved).ok()).toBe(true)
     await expect(card(column(page, 'En curso'), 'dos')).toBeAttached()
   })

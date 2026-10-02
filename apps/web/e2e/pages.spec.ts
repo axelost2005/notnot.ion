@@ -168,8 +168,11 @@ test.describe('celu', () => {
     await expect(page.getByRole('textbox', { name: 'Texto' })).toHaveValue('desde el celu')
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375)
 
-    // Desde la nota, el título del header vuelve a abrir el menú.
-    await page.getByRole('button', { name: /abrir el menú/ }).tap()
+    // Desde la nota, "Menú" en la barra de abajo vuelve a abrir el menú.
+    await page
+      .getByRole('navigation', { name: 'Secciones' })
+      .getByRole('button', { name: 'Menú' })
+      .tap()
     await expect(page.getByRole('dialog', { name: 'Menú' })).toBeVisible()
   })
 })
