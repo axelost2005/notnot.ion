@@ -7,6 +7,7 @@ import { ReceivablesView } from '@/features/finance/ReceivablesView'
 import { NotesWindow } from '@/features/notes/NotesWindow'
 import { NotesHome } from '@/features/pages/NotesHome'
 import { PageView } from '@/features/pages/PageView'
+import { TodayView } from '@/features/today/TodayView'
 import { AppLayout } from './AppLayout'
 import { SessionGate } from './SessionGate'
 
@@ -21,6 +22,7 @@ export const router = createBrowserRouter([
         Component: AppLayout,
         children: [
           { index: true, Component: RootRedirect },
+          { path: 'hoy', Component: TodayView },
           { path: 'b/:slug', Component: BoardPage },
           // La sección Notas y una de sus notas (`/notas/:slug` es la ventana de notas de un tablero).
           { path: 'p', Component: NotesHome },
