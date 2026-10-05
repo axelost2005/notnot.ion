@@ -170,6 +170,16 @@ export type PaymentsSummary = {
   categories: string[]
 }
 
+/** Una cosa de Hoy. `day` es el día para el que se anotó ("2026-10-05"); `doneAt`, cuándo se tachó. */
+export type DayItem = {
+  id: string
+  day: string
+  text: string
+  doneAt: string | null
+  createdAt: string
+  updatedAt: string
+}
+
 export type ApiErrorBody = {
   error: { code: string; message: string }
 }

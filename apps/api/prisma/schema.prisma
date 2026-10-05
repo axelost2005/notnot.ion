@@ -178,3 +178,17 @@ model Receivable {
 
   @@index([boardId])
 }
+
+/// Una cosa para hacer un día (Hoy), aparte de los tableros. Lo pendiente de un día que ya pasó
+/// se ve en el de hoy.
+model DayItem {
+  id        String    @id @default(uuid(7)) @db.Uuid
+  // El día para el que se anotó.
+  day       DateTime  @db.Date
+  text      String
+  doneAt    DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([doneAt])
+}

@@ -22,6 +22,9 @@ export const LIMITS = {
   paymentAmountCents: 10_000_000_000_000,
   receivableDescription: 200,
   receivableNote: 1000,
+  dayItemText: 200,
+  /** Cosas de Hoy que se anotan de una vez (pegando varias líneas). */
+  dayItemsPerPost: 50,
 } as const
 
 /** Formatos que acepta la API (la web los convierte a WebP, o a JPEG si el navegador no puede). */

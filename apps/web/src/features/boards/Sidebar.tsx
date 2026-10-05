@@ -1,7 +1,7 @@
 import type { BoardSummary } from '@notnot/shared'
-import { dueCount } from '@notnot/shared'
+import { dueCount, pendingTodayCount } from '@notnot/shared'
 import { useQuery } from '@tanstack/react-query'
-import { ChevronRight, Lock, Plus, Wallet } from 'lucide-react'
+import { ChevronRight, ListChecks, Lock, Plus, Wallet } from 'lucide-react'
 import { useState } from 'react'
 import { NavLink } from 'react-router'
 import { BrandMark } from '@/components/BrandMark'
@@ -14,6 +14,7 @@ import { today } from '../finance/format'
 import { useLock } from '../lock/api'
 import { NotesSection } from '../pages/NotesSection'
 import { InstallButton } from '../pwa/InstallButton'
+import { dayItemsQuery } from '../today/api'
 import { boardsQuery } from './api'
 import { BoardFormDialog } from './BoardFormDialog'
 import { boardStyle } from './colors'
@@ -26,6 +27,7 @@ type Props = {
 export function Sidebar({ onNavigate }: Props) {
   const boards = useQuery(boardsQuery)
   const receivables = useQuery(receivablesQuery)
+  const dayItems = useQuery(dayItemsQuery)
   const lock = useLock()
   const [creating, setCreating] = useState(false)
 
@@ -36,6 +38,7 @@ export function Sidebar({ onNavigate }: Props) {
   const totalOpen = active.reduce((sum, b) => sum + b.openTaskCount, general?.openTaskCount ?? 0)
   // Lo por cobrar que vence hoy o ya venció: para no olvidarse de reclamarlo.
   const due = dueCount(receivables.data ?? [], today())
+  const leftToday = pendingTodayCount(dayItems.data ?? [], today())
 
   return (
     <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
@@ -45,6 +48,29 @@ export function Sidebar({ onNavigate }: Props) {
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-3">
+        <nav aria-label="Hoy" className="mb-px">
+          <NavLink
+            to="/hoy"
+            onClick={onNavigate}
+            className={({ isActive }) =>
+              cn(
+                'flex h-8 items-center gap-2.5 rounded-md px-2 outline-none pointer-coarse:h-11 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-ring',
+                isActive && 'bg-sidebar-accent font-medium text-sidebar-accent-foreground',
+              )
+            }
+          >
+            <ListChecks aria-hidden="true" className="size-3.5 shrink-0 text-muted-foreground" />
+            <span className="min-w-0 flex-1 truncate">Hoy</span>
+            {leftToday > 0 && (
+              <span
+                className="text-xs text-muted-foreground tabular-nums"
+                aria-label={`${leftToday} para hoy`}
+              >
+                {leftToday}
+              </span>
+            )}
+          </NavLink>
+        </nav>
         <nav aria-label="Tableros">
           {boards.isPending ? (
             <div className="grid gap-2 px-2 pt-1" aria-label="Cargando tableros">

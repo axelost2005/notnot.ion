@@ -88,3 +88,13 @@ export async function deleteE2EReceivables(request: APIRequestContext) {
       await request.delete(`/api/receivables/${receivable.id}`)
   }
 }
+
+/** Borra lo de Hoy que dejaron los tests (texto con `e2e-`). Sin `X-Day-Start`, la API trae
+ * también lo tachado en las últimas 24 h. */
+export async function deleteE2EDayItems(request: APIRequestContext) {
+  const res = await request.get('/api/day-items')
+  const items = (await res.json()) as { id: string; text: string }[]
+  for (const item of items) {
+    if (item.text.includes('e2e-')) await request.delete(`/api/day-items/${item.id}`)
+  }
+}
