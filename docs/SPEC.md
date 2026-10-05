@@ -16,6 +16,7 @@ App personal para organizar el laburo por cliente. Cada cliente o categoría tie
 - **Sección Notas**: aparte de los tableros, para guardar lo que no es una tarea. Carpetas (con carpetas adentro) y notas con título y texto, sueltas o en una carpeta. En el código son `Folder` y `Page`.
 - **Finanzas**: los pagos que me hicieron (solo ingresos, en ARS o USD), con cliente (un tablero), categoría y comprobantes, para poder mostrar qué se pagó y qué no. En el código, `Payment`.
 - **Por cobrar**: lo que me deben, con el día que vence, dentro de Finanzas. Lo que me van pagando de eso son pagos vinculados: lo que falta es el monto menos esos pagos. En el código, `Receivable`.
+- **Hoy**: una lista de cosas generales para hacer, por día ("llevar a la perra al veterinario", "hablarle a Pepito"), aparte de los tableros y sin tarjetas. Lo que no se tachó pasa solo al día siguiente. En el código, `DayItem`.
 
 ## Modelo de datos
 | Modelo | Campos |
@@ -29,6 +30,7 @@ App personal para organizar el laburo por cliente. Cada cliente o categoría tie
 | Page | id, folderId?, title, content, createdAt, updatedAt |
 | Payment | id, date (día), amountCents, currency, boardId?, category?, description?, receivableId?, createdAt, updatedAt |
 | Receivable | id, description, amountCents, currency, boardId?, dueDate? (día), note?, createdAt, updatedAt |
+| DayItem | id, day (día), text, doneAt?, createdAt, updatedAt |
 
 - Cada tablero tiene al menos 1 columna normal y exactamente 1 `isDone`.
 - `Task.columnId` siempre pertenece a `Task.boardId`.
@@ -43,6 +45,7 @@ App personal para organizar el laburo por cliente. Cada cliente o categoría tie
 - Imágenes: el archivo vive en un store privado de Vercel Blob (`pathname`) y la fila en la base. Cada imagen es de una tarjeta o de un pago (un CHECK lo asegura). Borrar una tarjeta, un tablero o un pago borra sus imágenes (filas en cascada; los archivos los borra la API después).
 - Pagos: monto en centavos (mayor a cero), moneda `ARS` o `USD`, fecha sin hora. Borrar el tablero cliente deja el pago sin cliente. Categoría ≤ 40 y descripción ≤ 1000 (vacías quedan en `null`); hasta 20 comprobantes por pago.
 - Por cobrar: concepto 1–200, monto como el de los pagos, vence (día) y nota ≤ 1000 opcionales. Lo cobrado es la suma de sus pagos (`Payment.receivableId`), que van en su misma moneda (si no, 409); cuando cubren el monto, está cobrada. Borrarla deja sus pagos, sin el vínculo. Borrar el tablero cliente la deja sin cliente.
+- Hoy: `day` es el día para el que se anotó (sin hora) y `doneAt`, cuándo se tachó. Texto 1–200 y hasta 50 por vez. Lo pendiente de un día que ya pasó se ve en el de hoy; lo tachado antes de hoy ya no se ve (queda en la base).
 
 ## Notas → tareas (el corazón de la app)
 Parser puro en `packages/shared`: `parseNote(content, { currentBoardSlug, boards })` devuelve las líneas tipadas (`text` o `task` con título y slug destino). Lo usa la API para crear (es la autoridad) y la web para la vista previa.
@@ -118,17 +121,25 @@ REST + JSON bajo `/api`. Toda entrada se valida con los schemas de `shared`. Err
 | GET | `/receivables` | Todo lo por cobrar (pendiente y cobrado), cada una con lo cobrado y sus pagos |
 | POST | `/receivables` | `{ description, amountCents, currency, boardId?, dueDate?, note? }` |
 | PATCH / DELETE | `/receivables/:id` | Editar / borrar (sus pagos quedan) |
+| GET | `/day-items` | Lo de Hoy: todo lo pendiente y lo tachado desde la medianoche del dispositivo (`X-Day-Start`; sin el header, en las últimas 24 h), por día y en el orden en que se anotó |
+| POST | `/day-items` | `{ day, text }`: una cosa por línea (sin las viñetas o corchetes del principio), hasta 50 |
+| PATCH / DELETE | `/day-items/:id` | `{ text?, day?, done? }` / borrar |
 
 La web manda en cada pedido `X-Day-Start` con la medianoche de hoy en el dispositivo (ISO). Al leer un tablero, General, notas o historial, la API pasa al historial las terminadas antes de esa hora. Sin el header (o si está a más de 48 h de la hora del server) no archiva nada: no hace falta ninguna tarea programada.
 
 ## UI
-- Rutas: `/unlock`, `/b/:slug` (la web resuelve slug → id con la lista de tableros), `/notas/:slug` (la ventana de notas), `/p` (la sección Notas a pantalla completa), `/p/:id` (una nota de la sección Notas), `/finanzas/:mes` (`/finanzas` abre el mes actual) y `/finanzas/por-cobrar`. `/` redirige al último tablero abierto o a General.
-- Desktop: sidebar (General fijo arriba con el total de abiertas, tableros con color y contador de abiertas, archivados colapsados, "+ Nuevo tablero", la sección Notas, Finanzas con cuánto por cobrar vence hoy o ya venció, "Bloquear"), kanban al centro con scroll horizontal, panel de notas a la derecha (~360px, plegable).
+- Rutas: `/unlock`, `/b/:slug` (la web resuelve slug → id con la lista de tableros), `/notas/:slug` (la ventana de notas), `/p` (la sección Notas a pantalla completa), `/p/:id` (una nota de la sección Notas), `/finanzas/:mes` (`/finanzas` abre el mes actual), `/finanzas/por-cobrar` y `/hoy`. `/` redirige al último tablero abierto o a General.
+- Desktop: sidebar (Hoy arriba de todo con cuántas quedan para hoy, General fijo debajo con el total de abiertas, tableros con color y contador de abiertas, archivados colapsados, "+ Nuevo tablero", la sección Notas, Finanzas con cuánto por cobrar vence hoy o ya venció, "Bloquear"), kanban al centro con scroll horizontal, panel de notas a la derecha (~360px, plegable).
 - Sección Notas en la sidebar: árbol plegable (se recuerda qué carpetas están abiertas), carpetas primero y orden alfabético. "+" crea una nota o una carpeta; el "…" de cada fila tiene crear adentro (carpetas), renombrar, "Personalizar" (carpetas: color e ícono, con la fila como va a quedar), "Mover a…" y borrar. Sin elegir, una carpeta se ve gris con el ícono de carpeta. Una carpeta nueva queda lista para escribirle el nombre; una nota se renombra en su título. Borrar una carpeta vacía no pregunta; con contenido, pide confirmación y dice qué se lleva.
 - Finanzas tiene dos pestañas: **Cobrado** (los pagos por mes) y **Por cobrar** (con cuántas hay pendientes).
 - Cobrado (`/finanzas/2026-10`): el mes con flechas para ir y volver y la lista de los meses con pagos; lo cobrado en el mes por moneda; la lista por fecha o agrupada por categoría con subtotales (`?por=categoria`). "Anotar un pago" y tocar uno abren el mismo formulario: monto como se escribe acá ("150.000", "1.234,50"), moneda, fecha, cliente, categoría (con las ya usadas como sugerencia), descripción y comprobantes (pegar, arrastrar o adjuntar; en uno nuevo se suben al guardarlo). Si hay algo por cobrar, el formulario deja vincular el pago (o desvincularlo); vinculado, la moneda es la de lo que te deben.
 - Por cobrar (`/finanzas/por-cobrar`): lo que te deben en total por moneda y la lista: primero lo vencido (marcado, "venció hace 3 días"), después lo que vence, por fecha ("vence hoy", "vence en 5 días"), y al final lo que no tiene fecha; las cobradas, aparte y plegadas. Cada fila: el día que vence, concepto, cliente, lo que falta (y de cuánto, si ya pagaron una parte) y "Me pagaron", que abre el formulario de un pago ya completo (lo que falta, la moneda, el cliente y el concepto) para ajustar el monto y adjuntar el comprobante. Tocar una abre su formulario: concepto, monto y moneda, vence, cliente, nota y los pagos que tiene.
 - Nota (`/p/:id`): título y texto plano. Se guarda sola (un rato después de la última tecla, al ir a otra nota y al esconder la pestaña) y lo avisa ("Guardando…", "Guardado"). Arriba, dónde está (Notas / carpeta), "Mover a…" y borrar (después de borrarla, vuelve a la lista de notas). En el celu, "‹" vuelve a la lista de notas y la sidebar se abre con "Menú" en la barra de abajo.
+- Hoy (`/hoy`): arriba, la fecha de hoy; abajo, lo de hoy y después cada día que viene con algo ("Mañana · martes 6", "Jueves 8"), en una columna de ancho de lectura.
+  - En Hoy, primero lo pendiente de días anteriores (con "de ayer", "del sábado") y después lo de hoy, en el orden en que se anotó. Sin nada: "Nada para hoy" y que lo que no se tacha pasa solo al día siguiente.
+  - Cada cosa es un checkbox con su texto. Tachada, queda en su lugar. Tocar el texto lo edita ahí mismo (Enter o salir del campo guarda, Esc cancela). Su "…" la mueve a otro día (Hoy, Mañana y los próximos de la semana) o la borra, sin confirmación.
+  - Abajo, el campo "Anotar…" con los días como chips (Hoy, Mañana y los próximos cinco), Hoy por defecto; el elegido se mantiene mientras se anota. Enter agrega lo escrito y deja el campo listo; Shift+Enter hace salto de línea (en la compu) y pegar varias líneas agrega una cosa por línea. También hay botón enviar.
+  - Tildar, anotar, editar, mover y borrar son optimistas.
 - Header del tablero: "Historial" (panel lateral con las terminadas, agrupadas por día; en General, las de todos con el chip de su tablero) y, en desktop, "Abrir las notas en otra ventana".
 - Ventana de notas (`/notas/:slug`): una ventana chica aparte (`window.open`, ~400×640) con solo el panel de notas y un selector de tablero arriba (desplegable propio, con el punto de color de cada tablero). Cambiar de tablero cambia dónde se escriben las notas y a dónde van las tareas sin `@`. Lo que cambia en una ventana se refresca en las otras (BroadcastChannel).
 - General: tres columnas fijas por estado con las tarjetas de todos los tableros activos. "Por hacer" = la primera columna normal de cada tablero, "En curso" = las otras normales, "Hecho" = la de terminadas. Cada tarjeta muestra el chip de su tablero (las de General no llevan). Dentro de cada columna van agrupadas por tablero, en el orden de la sidebar. Arrastrar una tarjeta a otra columna la mueve al final de esa columna en su propio tablero ("En curso" va a la segunda columna normal; si el tablero no tiene, avisa y no la mueve). No se reordena dentro de una columna ni se editan las columnas de General. "Agregar tarjeta" en cada columna crea una tarea de General en la columna que corresponde.
@@ -136,7 +147,7 @@ La web manda en cada pedido `X-Day-Start` con la medianoche de hoy en el disposi
 - Tarjeta: una fila con un checkbox (tilda y destilda como desde la nota) y el título en negrita con una línea de la descripción debajo. Click abre el detalle (título, descripción, imágenes, mover a otro tablero o columna, borrar, link a la nota de origen).
 - Imágenes en el detalle: pegar (Ctrl+V), arrastrar o el botón "Adjuntar" (en el celu abre la galería o la cámara); el navegador las achica y las pasa a WebP antes de subirlas. Miniaturas que se borran (con confirmación) y que, al tocarlas, se agrandan desde su lugar (GSAP Flip, sin animación con `prefers-reduced-motion`) sobre el fondo oscurecido; se cierran con click, Esc o tocando afuera.
 - Mobile (<768px): una sola columna de contenido, sin nada que se salga hacia los costados.
-  - Abajo, la barra de la app: "Tablero" (el tablero abierto o, desde otra sección, el último), "Notas" (la sección Notas en `/p`: carpetas y notas, con "Nueva nota" a un toque para usarla de anotador), "Finanzas" (con cuánto por cobrar vence hoy o ya venció) y "Menú" (la sidebar en un panel: tableros, la sección Notas y bloquear). El título del tablero también abre el menú.
+  - Abajo, la barra de la app: "Hoy" (con cuántas quedan para hoy), "Tablero" (el tablero abierto o, desde otra sección, el último), "Notas" (la sección Notas en `/p`: carpetas y notas, con "Nueva nota" a un toque para usarla de anotador), "Finanzas" (con cuánto por cobrar vence hoy o ya venció) y "Menú" (la sidebar en un panel: tableros, la sección Notas y bloquear). El título del tablero también abre el menú.
   - Las notas de cada tablero (las que se vuelven tarjetas) se abren con el botón de notas del header del tablero, en lugar de sus columnas; tocarlo de nuevo o "Tablero" abajo vuelve a las columnas.
   - El tablero es una lista: cada columna es un grupo con su título (color de su rol, contador y menú, fijo arriba mientras se recorre el grupo), sus tarjetas como filas y "Agregar tarjeta" al final. En General, igual con sus tres columnas por estado.
   - Mover: long-press y arrastrar a otro grupo (cerca del borde de abajo o de arriba la lista se mueve sola), o "Mover a…" en el detalle.
@@ -310,7 +321,18 @@ En el celu la app se veía como la de la compu achicada (el kanban con la column
 
 **Listo cuando:** el e2e en 375 px ve las columnas una abajo de la otra a todo el ancho sin scroll horizontal; con la barra de abajo va a la sección Notas, a Finanzas, vuelve al tablero y abre el menú; desde "Notas" crea una nota con "Nueva nota" (el título ya enfocado) y la ve en la lista al volver; abre las notas del tablero desde su header, captura una nota y mueve una tarjeta con "Mover a…"; con long-press baja una tarjeta hasta "En curso" en un tablero y en General; y desde una nota de la sección Notas, "Menú" abre la sidebar.
 
+### Fase 9 — Hoy
+Una lista de cosas generales para hacer, por día, que no son tareas de un cliente (ver "Hoy" en Conceptos y en UI). Una rama y un PR. La migración solo agrega una tabla.
+
+- Modelo `DayItem` y `GET/POST /day-items`, `PATCH/DELETE /day-items/:id`.
+- En `shared`, con tests: separar lo pegado en una cosa por línea y agrupar por día (lo pendiente de días anteriores va en Hoy).
+- Pantalla `/hoy`; "Hoy" arriba de todo en la sidebar y primero en la barra de abajo del celu, con cuántas quedan para hoy.
+- Sin ver días pasados, sin reordenar y sin `@cliente` (quedan en "Después").
+
+**Listo cuando:** el e2e anota una cosa con Enter y pega dos líneas (quedan 3 para hoy), con el chip "Mañana" anota otra, ve 3 en la sidebar, tacha una y el número baja a 2, edita una y pasa otra a mañana; con el reloj del navegador en mañana, la tachada ya no está y lo pendiente de ayer aparece en Hoy con "de ayer"; borra una. En 375 px llega desde la barra de abajo y anota sin scroll horizontal.
+
 ## Después (no ahora)
+- Hoy: ver los días pasados, reordenar arrastrando y vincular un cliente con `@`.
 - Avisos de lo que vence por cobrar (notificaciones push con la app instalada).
 - IA para procesar notas desordenadas (Claude API desde la API, con confirmación antes de crear).
 - Fechas y recordatorios ("mañana", "viernes").
