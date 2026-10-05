@@ -33,9 +33,7 @@ export function splitDayItems(text: string): string[] {
 
 /** Por día y, dentro del día, en el orden en que se anotó. */
 const byDayAndCreation = (a: Dated, b: Dated) =>
-  a.day.localeCompare(b.day) ||
-  a.createdAt.localeCompare(b.createdAt) ||
-  a.id.localeCompare(b.id)
+  a.day.localeCompare(b.day) || a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id)
 
 /**
  * Lo de hoy (con lo pendiente de días anteriores primero) y cada día que viene con algo. Lo
@@ -54,7 +52,5 @@ export function groupDayItems<T extends Dated>(items: readonly T[], today: strin
 }
 
 /** Cuántas quedan para hoy (el número de la sidebar y de la barra de abajo). */
-export const pendingTodayCount = (
-  items: readonly Pick<Dated, 'day' | 'doneAt'>[],
-  today: string,
-) => items.filter((item) => item.doneAt === null && item.day <= today).length
+export const pendingTodayCount = (items: readonly Pick<Dated, 'day' | 'doneAt'>[], today: string) =>
+  items.filter((item) => item.doneAt === null && item.day <= today).length
