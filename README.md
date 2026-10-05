@@ -12,6 +12,7 @@ Un solo usuario, sin cuentas: la app se abre con un código. Funciona en la web 
 
 ## Cómo se usa
 
+- **Hoy**: una lista de cosas generales para hacer, por día, que no son tareas de un cliente ("llevar a la perra al veterinario", "hablarle a Pepito"). Escribís abajo y das Enter (pegando varias líneas, se anota una por línea); los chips eligen el día: hoy, mañana o los próximos de la semana. Lo que no tachás pasa solo al día siguiente, marcado ("de ayer"); lo tachado se va al otro día. Tocando el texto lo editás y con el "…" lo movés a otro día o lo borrás. En la sidebar (arriba de todo) y en la barra de abajo del celu ves cuántas te quedan para hoy.
 - **Tableros**: uno por cliente o categoría, con columnas "Por hacer", "En curso" y "Hecho" (podés agregar, renombrar y elegir cuál es la de terminadas).
 - **General**: siempre está arriba. Junta las tarjetas de todos los tableros por estado, cada una con el chip de su tablero, y guarda lo que no es de ningún cliente. Arrastrar una tarjeta a otra columna le cambia el estado en su tablero.
 - **Tarjetas**: se crean al pie de cada columna, se tildan con su checkbox (igual que desde la nota) y se mueven arrastrando a cualquier parte de la columna (con el mouse, con espacio y flechas, o con un toque largo en el celu) o desde el detalle con "Mover a…".
@@ -23,7 +24,7 @@ Un solo usuario, sin cuentas: la app se abre con un código. Funciona en la web 
 - **Sección Notas** (en la sidebar, abajo de los tableros; en el celu, en "Notas" de la barra de abajo, con "Nueva nota" a un toque): para lo que no es una tarea. Carpetas con carpetas adentro y notas con título y texto, que se guardan solas mientras escribís. Se crean, renombran, mueven ("Mover a…") y borran desde el "…" de cada una; las carpetas, además, se personalizan con un color y un ícono.
 - **Finanzas → Cobrado**: los pagos que te hicieron, en pesos o dólares, organizados por mes. Cada uno con fecha, monto, cliente (uno de los tableros), categoría, descripción y comprobantes. Arriba, lo cobrado en el mes por moneda; la lista se ve por fecha o agrupada por categoría.
 - **Finanzas → Por cobrar**: lo que te deben, con el día que vence. Lo vencido queda arriba y marcado, y en la sidebar, al lado de Finanzas, ves cuánto vence hoy o ya venció. "Me pagaron" anota el pago ya completo (si fue una parte, cambiás el monto y queda lo que falta); cuando está todo, pasa a "Cobradas" con la lista de sus pagos.
-- **En el celu**: el tablero es una lista, con las columnas una abajo de la otra. Abajo están "Tablero", "Notas" (la sección Notas, para anotar rápido), "Finanzas" y "Menú" (los tableros y bloquear); las notas del tablero se abren con el botón de notas de su header. La tarjeta y los formularios se abren desde abajo, y todo se toca cómodo con el dedo.
+- **En el celu**: el tablero es una lista, con las columnas una abajo de la otra. Abajo están "Hoy", "Tablero", "Notas" (la sección Notas, para anotar rápido), "Finanzas" y "Menú" (los tableros y bloquear); las notas del tablero se abren con el botón de notas de su header. La tarjeta y los formularios se abren desde abajo, y todo se toca cómodo con el dedo.
 
 ![General: las tarjetas de todos los tableros por estado](docs/capturas/escritorio-general.png)
 

@@ -2,7 +2,7 @@
 
 ## Fase actual
 
-**Fase 8 — Versión mobile: hecha.** Las fases 0 a 8 están hechas y la app está en producción. Los e2e de la Fase 8 quedaron escritos pero sin correr contra la base: ver "Pendientes para vos".
+**Fase 9 — Hoy: hecha.** Las fases 0 a 9 están hechas. Los e2e de las fases 8 y 9 quedaron escritos pero sin correr contra la base (la de dev no anda): ver "Pendientes para vos".
 
 ## Hecho
 
@@ -83,6 +83,13 @@
 - **Más colores** (pedido después): la paleta de tableros y carpetas pasa de 8 a 14, en orden de tono (se suman marrón, amarillo, lima, celeste, fucsia y rosa). El selector los muestra en dos filas de 7. El color se guarda como texto, así que no hace falta migración.
 - e2e: `mobile.spec.ts` (lista vertical, barra de abajo, notas del tablero desde el header y "Mover a…"), `drop-zones.spec.ts` (long-press bajando hasta "En curso", en un tablero y en General) y `pages.spec.ts` ("Menú" desde una nota y "Nueva nota" desde "Notas" abajo). Los recorridos nuevos de la sección Notas también se probaron con la API simulada. Verificado con la API simulada en Playwright (375, 360 y 390 px, claro y oscuro, tablet y la ventana de notas): las pantallas, el arrastre con eventos touch reales en un tablero y en General, y la compu sin cambios. README con "En el celu" y las capturas del celu nuevas.
 
+### Fase 9 — Hoy
+
+- Lo pediste como "notas para hacer hoy": una lista de cosas generales por día, aparte de los tableros. Elegiste que lo pendiente pase solo al día siguiente, una sección propia arriba de todo y un campo con chips de día.
+- Modelo `DayItem` (migración `day_items`: solo agrega una tabla). `GET /day-items` trae lo pendiente y lo tachado desde la medianoche del dispositivo (`X-Day-Start`); `POST` separa lo escrito en una cosa por línea (sin viñetas ni corchetes, hasta 50), `PATCH` tacha, edita o cambia el día y `DELETE` borra. `splitDayItems`, `groupDayItems`, `pendingTodayCount` y `addDays` en `shared`, con tests; candado y validaciones con Supertest.
+- Web: `/hoy` con lo de hoy (primero lo pendiente de días anteriores, con "de ayer" o "del sábado") y los días que vienen; checkbox, texto que se edita al tocarlo y "…" para moverlo de día o borrarlo; campo "Anotar…" con chips de Hoy a dentro de seis días. Todo optimista. "Hoy" arriba de todo en la sidebar y primero en la barra de abajo del celu (ahora con cinco botones), con cuántas quedan para hoy.
+- e2e (`today.spec.ts`): el "Listo cuando" completo y el celu en 375 px. Pasan contra una API simulada en memoria que usa los schemas reales de `shared` (la base de dev no anda); con la base quedan pendientes. Capturas revisadas en la compu y en el celu, en claro y oscuro.
+
 ## Decisiones
 
 - **Versiones**: lo último estable que funciona junto. TypeScript 6.0 (typescript-eslint todavía no soporta TS 7), Prisma 7.10 (Prisma 8 está en RC), React Router 8 en modo data, Vite 8, Vitest 5, ESLint 10, Tailwind 4, Zod 4, shadcn CLI 4.
@@ -150,11 +157,15 @@
 - **Vencimientos**: el día lo pone el dispositivo, como el historial. El número de la sidebar cuenta lo que vence hoy además de lo vencido, para acordarte de reclamarlo ese mismo día.
 - **"Me pagaron"**: abre el mismo formulario de "Anotar un pago" con lo que falta, la moneda, el cliente y el concepto, y la fecha de hoy. Si fue una parte, se cambia el monto y queda el resto.
 - **Carpetas, color e ícono**: elegiste color e ícono (no emoji). Los colores son los mismos 8 de los tableros, y el gris es "sin color": se guarda como `null` y la carpeta queda como siempre. Los íconos son 23 de lucide (la misma librería del resto de la app) más la carpeta de siempre; un ícono elegido no cambia al abrir la carpeta (la flecha ya lo muestra). Al abrir el diálogo, el foco va al color elegido.
+- **Hoy, aparte de las tarjetas**: un modelo propio en vez de un tablero oculto con tareas, que habría arrastrado columnas, historial y el kanban de General. No hay vínculo con los clientes (`@`) ni orden manual: quedan en "Después".
+- **Qué es "hoy" en Hoy**: lo decide el dispositivo, como el historial. Lo tachado antes de la medianoche ya no viaja (queda en la base); sin `X-Day-Start`, la API trae lo tachado en las últimas 24 h. Dentro de un día, el orden es el de anotación (lo pegado queda en el orden de las líneas: cada una se guarda con un milisegundo de diferencia).
+- **"Mover a…" de Hoy**: el "…" lista los siete días directamente (Hoy, Mañana, Miércoles 7…) en vez de un "Pasar a mañana" aparte: mañana queda a un toque igual y no hace falta un submenú.
+- **Enter en el celu**: en Hoy envía también con el dedo (cada cosa es una línea); en las notas del tablero sigue siendo salto de línea.
 - **Dev**: si corrés comandos de pnpm con la app levantada, pnpm 11 puede regenerar el cliente de Prisma y `node --watch` reinicia la API (algún pedido puede dar 502 en ese momento).
 
 ## Pendientes para vos
 
-- **Credenciales de la base de dev**: desde el 1/10 a la tarde, Neon rechaza el usuario y la contraseña del `.env` (`DATABASE_URL` y `DIRECT_URL`: "Authentication failed"; ese día a las 15:23 los e2e andaban), así que la API local da 500. Seguramente se reseteó la contraseña del branch `dev`. Copiá las dos URLs nuevas del branch `dev` (Neon → Connect) al `.env` y corré `pnpm e2e`: los de la Fase 8 quedaron escritos pero sin correr contra la base. Las capturas del celu del README salieron de la API simulada con los mismos datos de `pnpm --filter @notnot/web capturas`; ese comando las vuelve a sacar con la base.
+- **Credenciales de la base de dev**: el 5/10 sigue igual y además el preview de Vercel tampoco llega al servidor de Neon `dev` (`P1001: Can't reach database server` en `prisma migrate deploy`), así que los previews fallan antes de compilar: puede que el branch `dev` o su endpoint se haya borrado o suspendido. Desde el 1/10 a la tarde, Neon rechaza el usuario y la contraseña del `.env` (`DATABASE_URL` y `DIRECT_URL`: "Authentication failed"; ese día a las 15:23 los e2e andaban), así que la API local da 500. Seguramente se reseteó la contraseña del branch `dev`. Copiá las dos URLs nuevas del branch `dev` (Neon → Connect) al `.env` y corré `pnpm e2e`: los de las fases 8 y 9 quedaron escritos pero sin correr contra la base (si el branch `dev` cambió, actualizá también `DATABASE_URL` y `DIRECT_URL` de Preview en Vercel). Las capturas del celu del README salieron de la API simulada con los mismos datos de `pnpm --filter @notnot/web capturas`; ese comando las vuelve a sacar con la base.
 - **Probar la versión mobile en tu celu**: abrila (o la app instalada) después del deploy. Si todavía ves la sidebar a la izquierda como en la compu, revisá que el navegador no tenga activado "Sitio de escritorio" para la app.
 - **Instalarla en el celu y en la compu** (ver "Instalarla" en el README). El código de producción te lo pasé por chat; no está en el repo.
 - **Probar en producción lo de las fases 6 y 7** con tus datos: imágenes en una tarjeta, la sección Notas, un pago con comprobante y algo por cobrar con "Me pagaron". Las subidas las probé en el preview (mismo código, store de dev); en producción no puedo entrar porque no tengo el código.
