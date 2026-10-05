@@ -11,7 +11,7 @@ export function ColorPicker({ value, onChange }: Props) {
   return (
     <fieldset className="grid gap-2">
       <legend className="mb-2 text-sm leading-none font-medium">Color</legend>
-      <div className="flex flex-wrap gap-1">
+      <div className="grid w-fit grid-cols-7 gap-1">
         {BOARD_COLORS.map((color) => (
           <label
             key={color}
