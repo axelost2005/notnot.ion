@@ -30,16 +30,25 @@ export function DayItemRow({ item, days, carriedFrom }: Props) {
   const update = useUpdateDayItem()
   const remove = useDeleteDayItem()
   const [editing, setEditing] = useState(false)
+  // El cache se actualiza después de un await: sin esto el checkbox y el texto vuelven atrás un
+  // instante.
+  const [sentDone, setSentDone] = useState<boolean | null>(null)
+  const [sentText, setSentText] = useState<string | null>(null)
   const pending = isPendingItem(item)
-  // El cache se actualiza después de un await: mientras tanto se muestra lo que se mandó.
-  const sent = update.isPending ? update.variables : undefined
-  const done = sent?.done ?? item.doneAt !== null
-  const text = sent?.text ?? item.text
+  const done = sentDone ?? item.doneAt !== null
+  const text = sentText ?? item.text
 
-  function save(text: string) {
+  function toggle() {
+    setSentDone(!done)
+    update.mutate({ id: item.id, done: !done }, { onSettled: () => setSentDone(null) })
+  }
+
+  function save(value: string) {
     setEditing(false)
-    const next = text.trim()
-    if (next && next !== text) update.mutate({ id: item.id, text: next })
+    const next = value.trim()
+    if (!next || next === text) return
+    setSentText(next)
+    update.mutate({ id: item.id, text: next }, { onSettled: () => setSentText(null) })
   }
 
   function onKeyDown(event: KeyboardEvent<HTMLInputElement>) {
@@ -66,7 +75,7 @@ export function DayItemRow({ item, days, carriedFrom }: Props) {
             type="checkbox"
             checked={done}
             disabled={pending}
-            onChange={() => update.mutate({ id: item.id, done: !done })}
+            onChange={toggle}
             aria-label={`${done ? 'Destildar' : 'Tildar'} ${text}`}
             className="peer col-start-1 row-start-1 size-4 cursor-pointer appearance-none rounded-[4px] border border-foreground/30 bg-card outline-none checked:border-foreground checked:bg-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background max-md:size-5 max-md:rounded-[5px]"
           />

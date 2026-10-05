@@ -43,19 +43,17 @@ export function DayComposer({ days, day, onDayChange }: Props) {
   }
 
   return (
-    <form
-      onSubmit={submit}
-      className="shrink-0 border-t bg-background pb-3 max-md:border-t-0 max-md:pb-2"
-    >
-      <div className="mx-auto w-full max-w-2xl px-6 pt-3 max-md:px-3 max-md:pt-1">
-        <fieldset>
+    <form onSubmit={submit} className="shrink-0 border-t bg-background pb-3 max-md:pb-2">
+      <div className="mx-auto w-full max-w-2xl px-6 pt-3 max-md:px-3 max-md:pt-2">
+        {/* `min-w-0`: un fieldset no se achica por debajo de su contenido y los chips lo estiraban. */}
+        <fieldset className="min-w-0">
           <legend className="sr-only">Para qué día</legend>
           {/* En el celu los días que no entran se ven corriendo los chips, no la pantalla. */}
-          <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-2 [scrollbar-width:none]">
+          <div className="-mx-1 -mt-1 flex gap-1.5 overflow-x-auto px-1 pt-1 pb-2 [scrollbar-width:none]">
             {days.map((option) => (
               <label
                 key={option.day}
-                className="flex h-7 shrink-0 cursor-pointer items-center rounded-md border px-2.5 text-xs font-medium text-muted-foreground transition-colors select-none pointer-coarse:h-9 pointer-coarse:px-3 pointer-coarse:text-sm hover:text-foreground has-checked:border-foreground has-checked:bg-foreground has-checked:text-background has-focus-visible:ring-2 has-focus-visible:ring-ring has-focus-visible:ring-offset-1 has-focus-visible:ring-offset-background"
+                className="relative flex h-7 shrink-0 items-center rounded-md border px-2.5 text-xs font-medium text-muted-foreground transition-colors select-none pointer-coarse:h-9 pointer-coarse:px-3 pointer-coarse:text-sm hover:text-foreground has-checked:border-foreground has-checked:bg-foreground has-checked:text-background has-focus-visible:ring-2 has-focus-visible:ring-ring has-focus-visible:ring-offset-1 has-focus-visible:ring-offset-background"
               >
                 <input
                   type="radio"
@@ -64,7 +62,8 @@ export function DayComposer({ days, day, onDayChange }: Props) {
                   checked={option.day === target.day}
                   onChange={() => onDayChange(option.day)}
                   aria-label={option.name.charAt(0).toUpperCase() + option.name.slice(1)}
-                  className="sr-only"
+                  // Tapa todo el chip: se toca (y se prueba) como un radio común.
+                  className="absolute inset-0 cursor-pointer appearance-none rounded-md outline-none"
                 />
                 {option.label}
               </label>
@@ -100,7 +99,7 @@ export function DayComposer({ days, day, onDayChange }: Props) {
           id={hintId}
           aria-live="polite"
           className={cn(
-            'mt-1.5 min-h-4 px-1 text-xs',
+            'mt-1.5 min-h-4 px-1 text-xs max-md:mt-1 max-md:min-h-0',
             tooMany ? 'text-destructive' : 'text-muted-foreground',
           )}
         >
