@@ -27,7 +27,10 @@ type Props = {
 
 /** Una cosa de Hoy: checkbox, el texto (tocarlo lo edita) y el "…" para moverla o borrarla. */
 export function DayItemRow({ item, days, carriedFrom }: Props) {
-  const update = useUpdateDayItem()
+  // Una mutación por cosa: `onSettled` de `mutate` solo corre para el último pedido de cada una.
+  const check = useUpdateDayItem()
+  const edit = useUpdateDayItem()
+  const move = useUpdateDayItem()
   const remove = useDeleteDayItem()
   const [editing, setEditing] = useState(false)
   // El cache se actualiza después de un await: sin esto el checkbox y el texto vuelven atrás un
@@ -40,7 +43,7 @@ export function DayItemRow({ item, days, carriedFrom }: Props) {
 
   function toggle() {
     setSentDone(!done)
-    update.mutate({ id: item.id, done: !done }, { onSettled: () => setSentDone(null) })
+    check.mutate({ id: item.id, done: !done }, { onSettled: () => setSentDone(null) })
   }
 
   function save(value: string) {
@@ -48,7 +51,7 @@ export function DayItemRow({ item, days, carriedFrom }: Props) {
     const next = value.trim()
     if (!next || next === text) return
     setSentText(next)
-    update.mutate({ id: item.id, text: next }, { onSettled: () => setSentText(null) })
+    edit.mutate({ id: item.id, text: next }, { onSettled: () => setSentText(null) })
   }
 
   function onKeyDown(event: KeyboardEvent<HTMLInputElement>) {
@@ -133,7 +136,7 @@ export function DayItemRow({ item, days, carriedFrom }: Props) {
           <DropdownMenuLabel className="text-xs text-muted-foreground">Mover a</DropdownMenuLabel>
           <DropdownMenuRadioGroup
             value={item.day}
-            onValueChange={(day) => update.mutate({ id: item.id, day })}
+            onValueChange={(day) => move.mutate({ id: item.id, day })}
           >
             {days.map((option) => (
               <DropdownMenuRadioItem
