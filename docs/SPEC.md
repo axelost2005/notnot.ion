@@ -37,9 +37,9 @@ App personal para organizar el laburo por cliente. Cada cliente o categoría tie
 - `position` es una clave de fractional indexing (string): mover actualiza solo la fila movida. Índices en las FKs y en `(columnId, position)`.
 - Borrar un tablero borra en cascada columnas, tareas y notas. Borrar una nota deja sus tareas (`noteId` y `noteLine` en null).
 - Slug: minúsculas, sin acentos, espacios → guiones ("Pepito Pérez" → `pepito-perez`). Si choca, `-2`, `-3`… Se regenera al renombrar.
-- Color: paleta fija de 8.
+- Color: paleta fija de 14.
 - Límites: nombre de tablero 1–40, título 1–200, descripción ≤ 5000, nota 1–5000, máximo 50 tareas por nota, 20 imágenes por tarjeta (2000 px y 4 MB como mucho cada una).
-- Sección Notas: sin `parentId`/`folderId`, en la raíz. Borrar una carpeta borra en cascada lo que tiene adentro. Una carpeta no puede ir dentro de sí misma (409). Carpeta 1–60 caracteres, con color (uno de los 8 de los tableros) e ícono (de una lista fija) opcionales; título de nota ≤ 200 (puede quedar vacío: "Sin título"); texto ≤ 50.000.
+- Sección Notas: sin `parentId`/`folderId`, en la raíz. Borrar una carpeta borra en cascada lo que tiene adentro. Una carpeta no puede ir dentro de sí misma (409). Carpeta 1–60 caracteres, con color (uno de los 14 de los tableros) e ícono (de una lista fija) opcionales; título de nota ≤ 200 (puede quedar vacío: "Sin título"); texto ≤ 50.000.
 - Imágenes: el archivo vive en un store privado de Vercel Blob (`pathname`) y la fila en la base. Cada imagen es de una tarjeta o de un pago (un CHECK lo asegura). Borrar una tarjeta, un tablero o un pago borra sus imágenes (filas en cascada; los archivos los borra la API después).
 - Pagos: monto en centavos (mayor a cero), moneda `ARS` o `USD`, fecha sin hora. Borrar el tablero cliente deja el pago sin cliente. Categoría ≤ 40 y descripción ≤ 1000 (vacías quedan en `null`); hasta 20 comprobantes por pago.
 - Por cobrar: concepto 1–200, monto como el de los pagos, vence (día) y nota ≤ 1000 opcionales. Lo cobrado es la suma de sus pagos (`Payment.receivableId`), que van en su misma moneda (si no, 409); cuando cubren el monto, está cobrada. Borrarla deja sus pagos, sin el vínculo. Borrar el tablero cliente la deja sin cliente.
@@ -296,7 +296,7 @@ Una rama y un PR por paso. Las migraciones solo agregan.
 
    **Listo cuando:** el e2e anota una vencida con cliente y otra sin fecha; ve el total por moneda, la vencida primero y marcada, y el número en la sidebar; con "Me pagaron" registra una parte (queda lo que falta y el pago aparece en Cobrado del mes) y después el resto (pasa a las cobradas con sus dos pagos); vincula un pago anotado aparte; edita la otra y la borra.
 
-2. **Carpetas personalizadas.** En la sección Notas, cada carpeta puede tener uno de los 8 colores de los tableros y un ícono de una lista; sin elegir, queda como ahora. Se cambian desde su "…" → "Personalizar", con una vista previa.
+2. **Carpetas personalizadas.** En la sección Notas, cada carpeta puede tener uno de los 14 colores de los tableros y un ícono de una lista; sin elegir, queda como ahora. Se cambian desde su "…" → "Personalizar", con una vista previa.
 
    **Listo cuando:** el e2e le pone color e ícono a una carpeta, recarga y siguen; y la vuelve a dejar como estaba.
 
