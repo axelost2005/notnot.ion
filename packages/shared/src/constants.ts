@@ -35,16 +35,22 @@ export type ImageType = (typeof IMAGE_TYPES)[number]
  */
 export const DAY_START_HEADER = 'X-Day-Start'
 
-/** Paleta fija de tableros. Los valores de color viven en la web. */
+/** Paleta fija de tableros, en orden de tono. Los valores de color viven en la web. */
 export const BOARD_COLORS = [
   'gray',
+  'brown',
   'red',
   'orange',
   'amber',
+  'yellow',
+  'lime',
   'green',
   'teal',
+  'sky',
   'blue',
   'violet',
+  'fuchsia',
+  'pink',
 ] as const
 
 export type BoardColor = (typeof BOARD_COLORS)[number]
