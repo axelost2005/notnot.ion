@@ -52,7 +52,7 @@ test('anota desde el Inicio, abre el cuadrado encima, tacha y vuelve con Esc', a
   await expect(page.getByText(`Anotada en ${board.name}, para hoy`)).toBeVisible()
 
   // El cuadrado del tablero la cuenta: abierta y para hoy.
-  const tile = page.getByRole('link', { name: `${board.name}: 1 abierta, 1 para hoy` })
+  const tile = page.getByRole('link', { name: `${board.name}: por hacer, 1 abierta, 1 para hoy` })
   await expect(tile).toBeVisible()
 
   // Se abre encima, en la dirección del tablero, con el sol prendido.
@@ -70,12 +70,53 @@ test('anota desde el Inicio, abre el cuadrado encima, tacha y vuelve con Esc', a
   await page.keyboard.press('Escape')
   await expect(page).toHaveURL('/')
   await expect(page.getByRole('dialog')).toHaveCount(0)
-  const done = page.getByRole('link', { name: `${board.name}: 0 abiertas` })
+  const done = page.getByRole('link', { name: `${board.name}: al día, 0 abiertas` })
   await expect(done).toBeVisible()
   await expect(done.getByTitle('Tachadas hoy')).toHaveText('1')
   // "Atrás" no vuelve a abrir el panel: el cierre volvió a la entrada del Inicio.
   await page.goBack()
   await expect(page.getByRole('dialog')).toHaveCount(0)
+})
+
+test('el color del cuadrado dice el estado', async ({ page }) => {
+  const board = await createBoard(page, 'estado')
+  const task = e2eName('estado')
+
+  await page.goto('/')
+  const tile = page.getByRole('link', { name: new RegExp('^' + board.name + ':') })
+  await expect(tile).toHaveAttribute('data-status', 'done')
+  await expect(tile).toHaveAccessibleName(/al día/)
+
+  const capture = page.getByRole('combobox', { name: 'Anotar, para hoy' })
+  await capture.fill(`${task} @${board.slug}`)
+  await capture.press('Enter')
+  await expect(tile).toHaveAttribute('data-status', 'todo')
+  await expect(tile).toHaveAccessibleName(/por hacer/)
+
+  // En el panel pasa a "En curso" con "Mover a…" y, al cerrar, el cuadrado ya lo sabe.
+  await tile.click()
+  const panel = page.getByRole('dialog', { name: board.name })
+  await panel.getByRole('button', { name: task, exact: true }).click()
+  const detail = page.getByRole('dialog', { name: 'Tarjeta' })
+  await detail.getByRole('combobox', { name: 'Columna' }).click()
+  await page.getByRole('option', { name: 'En curso' }).click()
+  await detail.getByRole('button', { name: 'Mover', exact: true }).click()
+  await expect(detail).toBeHidden()
+  // El detalle tiene que terminar de irse: mientras sale, el Esc es suyo.
+  await expect(page.getByRole('dialog')).toHaveCount(1)
+  await page.keyboard.press('Escape')
+  await expect(page).toHaveURL('/')
+  await expect(tile).toHaveAttribute('data-status', 'doing')
+  await expect(tile).toHaveAccessibleName(/en curso/)
+
+  // Tachada, vuelve a estar al día.
+  await tile.click()
+  await panel.getByRole('checkbox', { name: `Tildar ${task}` }).check()
+  await expect(panel.getByRole('checkbox', { name: `Destildar ${task}` })).toBeChecked()
+  await page.keyboard.press('Escape')
+  await expect(page).toHaveURL('/')
+  await expect(tile).toHaveAttribute('data-status', 'done')
+  await expect(tile).toHaveAccessibleName(/al día/)
 })
 
 test('Hoy junta lo de los tableros y lo de General; mañana, y lo pendiente de ayer', async ({

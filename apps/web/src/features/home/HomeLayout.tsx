@@ -26,23 +26,17 @@ import { capturedMessage } from './format'
 import { QuickCapture } from './QuickCapture'
 import { BoardTile, FinanceTile, NotesTile, TileSkeletons, TodayTile } from './Tiles'
 
-type Section = { tile: string; label: string; color: string }
+type Section = { tile: string; label: string }
 
 /** Qué cuadrado corresponde a la ruta abierta. En el Inicio, ninguno. */
 function sectionOf(pathname: string, boards: BoardSummary[] | undefined): Section | null {
-  if (pathname === '/hoy') return { tile: 'hoy', label: 'Hoy', color: 'var(--sun)' }
-  if (pathname === '/p' || pathname.startsWith('/p/')) {
-    return { tile: 'notas', label: 'Notas', color: 'var(--muted-foreground)' }
-  }
-  if (pathname.startsWith('/finanzas')) {
-    return { tile: 'finanzas', label: 'Finanzas', color: 'var(--muted-foreground)' }
-  }
+  if (pathname === '/hoy') return { tile: 'hoy', label: 'Hoy' }
+  if (pathname === '/p' || pathname.startsWith('/p/')) return { tile: 'notas', label: 'Notas' }
+  if (pathname.startsWith('/finanzas')) return { tile: 'finanzas', label: 'Finanzas' }
   const slug = /^\/b\/([^/]+)$/.exec(pathname)?.[1]
   if (slug === undefined) return null
   const board = boards?.find((b) => b.slug === decodeURIComponent(slug))
-  return board
-    ? { tile: `b:${board.id}`, label: board.name, color: `var(--board-${board.color})` }
-    : { tile: 'b:?', label: 'Tablero', color: 'var(--muted-foreground)' }
+  return board ? { tile: `b:${board.id}`, label: board.name } : { tile: 'b:?', label: 'Tablero' }
 }
 
 /** El índice de esta entrada en el historial (React Router lo guarda en `history.state`). */
@@ -91,7 +85,7 @@ export function HomeLayout() {
         <Home />
       </main>
       {section ? (
-        <Panel tile={section.tile} label={section.label} color={section.color} onClosed={onClosed}>
+        <Panel tile={section.tile} label={section.label} onClosed={onClosed}>
           {outlet}
         </Panel>
       ) : (

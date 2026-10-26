@@ -3,14 +3,7 @@ import { gsap } from 'gsap'
 import { Flip } from 'gsap/Flip'
 import { X } from 'lucide-react'
 import { Dialog as DialogPrimitive } from 'radix-ui'
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useRef,
-  type CSSProperties,
-  type ReactNode,
-} from 'react'
+import { createContext, useContext, useEffect, useRef, type ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { tileSelector } from './navigation'
@@ -30,8 +23,6 @@ type Props = {
   tile: string
   /** Para lectores de pantalla: "Hoy", el nombre del tablero… */
   label: string
-  /** El color del cuadrado: tiñe el panel. */
-  color: string
   /** Terminó de cerrarse: hay que volver al Inicio. */
   onClosed: () => void
   children: ReactNode
@@ -53,7 +44,7 @@ export function Panel(props: Props) {
 }
 
 // Va adentro del portal: así sus efectos corren cuando el panel ya está en la página.
-function PanelContent({ tile, label, color, onClosed, children }: Props) {
+function PanelContent({ tile, label, onClosed, children }: Props) {
   const scope = useRef<HTMLDivElement>(null)
   const backdrop = useRef<HTMLDivElement>(null)
   const panel = useRef<HTMLDivElement>(null)
@@ -146,11 +137,9 @@ function PanelContent({ tile, label, color, onClosed, children }: Props) {
       <div
         ref={panel}
         tabIndex={-1}
-        style={{ '--tile': color } as CSSProperties}
         className={cn(
-          'absolute inset-x-0 mx-auto flex flex-col overflow-hidden bg-(--panel-bg) outline-none',
-          '[--panel-bg:color-mix(in_oklab,var(--tile)_var(--panel-tint),var(--background))]',
-          'top-6 bottom-6 w-[min(72rem,calc(100%-3rem))] rounded-2xl border border-[color:color-mix(in_oklab,var(--tile)_30%,var(--border))] shadow-2xl',
+          'absolute inset-x-0 mx-auto flex flex-col overflow-hidden bg-background outline-none',
+          'top-6 bottom-6 w-[min(72rem,calc(100%-3rem))] rounded-2xl border shadow-2xl',
           'max-md:inset-0 max-md:w-full max-md:rounded-none max-md:border-0 max-md:pt-[env(safe-area-inset-top)] max-md:pb-[env(safe-area-inset-bottom)] max-md:shadow-none',
         )}
       >
