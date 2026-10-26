@@ -5,6 +5,7 @@
 **Objetivo:** volver a la barra lateral (Hoy, Tareas, Finanzas y el árbol de Notas) y dejar los cuadrados solo para los tableros. Cada cuadrado se pinta según su estado (azul por hacer, amarillo en curso, verde al día) y conserva el punto del color del tablero.
 
 **Arquitectura:**
+
 - Un `AppLayout` nuevo envuelve todas las rutas con la barra. En el celu, la barra es una hoja que sale desde la izquierda.
 - `/` es "Tareas": "Anotar…" y la grilla de cuadrados de los tableros.
   - Los cuadrados se siguen abriendo encima con el `Panel` de la Fase 10 (`/b/:slug` pasa a ser ruta hija de `/`).
@@ -18,15 +19,17 @@
 ## Diseño
 
 **El pedido** (resumido): le gustan los cuadrados por cliente.
+
 - Quiere de vuelta la barra de la izquierda, con las Notas ahí.
 - En la barra, un "espacio de tareas" que al tocarlo muestre todos los cuadrados.
 - Los cuadrados no van con el color de cada tablero: de ese color queda solo el puntito.
 - El color del cuadrado dice el estado: verde si están todas hechas, amarillo si están en proceso y azul si hay tareas por hacer.
 - No sabía si pintar el borde o el cuadrado entero.
 
-Lo que sigue, salvo esos puntos, son decisiones mías. Están marcadas con *(decisión)* para revisarlas con quien hizo el pedido.
+Lo que sigue, salvo esos puntos, son decisiones mías. Están marcadas con _(decisión)_ para revisarlas con quien hizo el pedido.
 
 ### Barra lateral (compu, ≥768 px)
+
 Mide `w-60` y va fija a la izquierda.
 
 - **Arriba:** la marca, que es un link a `/`.
@@ -37,23 +40,26 @@ Mide `w-60` y va fija a la izquierda.
 - **Debajo, la sección Notas:** `<NotesSection onNavigate={…} />`, la variante de barra que ya existe ("Notas", el "+" y el árbol).
 - **Abajo, fijos:** "Instalar app" (si se puede) y "Bloquear".
 - **Scroll:** el cuerpo de la barra scrollea solo si el árbol es largo; el pie no se mueve.
-- *(decisión)* Hoy, Tareas y Finanzas van arriba de Notas para que un árbol largo no los empuje.
+- _(decisión)_ Hoy, Tareas y Finanzas van arriba de Notas para que un árbol largo no los empuje.
 
 ### Celu (<768 px)
+
 - La misma barra se abre como hoja desde la izquierda (`Sheet`, `data-[side=left]:w-[min(20rem,85vw)]`). Elegir algo la cierra.
-- *(decisión)* La hoja se abre con un botón ☰ (`aria-label="Menú"`) al principio del encabezado de cada sección: Tareas, Hoy, la lista de Notas y Finanzas.
-- *(decisión)* No vuelve la barra de abajo de la Fase 8.
+- _(decisión)_ La hoja se abre con un botón ☰ (`aria-label="Menú"`) al principio del encabezado de cada sección: Tareas, Hoy, la lista de Notas y Finanzas.
+- _(decisión)_ No vuelve la barra de abajo de la Fase 8.
 - Dentro de una nota (`/p/:id`), el encabezado sigue con "‹" (vuelve a la lista) y no lleva ☰.
 - Los paneles de tablero siguen a pantalla completa, con su ×.
 
 ### Tareas (`/`)
-- **Encabezado:** "Tareas", con "Historial" (el de todos los tableros) y "Nuevo tablero". *(decisión: es lo que estaba en la barra de arriba del Inicio.)*
+
+- **Encabezado:** "Tareas", con "Historial" (el de todos los tableros) y "Nuevo tablero". _(decisión: es lo que estaba en la barra de arriba del Inicio.)_
 - **Debajo, "Anotar…"** como ahora: arranca en Hoy.
 - **La grilla:** un cuadrado por tablero activo, en su orden, con General al final. Ya no hay cuadrados de Hoy, Notas ni Finanzas.
 - **Archivados:** plegados abajo, como ahora.
 - **Al tocar un cuadrado** se abre encima como en la Fase 10: el mismo `Panel`, con 0,3 s al abrir y 0,24 s al cerrar.
 
 ### Hoy, Notas y Finanzas
+
 Se ven en el área principal, al lado de la barra, sin panel ni animación.
 
 - **Hoy (`/hoy`):** queda igual que ahora.
@@ -64,25 +70,29 @@ Se ven en el área principal, al lado de la barra, sin panel ni animación.
 - **Finanzas:** queda igual que ahora.
 
 ### Estado de un tablero (`boardStatus`, usa `laneOf`)
+
 - **Al día** (verde, `--status-done`): no le queda ninguna tarea abierta.
-  - *(decisión)* Un tablero sin tareas también está al día. A la medianoche lo tachado pasa al historial, así que no se puede distinguir de un tablero que lo tachó todo ayer.
+  - _(decisión)_ Un tablero sin tareas también está al día. A la medianoche lo tachado pasa al historial, así que no se puede distinguir de un tablero que lo tachó todo ayer.
 - **En curso** (amarillo, `--status-doing`): al menos una tarea abierta está en una columna "en curso", es decir cualquier columna normal que no sea la primera, como en `laneOf`. Este estado le gana a "por hacer".
 - **Por hacer** (azul, `--status-todo`): tiene tareas abiertas y ninguna en curso.
 - Los tres colores ya existen en `index.css`, en claro y oscuro: son los de los títulos de columna. No se agregan colores.
 
 ### Cómo se ve el cuadrado
-- *(decisión: el pedido dudaba entre borde y relleno.)* El fondo se tiñe con el color del estado (el mecanismo de ahora: `--tile` con `--tile-tint`) y el borde, del mismo color, va más marcado que hoy.
+
+- _(decisión: el pedido dudaba entre borde y relleno.)_ El fondo se tiñe con el color del estado (el mecanismo de ahora: `--tile` con `--tile-tint`) y el borde, del mismo color, va más marcado que hoy.
   - El borde arranca con 50 % de mezcla, y 75 % en hover. Se ajusta mirando capturas en claro y oscuro.
 - El color del tablero queda solo en el punto al lado del nombre.
-- *(decisión)* El estado también se lee como texto (así no depende solo del color): una palabra visible, "Por hacer", "En curso" o "Al día", en la tinta del estado.
+- _(decisión)_ El estado también se lee como texto (así no depende solo del color): una palabra visible, "Por hacer", "En curso" o "Al día", en la tinta del estado.
   - No se tiene que romper en 375 px con nombres largos.
 - El resto del contenido se queda: el sol con las de hoy, hasta tres tareas, el número de abiertas y las tachadas hoy.
 - **`aria-label` del cuadrado:** `"{nombre}: {estado}, {n} abierta|abiertas[, {m} para hoy]"`, con el estado en minúscula. Por ejemplo: `"Pepito: en curso, 4 abiertas, 2 para hoy"`.
 - **`data-status`:** `"todo" | "doing" | "done"` en el link del cuadrado, para los e2e.
-- *(decisión)* El panel deja de teñirse con el color del tablero: queda con fondo y borde normales y el punto de color en su encabezado.
+- _(decisión)_ El panel deja de teñirse con el color del tablero: queda con fondo y borde normales y el punto de color en su encabezado.
 
 ### Listo cuando (va a la Fase 11 de la spec)
+
 **En la compu:**
+
 - La barra muestra Hoy, Tareas, Finanzas y Notas, y en `/` solo hay cuadrados de tableros.
 - El estado de un tablero cambia sin recargar:
   - sin tareas está "al día";
@@ -95,10 +105,12 @@ Se ven en el área principal, al lado de la barra, sin panel ni animación.
 - Finanzas se abre desde la barra.
 
 **En 375 px:**
+
 - ☰ abre la barra, y elegir Hoy la cierra y muestra Hoy.
 - La grilla va de a dos y no hay scroll horizontal.
 
 ## Global Constraints
+
 - Mandan sobre este plan el `CLAUDE.md` de la raíz y `~/.claude/CLAUDE.md`.
 - TypeScript estricto: sin `any`, `as any`, `@ts-ignore` ni `eslint-disable`.
 - Código, nombres y commits en inglés, con Conventional Commits. UI y docs en español rioplatense.
@@ -115,6 +127,7 @@ Se ven en el área principal, al lado de la barra, sin panel ni animación.
   - De ahí se reusan las filas, la hoja del celu y los estados de carga y error. No se trae `dayItemsQuery` (ya no existe) ni la lista de tableros (ya no va en la barra).
 
 ## Cómo levantar la app sin la base de dev
+
 Las credenciales de Neon dev siguen rotas, así que la API corre contra un Postgres en memoria (PGlite). El arnés de la sesión anterior está en:
 
 `C:\Users\Usuario\AppData\Local\Temp\claude\c--Users-Usuario-Desktop-TRABAJO-DesarrolloWeb-notnot-ion\2dbe8b84-dd09-4614-8018-678f8235978e\scratchpad\harness`
@@ -130,6 +143,7 @@ Primero, leé su `README.md`. Después:
 Si la carpeta ya no existe, armá uno igual en tu scratchpad siguiendo la decisión "PGlite" de `docs/PROGRESO.md`. Si no se puede, probá con `pnpm check` y `pnpm build`, y dejá los e2e como pendientes.
 
 ## Review Focus
+
 1. **Nombre largo o muchos tableros en 375 px:** la palabra del estado y el sol no se pisan con el nombre ni se salen del cuadrado. Se mira en una captura de 375 px con un nombre de 40 caracteres (tarea 2, paso 6).
 2. **Modo oscuro:** el azul y el verde se distinguen entre sí, y la palabra del estado tiene contraste. Se miran las capturas en oscuro (tarea 2, paso 6).
 3. **El estado cambia sin recargar** al tachar o mover dentro del panel y cerrarlo (cache `['overview']`). Lo cubre el e2e de la tarea 2.
@@ -144,16 +158,19 @@ Si la carpeta ya no existe, armá uno igual en tu scratchpad siguiendo la decisi
 ---
 
 ### Antes de la tarea 1
+
 - [ ] `git switch -c feat/phase-11-sidebar` desde `main` (el árbol está limpio, salvo los dos archivos del usuario).
 - [ ] `git add docs/superpowers/plans/2026-10-26-fase-11-barra-y-estado.md` y commit `docs: phase 11 plan`.
 
 ### Tarea 1: `boardStatus` en shared
 
 **Files:**
+
 - Modify: `packages/shared/src/general/lanes.ts` (ya se exporta desde `index.ts`)
 - Test: `packages/shared/src/general/lanes.test.ts`
 
 **Interfaces:**
+
 - Produces: `boardStatus(boardColumns: readonly ColumnLike[], boardTasks: readonly { columnId: string; completedAt: string | null }[]): Lane`, que devuelve `'todo' | 'doing' | 'done'`.
 
 - [ ] **Paso 1: tests que fallan** (`describe('boardStatus')`)
@@ -177,7 +194,10 @@ it('una en curso gana a las por hacer', () =>
 it('sin segunda columna normal nunca está en curso', () =>
   expect(
     boardStatus(
-      [{ id: 'hacer', position: 'a0', isDone: false }, { id: 'hecho', position: 'a1', isDone: true }],
+      [
+        { id: 'hacer', position: 'a0', isDone: false },
+        { id: 'hecho', position: 'a1', isDone: true },
+      ],
       [task('hacer')],
     ),
   ).toBe('todo'))
@@ -195,6 +215,7 @@ it('una abierta de una columna que no está cuenta como por hacer', () =>
 ### Tarea 2: cuadrados por estado y panel sin tinte
 
 **Files:**
+
 - Modify: `apps/web/src/features/home/Tiles.tsx`:
   - `Tile` acepta `status?: Lane` y pone `data-status`.
   - `BoardTile` pinta por estado, muestra la palabra y arma el `aria-label` nuevo.
@@ -206,6 +227,7 @@ it('una abierta de una columna que no está cuenta como por hacer', () =>
 - Test: `apps/web/e2e/home.spec.ts`
 
 **Interfaces:**
+
 - Consumes: `boardStatus` y `Lane` (de `@notnot/shared`).
 - Produces:
   - `Panel` con props `{ tile, label, onClosed, children }`.
@@ -219,6 +241,7 @@ it('una abierta de una columna que no está cuenta como por hacer', () =>
   - abrirlo de nuevo, tacharla y cerrar con Esc: `'done'`.
 
   El label exacto del primer test cambia a `` `${board.name}: por hacer, 1 abierta, 1 para hoy` ``.
+
 - [ ] **Paso 2:** `pnpm --filter @notnot/web e2e home.spec.ts`. Tiene que dar FAIL por `data-status`.
 - [ ] **Paso 3:** implementar en `Tiles.tsx`:
   - en `BoardTile`, `status = boardStatus(columns, tasks)`;
@@ -235,6 +258,7 @@ it('una abierta de una columna que no está cuenta como por hacer', () =>
 ### Tarea 3: barra lateral, Tareas en `/` y secciones al lado
 
 **Files:**
+
 - Create: `apps/web/src/app/AppLayout.tsx`.
   - Lleva `OfflineBanner`, y abajo `<aside className="hidden w-60 shrink-0 border-r border-sidebar-border md:block"><Sidebar/></aside>` más `<main className="flex min-w-0 flex-1 flex-col"><Outlet/></main>`.
   - En el celu agrega el `Sheet` con `<Sidebar onNavigate={close}/>`.
@@ -283,6 +307,7 @@ it('una abierta de una columna que no está cuenta como por hacer', () =>
 ```
 
 **Interfaces:**
+
 - Consumes: `Panel` sin `color` (tarea 2).
 - Produces:
   - `MenuContext`;
@@ -318,6 +343,7 @@ it('una abierta de una columna que no está cuenta como por hacer', () =>
 ### Tarea 4: docs, capturas, PR y deploy
 
 **Files:**
+
 - Modify: `docs/SPEC.md`:
   - "Qué es".
   - UI: las rutas; "Inicio" pasa a "Barra" y "Tareas"; "Panel" (solo tableros y sin tinte); Hoy, Notas y Finanzas al lado; "Mobile" (☰ y la hoja).
@@ -325,7 +351,7 @@ it('una abierta de una columna que no está cuenta como por hacer', () =>
 - Modify: `docs/PROGRESO.md`:
   - La fase actual pasa a ser la 11.
   - "Hecho / Fase 11".
-  - En "Decisiones", las marcadas *(decisión)* en este plan.
+  - En "Decisiones", las marcadas _(decisión)_ en este plan.
   - En "Pendientes": probar en el celu y en la compu, y si el tinte o el borde se quedan cortos, decirlo (es un número). Los pendientes que siguen vigentes se quedan.
 - Modify: `README.md`: "Cómo se usa" y las capturas.
 - Modify: `apps/web/scripts/capturas.mjs`:
@@ -343,4 +369,4 @@ it('una abierta de una columna que no está cuenta como por hacer', () =>
   - El preview de Vercel puede fallar por `P1001`, igual que en los PR #20 y #21 (la base de dev): anotarlo en el PR y no bloquear por eso.
 - [ ] **Paso 6:** `gh pr merge --merge`, después `git switch main && git pull`.
   - Cuando termine el deploy de `main`, `https://notnot-ion.vercel.app/api/health` tiene que dar 200 y `/api/overview` sin cookie, 401.
-- [ ] **Paso 7:** parar el arnés y Vite. Después, el resumen final al usuario en español y corto: qué anda, qué quedó pendiente, qué le toca hacer a quien usa la app y las decisiones *(decisión)* para que las revise.
+- [ ] **Paso 7:** parar el arnés y Vite. Después, el resumen final al usuario en español y corto: qué anda, qué quedó pendiente, qué le toca hacer a quien usa la app y las decisiones _(decisión)_ para que las revise.
