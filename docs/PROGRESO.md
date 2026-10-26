@@ -2,7 +2,7 @@
 
 ## Fase actual
 
-**Fase 10 — Inicio en cuadrados: hecha.** Las fases 0 a 10 están hechas. La base de dev sigue sin andar, así que esta fase se probó con la API de verdad contra un Postgres en memoria (PGlite), con las migraciones del repo: ver "Pendientes para vos".
+**Fase 11 — Barra lateral y cuadrados por estado: hecha.** Las fases 0 a 11 están hechas. La base de dev sigue sin andar, así que esta fase también se probó con la API de verdad contra un Postgres en memoria (PGlite), con las migraciones del repo: ver "Pendientes para vos".
 
 ## Hecho
 
@@ -103,6 +103,15 @@
 - **Más compacto**: tarjetas con el título en peso normal y columnas del alto de lo que tienen.
 - e2e: `home.spec.ts` (el "Listo cuando": anotar con `@` para hoy, abrir el cuadrado, tachar, Esc, Hoy con un tablero y General, pasar a mañana, el día siguiente con "de ayer", Notas, Finanzas, link directo y el celu en 375 px) y los specs de antes actualizados a la navegación nueva (se fueron `today.spec.ts` y `general.spec.ts`). Contra la API local pasan 40 de 42: los 2 que no, suben imágenes (`images.spec.ts` y el comprobante de `finance.spec.ts`) necesitan el token de Vercel Blob de dev. Los e2e encontraron dos bugs que quedaron arreglados: Esc en un campo dentro del panel (agregar tarjeta, renombrar) cerraba el panel entero, y al crear una carpeta desde el menú de Notas el menú le robaba el foco al nombre. La migración se probó con datos de Hoy pendientes y tachados: quedan en General, en orden y con su día. README con capturas nuevas.
 
+### Fase 11 — Barra lateral y cuadrados por estado
+
+- **Por qué**: te gustaron los cuadrados por cliente, pero querías de vuelta la barra de la izquierda con las Notas ahí, un "espacio de tareas" en la barra con todos los cuadrados, y que el color de cada cuadrado diga el estado (verde todo hecho, amarillo en proceso, azul por hacer), con el color del tablero solo en el puntito.
+- **Barra** (`app/Sidebar.tsx`, `app/AppLayout.tsx`): Hoy, Tareas y Finanzas con sus números, el árbol de Notas debajo e "Instalar app" y "Bloquear" abajo. En el celu sale como hoja con el ☰ del encabezado de cada sección; elegir algo la cierra, Esc la cierra y el foco vuelve al ☰.
+- **Tareas** (`/`, `home/TasksHome.tsx`): "Historial" y "Nuevo tablero" en el encabezado, "Anotar…" y solo los cuadrados de los tableros (se fueron los de Hoy, Notas y Finanzas). El panel de un tablero se abre encima como en la Fase 10 (`/b/:slug` es ruta hija de `/`) y, si lo abriste desde Hoy, al cerrarlo volvés a Hoy.
+- **Estado de un tablero**: `boardStatus` en `shared`, con tests. El cuadrado se tiñe con el color del estado (fondo y borde), lo dice al pie ("Por hacer", "En curso", "Al día") y el color del tablero queda en el punto. El panel ya no se tiñe.
+- **Hoy, Notas y Finanzas** al lado de la barra, sin panel. En la compu, `/p` muestra "Elegí una nota de la barra o creá una con el «+»"; en el celu, `/p` sigue siendo la lista a pantalla completa.
+- e2e: `home.spec.ts` (el estado cambia sin recargar: al día → por hacer → en curso → al día; la barra lleva a Hoy, Tareas, Finanzas y Notas; el panel abierto desde Hoy aparece con un fundido y vuelve a Hoy; ☰ en 375 px) y los specs de antes adaptados a la navegación nueva (`mobile`, `pages`, `receivables`, `lock-and-boards`). Contra la API local pasan 44 de 46: los 2 que no, son los de siempre (suben imágenes y necesitan el token de Vercel Blob de dev). README con capturas nuevas (se suma `mobile-menu.png`).
+
 ## Decisiones
 
 - **Versiones**: lo último estable que funciona junto. TypeScript 6.0 (typescript-eslint todavía no soporta TS 7), Prisma 7.10 (Prisma 8 está en RC), React Router 8 en modo data, Vite 8, Vitest 5, ESLint 10, Tailwind 4, Zod 4, shadcn CLI 4.
@@ -188,10 +197,23 @@
 - **Columnas del alto de su contenido**: lo pediste más compacto. Para soltar una tarjeta en una columna vacía hay que llevarla hasta la columna (antes toda la altura de la pantalla era zona para soltar).
 - **Tamaño**: Vite avisa que el chunk de librerías pasa los 700 kB (783 kB, 248 kB con gzip). No hay dependencias nuevas (GSAP Flip, Radix Dialog y dnd-kit ya estaban).
 
+- **Barra y cuadrados por estado** (Fase 11). Las marcadas (decisión) las tomó la sesión que escribió el plan; revisalas:
+  - (decisión) Hoy, Tareas y Finanzas van arriba de Notas, así un árbol largo no los empuja.
+  - (decisión) En el celu la barra se abre con un ☰ al principio del encabezado de Tareas, Hoy, la lista de Notas y Finanzas. Dentro de una nota va "‹" y no ☰. No vuelve la barra de abajo de la Fase 8.
+  - (decisión) El encabezado de Tareas lleva "Historial" (el de todos) y "Nuevo tablero": es lo que estaba en la barra de arriba del Inicio.
+  - (decisión) Un tablero sin tareas está "al día": a la medianoche lo tachado pasa al historial, así que no se distingue de uno que lo tachó todo ayer.
+  - (decisión) El cuadrado se tiñe entero (no solo el borde) y el borde, del mismo color, va más marcado (50 %, 75 % con el mouse encima).
+  - (decisión) El estado también va escrito, para no depender solo del color. Lo puse al pie, a la derecha de "N abiertas", y el sol y las tachadas de hoy pasaron arriba a la derecha (solo cuando hay): arriba, la palabra le dejaba al nombre unos 60 px en el celu ("Estudio de…"), y en una fila aparte los cuadrados con nombres de dos líneas dejaban de ser cuadrados.
+  - (decisión) El panel del tablero ya no se tiñe: fondo y borde normales, con el punto de color en su encabezado.
+  - El plan pedía teñir con los mismos colores de los títulos de columna, pero en claro esos colores son oscuros (para que el texto se lea) y el amarillo quedaba marrón claro. El tinte usa el mismo color con la luminosidad subida (`oklch(from … max(l, 0.8) c h)`) y en claro va al 16 %: azul, verde y crema se distinguen sin agregar colores. En oscuro no cambia (14 %).
+  - No hay un link a `/p` en la barra: en el celu la hoja ya muestra el árbol con su "+", y a la lista se llega con "‹" desde una nota.
+  - Un tablero abierto desde Hoy se abre encima de Tareas, como pide el plan: mientras está abierto, detrás se ve la grilla, y al cerrarlo Hoy se vuelve a armar (se pierden el scroll y lo que estuvieras escribiendo en "Anotar…"). Para que no crezca desde un cuadrado que no se veía ni vuelva a él, ese panel aparece y se va con un fundido. Si te molesta que cambie el fondo, se puede dejar Hoy detrás del panel, pero lleva más trabajo.
+  - "Instalar app" vuelve a ser la fila de la barra (como antes de la Fase 10): en la hoja del celu, el botón de solo ícono no decía qué era.
+
 ## Pendientes para vos
 
 - **La Fase 10 en producción**: el deploy corre la migración `task_day`, que pasa lo que tengas en Hoy a tareas de General (con su día; lo tachado, a "Hecho") y borra la tabla vieja. La probé con un Postgres en memoria con las mismas migraciones, no contra Neon. Después del deploy, mirá que en Hoy esté lo que tenías.
-- **Probar el Inicio en el celu y en la compu**: sobre todo cómo se siente la animación (si querés más rápida o más lenta es un número).
+- **Probar la barra y los cuadrados por estado en el celu y en la compu** (Fase 11). Si el tinte o el borde de los cuadrados se quedan cortos o se pasan, decímelo: es un número (`--tile-tint` y la mezcla del borde). Lo mismo con la animación del panel.
 - **Credenciales de la base de dev**: el 5/10 sigue igual y además el preview de Vercel tampoco llega al servidor de Neon `dev` (`P1001: Can't reach database server` en `prisma migrate deploy`), así que los previews fallan antes de compilar: puede que el branch `dev` o su endpoint se haya borrado o suspendido. Desde el 1/10 a la tarde, Neon rechaza el usuario y la contraseña del `.env` (`DATABASE_URL` y `DIRECT_URL`: "Authentication failed"; ese día a las 15:23 los e2e andaban), así que la API local da 500. Seguramente se reseteó la contraseña del branch `dev`. Copiá las dos URLs nuevas del branch `dev` (Neon → Connect) al `.env` y corré `pnpm e2e`: los de las fases 8 y 9 quedaron escritos pero sin correr contra la base (si el branch `dev` cambió, actualizá también `DATABASE_URL` y `DIRECT_URL` de Preview en Vercel). Las capturas del celu del README salieron de la API simulada con los mismos datos de `pnpm --filter @notnot/web capturas`; ese comando las vuelve a sacar con la base.
 - **Probar la versión mobile en tu celu**: abrila (o la app instalada) después del deploy. Si todavía ves la sidebar a la izquierda como en la compu, revisá que el navegador no tenga activado "Sitio de escritorio" para la app.
 - **Instalarla en el celu y en la compu** (ver "Instalarla" en el README). El código de producción te lo pasé por chat; no está en el repo.

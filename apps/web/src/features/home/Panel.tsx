@@ -1,19 +1,12 @@
 import { useGSAP } from '@gsap/react'
 import { gsap } from 'gsap'
 import { Flip } from 'gsap/Flip'
-import { X } from 'lucide-react'
+import { Menu, X } from 'lucide-react'
 import { Dialog as DialogPrimitive } from 'radix-ui'
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useRef,
-  type CSSProperties,
-  type ReactNode,
-} from 'react'
+import { createContext, useContext, useEffect, useRef, type ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { tileSelector } from './navigation'
+import { MenuContext, tileSelector } from './navigation'
 
 gsap.registerPlugin(useGSAP, Flip)
 
@@ -26,12 +19,13 @@ const CLOSE = { duration: 0.24, ease: 'power3.inOut' }
 const PanelContext = createContext<{ close: () => void } | null>(null)
 
 type Props = {
-  /** El cuadrado del que sale (`data-tile`). Puede cambiar con el panel abierto. */
-  tile: string
+  /**
+   * El cuadrado del que sale (`data-tile`). Puede cambiar con el panel abierto. Sin cuadrado
+   * (abierto desde Hoy), aparece y se va con un fundido.
+   */
+  tile: string | null
   /** Para lectores de pantalla: "Hoy", el nombre del tablero… */
   label: string
-  /** El color del cuadrado: tiñe el panel. */
-  color: string
   /** Terminó de cerrarse: hay que volver al Inicio. */
   onClosed: () => void
   children: ReactNode
@@ -53,14 +47,17 @@ export function Panel(props: Props) {
 }
 
 // Va adentro del portal: así sus efectos corren cuando el panel ya está en la página.
-function PanelContent({ tile, label, color, onClosed, children }: Props) {
+function PanelContent({ tile, label, onClosed, children }: Props) {
   const scope = useRef<HTMLDivElement>(null)
   const backdrop = useRef<HTMLDivElement>(null)
   const panel = useRef<HTMLDivElement>(null)
   const content = useRef<HTMLDivElement>(null)
   const closing = useRef(false)
   const currentTile = useRef(tile)
-  const findTile = () => document.querySelector<HTMLElement>(tileSelector(currentTile.current))
+  const findTile = () =>
+    currentTile.current === null
+      ? null
+      : document.querySelector<HTMLElement>(tileSelector(currentTile.current))
 
   // Abrir: el panel sale del cuadrado y crece hasta su lugar (GSAP Flip).
   const { contextSafe } = useGSAP(
@@ -146,11 +143,9 @@ function PanelContent({ tile, label, color, onClosed, children }: Props) {
       <div
         ref={panel}
         tabIndex={-1}
-        style={{ '--tile': color } as CSSProperties}
         className={cn(
-          'absolute inset-x-0 mx-auto flex flex-col overflow-hidden bg-(--panel-bg) outline-none',
-          '[--panel-bg:color-mix(in_oklab,var(--tile)_var(--panel-tint),var(--background))]',
-          'top-6 bottom-6 w-[min(72rem,calc(100%-3rem))] rounded-2xl border border-[color:color-mix(in_oklab,var(--tile)_30%,var(--border))] shadow-2xl',
+          'absolute inset-x-0 mx-auto flex flex-col overflow-hidden bg-background outline-none',
+          'top-6 bottom-6 w-[min(72rem,calc(100%-3rem))] rounded-2xl border shadow-2xl',
           'max-md:inset-0 max-md:w-full max-md:rounded-none max-md:border-0 max-md:pt-[env(safe-area-inset-top)] max-md:pb-[env(safe-area-inset-bottom)] max-md:shadow-none',
         )}
       >
@@ -169,17 +164,36 @@ type HeaderProps = {
   className?: string
   /** Dónde va la × para cerrar el panel. En las notas de la compu va en la nota, no en la lista. */
   close?: 'always' | 'mobile' | 'never'
+  /** Fuera de un panel, en el celu, el ☰ que abre la barra. Dentro de una nota va "‹". */
+  menu?: boolean
 }
 
-/** El encabezado de cada panel, con la × al final. */
-export function PanelHeader({ children, className, close = 'always' }: HeaderProps) {
+/** El encabezado de cada sección: con la × al final en un panel y con el ☰ en el celu. */
+export function PanelHeader({ children, className, close = 'always', menu = true }: HeaderProps) {
+  const panel = useContext(PanelContext)
+  const openMenu = useContext(MenuContext)
+  const showMenu = !panel && openMenu !== null && menu
+
   return (
     <header
       className={cn(
         'flex h-12 shrink-0 items-center gap-2.5 border-b px-4 max-md:h-14 max-md:pr-2',
+        showMenu && 'max-md:pl-2',
         className,
       )}
     >
+      {showMenu && (
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label="Menú"
+          aria-haspopup="dialog"
+          onClick={openMenu}
+          className="shrink-0 text-muted-foreground md:hidden"
+        >
+          <Menu />
+        </Button>
+      )}
       {children}
       {close !== 'never' && <PanelClose className={cn(close === 'mobile' && 'md:hidden')} />}
     </header>

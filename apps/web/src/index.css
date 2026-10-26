@@ -92,9 +92,8 @@
   /* Hoy: el sol de las tareas y el color de su cuadrado. `--sun-ink` es para texto (4.5:1). */
   --sun: oklch(0.78 0.15 78);
   --sun-ink: oklch(0.53 0.12 62);
-  /* Cuánto color del tablero lleva su cuadrado y su panel. */
-  --tile-tint: 9%;
-  --panel-tint: 4%;
+  /* Cuánto color de su estado lleva el cuadrado de un tablero. */
+  --tile-tint: 16%;
 
   --board-gray: oklch(0.62 0.012 260);
   --board-brown: oklch(0.55 0.07 55);
@@ -147,7 +146,6 @@
     --sun: oklch(0.82 0.15 80);
     --sun-ink: oklch(0.84 0.14 82);
     --tile-tint: 14%;
-    --panel-tint: 7%;
 
     --board-gray: oklch(0.68 0.012 260);
     --board-brown: oklch(0.66 0.07 58);

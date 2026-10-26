@@ -8,27 +8,21 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { cn } from '@/lib/utils'
 import { needsIosInstallTip, useInstallPrompt } from './install'
 
-const buttonClass = 'gap-1.5 max-md:size-9 max-md:px-0'
+const buttonClass = 'w-full justify-start gap-2.5 px-2 text-muted-foreground'
 
 /** Solo aparece si el navegador deja instalar, o en iOS con el tip de "Compartir". */
-export function InstallButton({ className }: { className?: string }) {
+export function InstallButton() {
   const { canInstall, install } = useInstallPrompt()
   const [iosTip] = useState(needsIosInstallTip)
   const [tipOpen, setTipOpen] = useState(false)
 
   if (canInstall) {
     return (
-      <Button
-        variant="ghost"
-        size="sm"
-        className={cn(buttonClass, className)}
-        onClick={() => void install()}
-      >
-        <Download />
-        <span className="max-md:sr-only">Instalar app</span>
+      <Button variant="ghost" className={buttonClass} onClick={() => void install()}>
+        <Download className="size-3.5" />
+        Instalar app
       </Button>
     )
   }
@@ -37,14 +31,9 @@ export function InstallButton({ className }: { className?: string }) {
 
   return (
     <>
-      <Button
-        variant="ghost"
-        size="sm"
-        className={cn(buttonClass, className)}
-        onClick={() => setTipOpen(true)}
-      >
-        <Download />
-        <span className="max-md:sr-only">Instalar app</span>
+      <Button variant="ghost" className={buttonClass} onClick={() => setTipOpen(true)}>
+        <Download className="size-3.5" />
+        Instalar app
       </Button>
       <Dialog open={tipOpen} onOpenChange={setTipOpen}>
         <DialogContent>

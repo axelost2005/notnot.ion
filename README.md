@@ -1,33 +1,34 @@
 # notnot.ion
 
-App personal para organizar el laburo por cliente. Abre en una grilla de cuadrados (Hoy, uno por cliente, Notas y Finanzas) y cada cuadrado se abre encima con todo lo suyo: el tablero kanban del cliente, sus notas rápidas (cada línea que empieza con `[]` se vuelve tarjeta), lo de hoy de todos los clientes, la sección Notas o Finanzas.
+App personal para organizar el laburo por cliente. A la izquierda, una barra con Hoy (lo de hoy de todos los clientes), Tareas, Finanzas y tus notas. Tareas es una grilla con un cuadrado por cliente, pintado según cómo viene (azul por hacer, amarillo en curso, verde al día), y cada cuadrado se abre encima con el tablero kanban del cliente y sus notas rápidas (cada línea que empieza con `[]` se vuelve tarjeta).
 
 Un solo usuario, sin cuentas: la app se abre con un código. Funciona en la web y se instala como PWA en el celu y en la compu.
 
-![El Inicio: el campo para anotar y los cuadrados](docs/capturas/escritorio-inicio.png)
+![Tareas: la barra, el campo para anotar y los cuadrados por estado](docs/capturas/escritorio-inicio.png)
 
-| Oscuro                                              | Celu: Inicio                                             | Celu: tablero                                           |
-| --------------------------------------------------- | -------------------------------------------------------- | ------------------------------------------------------- |
-| ![Modo oscuro](docs/capturas/escritorio-oscuro.png) | ![El Inicio en el celu](docs/capturas/mobile-inicio.png) | ![Tablero en el celu](docs/capturas/mobile-tablero.png) |
+| Oscuro                                              | Celu: Tareas                                          | Celu: menú                                            | Celu: tablero                                           |
+| --------------------------------------------------- | ----------------------------------------------------- | ----------------------------------------------------- | ------------------------------------------------------- |
+| ![Modo oscuro](docs/capturas/escritorio-oscuro.png) | ![Tareas en el celu](docs/capturas/mobile-inicio.png) | ![La barra en el celu](docs/capturas/mobile-menu.png) | ![Tablero en el celu](docs/capturas/mobile-tablero.png) |
 
 ## Cómo se usa
 
-- **Inicio**: arriba, "Anotar…"; abajo, los cuadrados. Cada uno resume lo suyo: las tareas abiertas (el número grande), lo que está en curso, cuántas son para hoy (el sol) y cuántas tachaste hoy. Tocarlo lo abre encima: crece desde su lugar y, al cerrarlo (×, Esc o tocando afuera), vuelve ahí. Los tableros archivados quedan plegados abajo.
+- **Barra**: Hoy (con cuántas te quedan para hoy), Tareas (con las abiertas de todos los clientes), Finanzas (en rojo, lo que vence hoy o ya venció) y, debajo, tus notas.
+- **Tareas**: arriba, "Anotar…"; abajo, un cuadrado por cliente. El color dice cómo viene y también lo dice al pie: azul "Por hacer" (tiene tareas y ninguna empezada), amarillo "En curso" (alguna está en una columna en curso) y verde "Al día" (no le queda ninguna). El color del cliente queda en el puntito al lado del nombre. Cada cuadrado muestra las abiertas (el número grande), hasta tres tareas, cuántas son para hoy (el sol) y cuántas tachaste hoy. Tocarlo lo abre encima: crece desde su lugar y, al cerrarlo (×, Esc o tocando afuera), vuelve ahí. Los tableros archivados quedan plegados abajo.
 - **Anotar**: escribís la tarea y das Enter. Con `@tablero` va a ese cliente (sin `@`, a General); los chips eligen el día (Hoy, los próximos de la semana o "Sin día"). Pegando varias líneas se anota una tarea por línea. El mismo campo está en Hoy y en cada tablero (ahí, sin `@`, va a ese tablero).
-- **Hoy**: lo que tenés que hacer hoy de todos los clientes, agrupado por cliente, con los próximos días al lado. Lo que no tachás pasa solo al día siguiente, marcado ("de ayer"). Una tarea va a Hoy con el sol de su tarjeta (o eligiendo el día en su detalle) y sale tocándolo de nuevo.
+- **Hoy**: lo que tenés que hacer hoy de todos los clientes, agrupado por cliente, con los próximos días al lado. El nombre de un cliente abre su tablero encima y, al cerrarlo, volvés a Hoy. Lo que no tachás pasa solo al día siguiente, marcado ("de ayer"). Una tarea va a Hoy con el sol de su tarjeta (o eligiendo el día en su detalle) y sale tocándolo de nuevo.
 - **Tableros**: uno por cliente o categoría, con columnas "Por hacer", "En curso" y "Hecho" (podés agregar, renombrar y elegir cuál es la de terminadas). General guarda lo que no es de ningún cliente.
 - **Tarjetas**: se tildan con su checkbox (igual que desde la nota) y se mueven arrastrando a cualquier parte de la columna (con el mouse, con espacio y flechas, o con un toque largo en el celu) o desde el detalle con "Mover a…". En el detalle también se elige el día.
 - **Imágenes**: en el detalle de una tarjeta, pegá una captura (Ctrl+V), arrastrá una imagen o tocá "Adjuntar" (en el celu, galería o cámara). Se achican antes de subirse, se agrandan al tocarlas y son privadas: solo se ven con el candado abierto.
 - **Notas del tablero**: en la pestaña "Notas" de cada tablero, escribís como en un chat. El composer ya arranca con `[] `: escribís, das Enter y se crea la tarjeta, listo para la siguiente. Cada línea que empieza con `[]`, `[ ]`, `- []`, `- [ ]` o `* [ ]` se vuelve tarjeta al final de "Por hacer"; para una nota común, borrás los corchetes. Con `@tablero` la mandás a otro tablero. Abajo del composer se ve antes de enviar: "2 tareas → Pepito, General".
 - Tildar una línea de la nota manda la tarjeta a "Hecho"; moverla en el tablero actualiza el tilde. Borrar una nota deja sus tarjetas.
 - **Notas en otra ventana**: el botón del encabezado del tablero las abre solas en una ventana chica, con un selector de tablero arriba, para tenerlas al costado en una reunión. En Windows, PowerToys la deja siempre encima con Win+Ctrl+T.
-- **Historial**: cada día arranca con "Hecho" vacío. Lo terminado antes de hoy pasa al Historial, agrupado por día: el de cada tablero en su encabezado y el de todos en la barra de arriba del Inicio.
-- **Sección Notas** (su cuadrado): para lo que no es una tarea. Carpetas con carpetas adentro y notas con título y texto, que se guardan solas mientras escribís. En la compu, el árbol a la izquierda y la nota al lado. Se crean, renombran, mueven ("Mover a…") y borran desde el "…" de cada una; las carpetas, además, se personalizan con un color y un ícono.
+- **Historial**: cada día arranca con "Hecho" vacío. Lo terminado antes de hoy pasa al Historial, agrupado por día: el de cada tablero en su encabezado y el de todos en el encabezado de Tareas.
+- **Sección Notas** (en la barra): para lo que no es una tarea. Carpetas con carpetas adentro y notas con título y texto, que se guardan solas mientras escribís. El "+" crea una nota o una carpeta, y la nota se abre al lado de la barra. Se crean, renombran, mueven ("Mover a…") y borran desde el "…" de cada una; las carpetas, además, se personalizan con un color y un ícono.
 - **Finanzas → Cobrado**: los pagos que te hicieron, en pesos o dólares, organizados por mes. Cada uno con fecha, monto, cliente (uno de los tableros), categoría, descripción y comprobantes. Arriba, lo cobrado en el mes por moneda; la lista se ve por fecha o agrupada por categoría.
-- **Finanzas → Por cobrar**: lo que te deben, con el día que vence. Lo vencido queda arriba y marcado, y el cuadrado de Finanzas muestra cuánto te deben y cuántas vencieron. "Me pagaron" anota el pago ya completo (si fue una parte, cambiás el monto y queda lo que falta); cuando está todo, pasa a "Cobradas" con la lista de sus pagos.
-- **En el celu**: los cuadrados van de a dos y cada uno se abre a pantalla completa. El tablero es una lista, con las columnas una abajo de la otra. La tarjeta y los formularios se abren desde abajo, y todo se toca cómodo con el dedo.
+- **Finanzas → Por cobrar**: lo que te deben, con el día que vence. Lo vencido queda arriba y marcado, y Finanzas en la barra muestra cuántas vencen hoy o ya vencieron. "Me pagaron" anota el pago ya completo (si fue una parte, cambiás el monto y queda lo que falta); cuando está todo, pasa a "Cobradas" con la lista de sus pagos.
+- **En el celu**: la barra se abre con el ☰ del encabezado y se cierra sola al elegir algo. Los cuadrados van de a dos y el tablero se abre a pantalla completa. El tablero es una lista, con las columnas una abajo de la otra. La tarjeta y los formularios se abren desde abajo, y todo se toca cómodo con el dedo.
 
-![Un tablero abierto encima del Inicio](docs/capturas/escritorio-tablero.png)
+![Un tablero abierto encima de Tareas](docs/capturas/escritorio-tablero.png)
 
 ![Hoy: lo de todos los clientes y los próximos días](docs/capturas/escritorio-hoy.png)
 

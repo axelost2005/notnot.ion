@@ -10,7 +10,7 @@ export const lanesClass =
 
 /** El encabezado de una columna. En el celu queda fijo arriba mientras se recorre su lista. */
 export const laneHeaderClass =
-  'flex h-10 shrink-0 items-center gap-1.5 pr-1 pl-3 max-md:sticky max-md:top-0 max-md:z-10 max-md:h-11 max-md:bg-(--panel-bg,var(--background)) max-md:pr-0 max-md:pl-4'
+  'flex h-10 shrink-0 items-center gap-1.5 pr-1 pl-3 max-md:sticky max-md:top-0 max-md:z-10 max-md:h-11 max-md:bg-background max-md:pr-0 max-md:pl-4'
 
 export const laneNameClass = 'truncate text-[13px] font-medium max-md:text-sm max-md:font-semibold'
 
