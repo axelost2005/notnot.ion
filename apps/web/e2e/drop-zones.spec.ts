@@ -4,8 +4,7 @@ import { deleteE2EBoards, e2eName, unlock } from './helpers'
 const column = (page: Page, name: string) =>
   page.locator('section', { has: page.getByRole('heading', { level: 2, name, exact: true }) })
 
-const titlesIn = (page: Page, name: string) =>
-  column(page, name).locator('ol > li').getByRole('button').allInnerTexts()
+const titlesIn = (page: Page, name: string) => column(page, name).locator('ol > li').allInnerTexts()
 
 const card = (scope: Locator, title: string) =>
   scope.getByRole('button', { name: title, exact: true })
@@ -62,11 +61,11 @@ test.afterEach(async ({ page }) => {
   await deleteE2EBoards(page.request)
 })
 
-// En una pantalla alta es donde se notaba: la columna vacía es larga.
+// En una pantalla alta es donde se notaba: la columna vacía quedaba "lejos" de la tarjeta.
 test.describe('mouse', () => {
   test.use({ viewport: { width: 1920, height: 1080 } })
 
-  test('en un tablero, "En curso" vacía recibe la tarjeta en el medio y sobre el título', async ({
+  test('en un tablero, "En curso" vacía recibe la tarjeta en el medio, sobre el título y sobre el pie', async ({
     page,
   }) => {
     const board = await seedBoard(page, 'soltar')
@@ -74,13 +73,9 @@ test.describe('mouse', () => {
     const todo = column(page, 'Por hacer')
     await expect(card(todo, 'nueve')).toBeVisible()
 
-    // En línea recta, a la misma altura, hasta el medio de la columna vacía.
-    const source = card(todo, 'siete')
+    // Hasta el medio de la columna vacía (cada columna tiene el alto de lo que tiene).
     let moved = moveResponse(page)
-    await dragWithMouse(page, source, {
-      x: (await centerOf(column(page, 'En curso'))).x,
-      y: (await centerOf(source)).y,
-    })
+    await dragWithMouse(page, card(todo, 'siete'), await centerOf(column(page, 'En curso')))
     expect((await moved).ok()).toBe(true)
     await expect.poll(() => titlesIn(page, 'En curso')).toEqual(['siete'])
 
@@ -93,36 +88,18 @@ test.describe('mouse', () => {
     )
     expect((await moved).ok()).toBe(true)
     await expect.poll(() => titlesIn(page, 'En curso')).toContain('cinco')
-    await page.reload()
-    await expect.poll(() => titlesIn(page, 'En curso')).toHaveLength(2)
-  })
 
-  test('en General, "En curso" recibe la tarjeta sobre el título y sobre el pie', async ({
-    page,
-  }) => {
-    await seedBoard(page, 'soltar-general')
-    await page.goto('/b/general')
-    const todo = column(page, 'Por hacer')
-    const doing = column(page, 'En curso')
-    await expect(card(todo, 'dos')).toBeVisible()
-
-    let moved = moveResponse(page)
-    await dragWithMouse(
-      page,
-      card(todo, 'dos'),
-      await centerOf(doing.getByRole('heading', { level: 2 })),
-    )
-    expect((await moved).ok()).toBe(true)
-    await expect(card(doing, 'dos')).toBeVisible()
-
+    // Sobre el pie ("Agregar tarjeta").
     moved = moveResponse(page)
     await dragWithMouse(
       page,
       card(todo, 'tres'),
-      await centerOf(doing.getByRole('button', { name: 'Agregar tarjeta' })),
+      await centerOf(column(page, 'En curso').getByRole('button', { name: 'Agregar tarjeta' })),
     )
     expect((await moved).ok()).toBe(true)
-    await expect(card(doing, 'tres')).toBeVisible()
+    await expect.poll(() => titlesIn(page, 'En curso')).toContain('tres')
+    await page.reload()
+    await expect.poll(() => titlesIn(page, 'En curso')).toHaveLength(3)
   })
 })
 
@@ -152,7 +129,7 @@ test.describe('touch', () => {
     }
 
     const from = await centerOf(source)
-    // Arriba de la barra de abajo, en la zona donde la lista baja sola.
+    // Cerca del borde de abajo del panel, en la zona donde la lista baja sola.
     const edge = { x: from.x, y: 620 }
     await touch('touchStart', from)
     await page.waitForTimeout(400)
@@ -182,17 +159,5 @@ test.describe('touch', () => {
     await dragDownTo(page, source, column(page, 'En curso'))
     expect((await moved).ok()).toBe(true)
     await expect.poll(() => titlesIn(page, 'En curso')).toEqual(['dos'])
-  })
-
-  test('en General, con long-press se baja una tarjeta hasta "En curso"', async ({ page }) => {
-    await seedBoard(page, 'touch-general')
-    await page.goto('/b/general')
-    const source = card(column(page, 'Por hacer'), 'dos')
-    await expect(source).toBeVisible()
-
-    const moved = moveResponse(page)
-    await dragDownTo(page, source, column(page, 'En curso'))
-    expect((await moved).ok()).toBe(true)
-    await expect(card(column(page, 'En curso'), 'dos')).toBeAttached()
   })
 })

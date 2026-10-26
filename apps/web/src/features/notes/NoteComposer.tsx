@@ -1,27 +1,18 @@
-import { LIMITS, normalizeForMatch, parseNote, type BoardSummary } from '@notnot/shared'
+import { LIMITS, parseNote, type BoardSummary } from '@notnot/shared'
 import { ArrowUp } from 'lucide-react'
 import { useId, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { boardStyle } from '../boards/colors'
 import { useCreateNote } from './api'
 import { tasksSummary } from './format'
+import { MentionList } from './MentionList'
+import { useMentions } from './useMentions'
 import { readDraft, writeDraft } from './storage'
 
 type Props = {
   board: BoardSummary
   boards: BoardSummary[]
   autoFocus?: boolean
-}
-
-type Mention = { start: number; query: string }
-
-const MENTION_BEFORE_CARET = /(^|\s)@([\p{L}\p{N}-]*)$/u
-
-function findMention(text: string, caret: number): Mention | null {
-  const match = MENTION_BEFORE_CARET.exec(text.slice(0, caret))
-  if (!match) return null
-  return { start: match.index + match[1]!.length, query: match[2]! }
 }
 
 // En touch, Enter hace salto de línea y se envía con el botón.
@@ -39,9 +30,8 @@ export function NoteComposer({ board, boards, autoFocus }: Props) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const pendingCaret = useRef<number | null>(null)
   const [text, setText] = useState(() => readDraft(board.id) || TASK_PREFIX)
-  const [caret, setCaret] = useState<number | null>(null)
-  const [highlight, setHighlight] = useState(0)
-  const [dismissedAt, setDismissedAt] = useState<number | null>(null)
+  const mentions = useMentions(text, boards)
+  const { open, suggestions, active } = mentions
 
   const parsed = useMemo(
     () =>
@@ -51,20 +41,6 @@ export function NoteComposer({ board, boards, autoFocus }: Props) {
       }),
     [text, board.slug, boards],
   )
-
-  const mention = caret === null ? null : findMention(text, caret)
-  const query = mention ? normalizeForMatch(mention.query) : ''
-  const activeBoards = boards.filter((b) => b.archivedAt === null)
-  // Si ya está escrito un slug completo, la mención está lista: Enter envía.
-  const complete = activeBoards.some((b) => b.slug === query)
-  const suggestions =
-    mention && mention.start !== dismissedAt && !complete
-      ? activeBoards
-          .filter((b) => normalizeForMatch(b.name).includes(query) || b.slug.includes(query))
-          .slice(0, 6)
-      : []
-  const open = suggestions.length > 0
-  const active = Math.min(highlight, suggestions.length - 1)
 
   // Después de insertar algo, deja el cursor donde corresponde.
   useLayoutEffect(() => {
@@ -80,18 +56,13 @@ export function NoteComposer({ board, boards, autoFocus }: Props) {
     writeDraft(board.id, isBlank(next) ? '' : next)
     if (nextCaret !== undefined) {
       pendingCaret.current = nextCaret
-      setCaret(nextCaret)
+      mentions.setCaret(nextCaret)
     }
   }
 
   function pickBoard(slug: string) {
-    if (!mention || caret === null) return
-    const inserted = `@${slug} `
-    update(
-      text.slice(0, mention.start) + inserted + text.slice(caret),
-      mention.start + inserted.length,
-    )
-    setHighlight(0)
+    const picked = mentions.pick(slug)
+    if (picked) update(picked.text, picked.caret)
   }
 
   /** El chip `[ ]`: pone el marcador al principio de la línea donde está el cursor. */
@@ -110,7 +81,7 @@ export function NoteComposer({ board, boards, autoFocus }: Props) {
     const at = textareaRef.current?.selectionStart ?? text.length
     const needsSpace = at > 0 && !/\s/.test(text[at - 1]!)
     const inserted = needsSpace ? ' @' : '@'
-    setDismissedAt(null)
+    mentions.undismiss()
     update(text.slice(0, at) + inserted + text.slice(at), at + inserted.length)
   }
 
@@ -135,24 +106,7 @@ export function NoteComposer({ board, boards, autoFocus }: Props) {
   }
 
   function onKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
-    if (open) {
-      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-        event.preventDefault()
-        const step = event.key === 'ArrowDown' ? 1 : -1
-        setHighlight((active + step + suggestions.length) % suggestions.length)
-        return
-      }
-      if (event.key === 'Enter' || event.key === 'Tab') {
-        event.preventDefault()
-        pickBoard(suggestions[active]!.slug)
-        return
-      }
-      if (event.key === 'Escape') {
-        event.preventDefault()
-        setDismissedAt(mention?.start ?? null)
-        return
-      }
-    }
+    if (mentions.onKeyDown(event, pickBoard)) return
     if (event.key === 'Enter' && !event.shiftKey && !isCoarsePointer()) {
       event.preventDefault()
       submit()
@@ -168,35 +122,13 @@ export function NoteComposer({ board, boards, autoFocus }: Props) {
     // En el celu, un bloque aparte como el campo de un chat.
     <div className="relative shrink-0 border-t p-3 max-md:mx-3 max-md:mt-1 max-md:mb-3 max-md:rounded-2xl max-md:border max-md:bg-card max-md:pb-2 max-md:focus-within:border-ring max-md:focus-within:ring-3 max-md:focus-within:ring-ring/20">
       {open && (
-        <ul
+        <MentionList
           id={listId}
-          role="listbox"
-          aria-label="Tableros"
-          className="absolute inset-x-3 bottom-full mb-1 grid gap-px rounded-lg border bg-popover p-1 text-sm shadow-md"
-        >
-          {suggestions.map((b, index) => (
-            <li
-              key={b.id}
-              id={`${listId}-${b.id}`}
-              role="option"
-              aria-selected={index === active}
-              style={boardStyle(b.color)}
-              // mousedown para no perder el foco del textarea.
-              onMouseDown={(event) => {
-                event.preventDefault()
-                pickBoard(b.slug)
-              }}
-              className={cn(
-                'flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5',
-                index === active && 'bg-accent',
-              )}
-            >
-              <span aria-hidden="true" className="size-2 shrink-0 rounded-full bg-(--board)" />
-              <span className="truncate">{b.name}</span>
-              <span className="ml-auto font-mono text-xs text-muted-foreground">@{b.slug}</span>
-            </li>
-          ))}
-        </ul>
+          suggestions={suggestions}
+          active={active}
+          onPick={pickBoard}
+          className="absolute inset-x-3 bottom-full mb-1"
+        />
       )}
 
       <textarea
@@ -206,11 +138,11 @@ export function NoteComposer({ board, boards, autoFocus }: Props) {
         rows={2}
         maxLength={LIMITS.noteContent}
         onChange={(event) => {
-          setDismissedAt(null)
+          mentions.undismiss()
           update(event.target.value)
-          setCaret(event.target.selectionStart)
+          mentions.setCaret(event.target.selectionStart)
         }}
-        onSelect={(event) => setCaret(event.currentTarget.selectionStart)}
+        onSelect={(event) => mentions.setCaret(event.currentTarget.selectionStart)}
         onFocus={(event) => {
           // Al entrar con Tab o al abrirse enfocado, el cursor queda al principio: va después
           // de los corchetes. Si ya hay algo seleccionado, se respeta.
@@ -219,7 +151,7 @@ export function NoteComposer({ board, boards, autoFocus }: Props) {
           el.setSelectionRange(el.value.length, el.value.length)
         }}
         onKeyDown={onKeyDown}
-        onBlur={() => setCaret(null)}
+        onBlur={() => mentions.setCaret(null)}
         placeholder="Escribí una nota…"
         aria-label={`Nueva nota en ${board.name}`}
         aria-describedby={`${listId}-preview`}

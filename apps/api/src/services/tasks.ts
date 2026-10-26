@@ -10,9 +10,19 @@ import { prisma } from '../db'
 import { badRequest, conflict, notFound } from '../middleware/errors'
 import { taskInclude, toTask } from './boards'
 import { deleteBlobs, imagePathnames } from './images'
+import { fromDay } from './payments'
 
-type NewTask = { columnId: string; title: string; description?: string | null }
-type TaskChanges = { title?: string; description?: string | null }
+type NewTask = {
+  columnId: string
+  title: string
+  description?: string | null
+  day?: string | null
+}
+type TaskChanges = { title?: string; description?: string | null; day?: string | null }
+
+/** `undefined` no lo toca; `null` lo saca de Hoy. */
+const toDayColumn = (day: string | null | undefined) =>
+  day === undefined || day === null ? day : fromDay(day)
 
 /** Al final de la columna. Si es la de terminadas, ya nace terminada. */
 export async function createTask(input: NewTask): Promise<Task> {
@@ -30,6 +40,7 @@ export async function createTask(input: NewTask): Promise<Task> {
       description: input.description ?? null,
       position: positionAfterLast(column.tasks),
       completedAt: column.isDone ? new Date() : null,
+      day: toDayColumn(input.day) ?? null,
     },
     include: taskInclude,
   })
@@ -39,7 +50,11 @@ export async function createTask(input: NewTask): Promise<Task> {
 export async function updateTask(id: string, changes: TaskChanges): Promise<Task> {
   const task = await prisma.task.update({
     where: { id },
-    data: { title: changes.title, description: changes.description },
+    data: {
+      title: changes.title,
+      description: changes.description,
+      day: toDayColumn(changes.day),
+    },
     include: taskInclude,
   })
   return toTask(task)

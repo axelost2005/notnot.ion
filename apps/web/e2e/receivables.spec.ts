@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Locator, type Page } from '@playwright/test'
 import {
   deleteE2EBoards,
   deleteE2EPayments,
@@ -19,7 +19,42 @@ function day(offset: number) {
 const thisMonth = day(0).slice(0, 7)
 
 /** La fila de algo por cobrar (la abre su primer botón; "Me pagaron" es el otro). */
-const row = (page: Page, text: string) => page.getByRole('listitem').filter({ hasText: text })
+const row = (scope: Page | Locator, text: string) =>
+  scope.getByRole('listitem').filter({ hasText: text })
+
+type Currency = 'ARS' | 'USD'
+type Owed = {
+  description: string
+  amountCents: number
+  paidCents: number
+  currency: Currency
+  dueDate: string | null
+}
+
+/** Lo pendiente que ya había (no de los tests): la base de dev tiene datos de verdad. */
+async function othersPending(page: Page) {
+  const res = await page.request.get('/api/receivables')
+  return ((await res.json()) as Owed[]).filter(
+    (r) => !r.description.includes('e2e-') && r.paidCents < r.amountCents,
+  )
+}
+
+const remaining = (owed: Owed[]) => owed.reduce((sum, r) => sum + r.amountCents - r.paidCents, 0)
+
+/** "$ 300.000", "US$ 1.200": como lo muestra la app. */
+const money = (cents: number, currency: Currency) =>
+  new Intl.NumberFormat('es-AR', {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: cents % 100 === 0 ? 0 : 2,
+    maximumFractionDigits: 2,
+  }).format(cents / 100)
+
+const pendingLabel = (count: number) => `${count} ${count === 1 ? 'pendiente' : 'pendientes'}`
+
+/** El nombre del cuadrado de Finanzas termina con las vencidas: "… por cobrar, 2 vencidas". */
+const dueSuffix = (count: number) =>
+  new RegExp(`por cobrar${count ? `, ${count} ${count === 1 ? 'vencida' : 'vencidas'}` : ''}$`)
 
 test.beforeEach(async ({ page }) => {
   await unlock(page)
@@ -36,11 +71,17 @@ test('anota lo que te deben, registra lo que te pagan en partes y vincula un pag
 }) => {
   const client = e2eName('cliente')
   await page.request.post('/api/boards', { data: { name: client, color: 'teal' } })
+  // Los totales y los números suman lo que ya había.
+  const others = await othersPending(page)
+  const ars = others.filter((r) => r.currency === 'ARS')
+  const usd = others.filter((r) => r.currency === 'USD')
+  const othersDue = others.filter((r) => r.dueDate !== null && r.dueDate <= day(0)).length
+  const financeTile = page.getByRole('link', { name: /^Finanzas:/ })
 
   await page.goto('/finanzas')
   await page.getByRole('link', { name: /^Por cobrar/ }).click()
   await expect(page).toHaveURL(/\/finanzas\/por-cobrar$/)
-  await expect(page.getByText('No te deben nada.')).toBeVisible()
+  if (others.length === 0) await expect(page.getByText('No te deben nada.')).toBeVisible()
 
   // Una vencida hace tres días, con cliente.
   await page.getByRole('button', { name: 'Anotar lo que te deben' }).first().click()
@@ -63,23 +104,31 @@ test('anota lo que te deben, registra lo que te pagan en partes y vincula un pag
   await dialog.getByRole('button', { name: 'Guardar' }).click()
   await expect(dialog).toBeHidden()
 
-  // Lo que te deben por moneda, la vencida primero y marcada, y el número en la sidebar.
+  // Lo que te deben por moneda, la vencida primero y marcada, y el número de la pestaña.
   const totals = page.locator('dl')
-  await expect(totals).toContainText('Te deben en pesos · 1 pendiente')
-  await expect(totals).toContainText('$ 300.000')
-  await expect(totals).toContainText('Te deben en dólares · 1 pendiente')
-  await expect(totals).toContainText('US$ 1.200')
-  await expect(page.locator('section[aria-label] > h2')).toHaveText(['Vencidas', 'Sin fecha'])
-  const overdue = page.getByRole('region', { name: 'Vencidas' })
+  await expect(totals).toContainText(`Te deben en pesos · ${pendingLabel(ars.length + 1)}`)
+  await expect(totals).toContainText(money(remaining(ars) + 30_000_000, 'ARS'))
+  await expect(totals).toContainText(`Te deben en dólares · ${pendingLabel(usd.length + 1)}`)
+  await expect(totals).toContainText(money(remaining(usd) + 120_000, 'USD'))
+  const groups = page.locator('section[aria-label] > h2')
+  await expect(groups.first()).toHaveText('Vencidas')
+  await expect(groups.last()).toHaveText('Sin fecha')
+  const overdue = row(page.getByRole('region', { name: 'Vencidas' }), 'e2e-Desarrollo web')
   await expect(overdue.getByText('venció hace 3 días')).toHaveClass(/text-destructive/)
   await expect(overdue).toContainText(client)
   await expect(page.getByRole('region', { name: 'Sin fecha' })).toContainText(
     'e2e-Mantenimiento anual',
   )
-  await expect(
-    page.getByRole('navigation', { name: 'Finanzas', exact: true }).getByRole('link'),
-  ).toContainText('1 por cobrar vence hoy o ya venció')
-  await expect(page.getByRole('link', { name: /^Por cobrar/ })).toContainText('2')
+  await expect(page.getByRole('link', { name: /^Por cobrar/ })).toContainText(
+    String(others.length + 2),
+  )
+
+  // En el Inicio, el cuadrado de Finanzas la cuenta entre las vencidas; y de ahí se vuelve.
+  await page.keyboard.press('Escape')
+  await expect(page).toHaveURL(/\/$/)
+  await expect(financeTile).toHaveAccessibleName(dueSuffix(othersDue + 1))
+  await financeTile.click()
+  await page.getByRole('link', { name: /^Por cobrar/ }).click()
 
   // "Me pagaron" una parte: el pago viene completo con lo que falta y queda el resto.
   const web = row(page, 'e2e-Desarrollo web')
@@ -96,7 +145,7 @@ test('anota lo que te deben, registra lo que te pagan en partes y vincula un pag
   await expect(dialog).toBeHidden()
   await expect(web).toContainText('$ 200.000')
   await expect(web).toContainText('de $ 300.000')
-  await expect(totals).toContainText('$ 200.000')
+  await expect(totals).toContainText(money(remaining(ars) + 20_000_000, 'ARS'))
 
   // El pago está en Cobrado, en el mes de hoy.
   await page.getByRole('link', { name: 'Cobrado' }).click()
@@ -110,10 +159,9 @@ test('anota lo que te deben, registra lo que te pagan en partes y vincula un pag
   await expect(dialog.getByRole('textbox', { name: 'Monto' })).toHaveValue('200.000')
   await dialog.getByRole('button', { name: 'Guardar' }).click()
   await expect(dialog).toBeHidden()
-  await expect(page.getByRole('region', { name: 'Vencidas' })).toHaveCount(0)
   await expect(
-    page.getByRole('navigation', { name: 'Finanzas', exact: true }).getByRole('link'),
-  ).toHaveText('Finanzas')
+    row(page.getByRole('region', { name: 'Vencidas' }), 'e2e-Desarrollo web'),
+  ).toHaveCount(0)
   await page.getByRole('button', { name: /^Cobradas/ }).click()
   await web.getByRole('button').first().click()
   dialog = page.getByRole('dialog', { name: 'Por cobrar' })
@@ -164,6 +212,11 @@ test('anota lo que te deben, registra lo que te pagan en partes y vincula un pag
   await page.goto('/finanzas/por-cobrar')
   await page.getByRole('button', { name: /^Cobradas/ }).click()
   await expect(web).toContainText('$ 300.000')
+
+  // Cobrada, ya no cuenta entre las vencidas del cuadrado de Finanzas.
+  await page.keyboard.press('Escape')
+  await expect(page).toHaveURL(/\/$/)
+  await expect(financeTile).toHaveAccessibleName(dueSuffix(othersDue))
 })
 
 test('en el celu se ve entero y "Me pagaron" abre el pago', async ({ page }) => {
@@ -177,12 +230,13 @@ test('en el celu se ve entero y "Me pagaron" abre el pago', async ({ page }) => 
     },
   })
   await page.goto('/finanzas/por-cobrar')
-  await expect(page.getByText('venció hace 40 días')).toBeVisible()
+  const long = row(page, 'e2e-Un concepto largo')
+  await expect(long.getByText('venció hace 40 días')).toBeVisible()
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
   )
   expect(overflow).toBe(0)
-  await page.getByRole('button', { name: /^Me pagaron/ }).click()
+  await long.getByRole('button', { name: /^Me pagaron/ }).click()
   await expect(page.getByRole('dialog', { name: 'Anotar un pago' })).toBeVisible()
 })
 

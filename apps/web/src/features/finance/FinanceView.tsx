@@ -26,6 +26,7 @@ import { BoardChip } from '../boards/BoardChip'
 import { paymentsQuery, paymentsSummaryQuery, receivablesQuery } from './api'
 import { currencyName, currentMonth, dayParts, formatMoney, monthLabel, monthName } from './format'
 import { PaymentDialog } from './PaymentDialog'
+import { PanelHeader } from '../home/Panel'
 
 /** `/finanzas` abre el mes actual. */
 export function FinanceRedirect() {
@@ -152,11 +153,11 @@ export function FinanceFrame({
 
 function FinanceHeader({ action }: { action: ReactNode }) {
   return (
-    <header className="flex h-12 shrink-0 items-center gap-2.5 border-b px-4">
+    <PanelHeader>
       <Wallet aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
       <h1 className="text-[15px] font-semibold tracking-tight max-md:text-[17px]">Finanzas</h1>
       <div className="ml-auto">{action}</div>
-    </header>
+    </PanelHeader>
   )
 }
 

@@ -44,6 +44,8 @@ export type Task = {
   completedAt: string | null
   /** Terminada antes de hoy: está en el historial y no en el tablero. */
   archivedAt: string | null
+  /** Para qué día es ("2026-10-26"): con día, está en Hoy. */
+  day: string | null
   noteId: string | null
   noteLine: number | null
   /** Tablero donde está la nota de origen (puede ser otro). */
@@ -59,8 +61,8 @@ export type BoardDetail = Board & {
   tasks: Task[]
 }
 
-/** El kanban de General: las columnas y las tarjetas (sin archivar) de los tableros activos. */
-export type GeneralBoard = {
+/** Lo de todos los tableros activos (columnas y tarjetas sin archivar): el Inicio y Hoy. */
+export type Overview = {
   columns: Column[]
   tasks: Task[]
 }
@@ -168,16 +170,6 @@ export type Receivable = {
 export type PaymentsSummary = {
   months: { month: string; count: number }[]
   categories: string[]
-}
-
-/** Una cosa de Hoy. `day` es el día para el que se anotó ("2026-10-05"); `doneAt`, cuándo se tachó. */
-export type DayItem = {
-  id: string
-  day: string
-  text: string
-  doneAt: string | null
-  createdAt: string
-  updatedAt: string
 }
 
 export type ApiErrorBody = {

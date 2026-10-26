@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Skeleton } from '@/components/ui/skeleton'
 import { isApiError } from '@/lib/api'
+import { PanelHeader } from '../home/Panel'
 import { pageQuery, pagesTreeQuery, useDeletePage, useUpdatePage } from './api'
 import { MoveDialog, type Movable } from './MoveDialog'
 import { openFolders } from './openFolders'
@@ -196,8 +197,8 @@ function PageHeader({
   const name = page.title || 'Sin título'
 
   return (
-    <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4 max-md:px-2">
-      {/* En el celu, de vuelta a la lista de notas (la de la barra de abajo). */}
+    <PanelHeader className="gap-2 max-md:pl-2">
+      {/* En el celu, de vuelta a la lista de notas. */}
       <Button asChild variant="ghost" size="icon" className="text-muted-foreground md:hidden">
         <Link to="/p" aria-label="Volver a Notas">
           <ChevronLeft />
@@ -273,29 +274,35 @@ function PageHeader({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </header>
+    </PanelHeader>
   )
 }
 
 function PageNotFound() {
   return (
-    <div className="grid max-w-sm gap-2 p-6">
-      <title>Nota no encontrada – notnot.ion</title>
-      <p className="font-medium">Esta nota no existe.</p>
-      <p className="text-[13px] text-muted-foreground">Puede que la hayan borrado.</p>
-      <Button asChild variant="outline" size="sm" className="mt-2 justify-self-start">
-        <Link to="/p">Ir a Notas</Link>
-      </Button>
-    </div>
+    <>
+      <PanelHeader>
+        <span className="ml-auto" />
+      </PanelHeader>
+      <div className="grid max-w-sm gap-2 p-6">
+        <title>Nota no encontrada – notnot.ion</title>
+        <p className="font-medium">Esta nota no existe.</p>
+        <p className="text-[13px] text-muted-foreground">Puede que la hayan borrado.</p>
+        <Button asChild variant="outline" size="sm" className="mt-2 justify-self-start">
+          <Link to="/p">Ir a Notas</Link>
+        </Button>
+      </div>
+    </>
   )
 }
 
 function PageSkeleton() {
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex h-12 items-center border-b px-4">
+      <PanelHeader>
         <Skeleton className="h-4 w-32" />
-      </div>
+        <span className="ml-auto" />
+      </PanelHeader>
       <div className="mx-auto grid w-full max-w-2xl gap-4 px-6 pt-8">
         <Skeleton className="h-8 w-2/3" />
         <Skeleton className="h-4 w-full" />

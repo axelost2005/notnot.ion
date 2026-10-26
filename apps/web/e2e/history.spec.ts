@@ -8,6 +8,10 @@ const titlesIn = (page: Page, name: string) => column(page, name).locator('ol > 
 
 const notesPanel = (page: Page) => page.getByRole('complementary', { name: 'Notas' })
 
+/** Las pestañas del panel del tablero: "Tareas" (el kanban) o "Notas". */
+const tab = (page: Page, name: 'Tareas' | 'Notas') =>
+  page.getByRole('button', { name, exact: true }).click()
+
 test.beforeEach(async ({ page }) => {
   await unlock(page)
 })
@@ -47,11 +51,13 @@ test('al otro día, lo terminado pasa de "Hecho" al Historial', async ({ page })
   await page.keyboard.press('Escape')
 
   // En la nota sigue tildada pero ya no abre la tarjeta. Destildarla la vuelve al tablero.
+  await tab(page, 'Notas')
   const panel = notesPanel(page)
   await expect(panel.getByRole('button', { name: 'mandar la factura' })).toHaveCount(0)
   const toggled = page.waitForResponse((r) => r.url().includes('/toggle-done') && r.ok())
   await panel.getByRole('checkbox', { name: 'Destildar mandar la factura' }).uncheck()
   await toggled
+  await tab(page, 'Tareas')
   await expect
     .poll(() => titlesIn(page, 'Por hacer'))
     .toEqual(['mandar la factura', 'llamar a Juan'])

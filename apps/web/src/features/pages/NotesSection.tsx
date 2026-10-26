@@ -57,6 +57,7 @@ import { FOLDER_ICON_OPTIONS } from './folderIcons'
 import { FolderGlyph, FolderStyleDialog } from './FolderStyleDialog'
 import { MoveDialog, type Movable } from './MoveDialog'
 import { setFolderOpen, useOpenFolders } from './openFolders'
+import { PanelHeader } from '../home/Panel'
 
 const NEW_FOLDER = 'Nueva carpeta'
 
@@ -233,7 +234,7 @@ export function NotesSection({ onNavigate, page = false }: Props) {
   if (page) {
     return (
       <div className="flex h-full min-h-0 flex-col">
-        <header className="flex h-12 shrink-0 items-center gap-2.5 border-b px-4">
+        <PanelHeader>
           <NotebookText aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
           <h1
             id={headingId}
@@ -258,7 +259,7 @@ export function NotesSection({ onNavigate, page = false }: Props) {
               Nueva nota
             </Button>
           </div>
-        </header>
+        </PanelHeader>
         <nav
           aria-labelledby={headingId}
           className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-2 py-2 max-md:text-[15px] md:px-6 md:py-6"
@@ -332,6 +333,7 @@ function FolderRow({
 }) {
   const update = useUpdateFolder()
   const renameInput = useRef<HTMLInputElement>(null)
+  const creating = useRef(false)
   const open = context.openIds.has(folder.id)
   // Un ícono elegido queda igual abierta o cerrada (la flecha ya lo dice).
   const Icon = folder.icon ? FOLDER_ICON_OPTIONS[folder.icon].Icon : open ? FolderOpen : FolderIcon
@@ -378,17 +380,34 @@ function FolderRow({
           label={`Opciones de la carpeta ${folder.name}`}
           // "Renombrar": el campo aparece con el menú abierto (que retiene el foco), así que se
           // enfoca recién cuando el menú se cierra, en vez de volver al botón "…".
+          // Lo nuevo se lleva el foco (el título de la nota, el nombre de la carpeta): si el menú lo
+          // devolviera al "…", con la API rápida el campo lo perdería y se cerraría.
           onCloseAutoFocus={(event) => {
+            if (creating.current) {
+              creating.current = false
+              event.preventDefault()
+              return
+            }
             if (context.renamingId !== folder.id) return
             event.preventDefault()
             renameInput.current?.focus()
           }}
         >
-          <DropdownMenuItem onSelect={() => context.newPage(folder.id)}>
+          <DropdownMenuItem
+            onSelect={() => {
+              creating.current = true
+              context.newPage(folder.id)
+            }}
+          >
             <FilePlus />
             Nueva nota adentro
           </DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => context.newFolder(folder.id)}>
+          <DropdownMenuItem
+            onSelect={() => {
+              creating.current = true
+              context.newFolder(folder.id)
+            }}
+          >
             <FolderPlus />
             Nueva carpeta adentro
           </DropdownMenuItem>
@@ -510,6 +529,13 @@ function NewMenu({
   onNewPage: () => void
   onNewFolder: () => void
 }) {
+  // Lo nuevo se lleva el foco: el menú no lo devuelve al "+" (ver `FolderRow`).
+  const creating = useRef(false)
+  const pick = (create: () => void) => () => {
+    creating.current = true
+    create()
+  }
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -517,12 +543,20 @@ function NewMenu({
           <Plus />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-44">
-        <DropdownMenuItem onSelect={onNewPage}>
+      <DropdownMenuContent
+        align="end"
+        className="w-44"
+        onCloseAutoFocus={(event) => {
+          if (!creating.current) return
+          creating.current = false
+          event.preventDefault()
+        }}
+      >
+        <DropdownMenuItem onSelect={pick(onNewPage)}>
           <FilePlus />
           Nueva nota
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={onNewFolder}>
+        <DropdownMenuItem onSelect={pick(onNewFolder)}>
           <FolderPlus />
           Nueva carpeta
         </DropdownMenuItem>

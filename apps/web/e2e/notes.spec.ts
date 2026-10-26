@@ -8,6 +8,16 @@ const titlesIn = (page: Page, name: string) => column(page, name).locator('ol > 
 
 const notesPanel = (page: Page) => page.getByRole('complementary', { name: 'Notas' })
 
+/** Las pestañas del panel del tablero: "Tareas" (el kanban) o "Notas". */
+const tab = (page: Page, name: 'Tareas' | 'Notas') =>
+  page.getByRole('button', { name, exact: true }).click()
+
+/** Abre el panel de un tablero en sus notas. */
+async function openNotes(page: Page, slug: string) {
+  await page.goto(`/b/${slug}`)
+  await tab(page, 'Notas')
+}
+
 async function createBoard(page: Page, label: string) {
   const res = await page.request.post('/api/boards', {
     data: { name: e2eName(label), color: 'green' },
@@ -26,7 +36,7 @@ async function writeNote(composer: Locator, lines: string[]) {
 }
 
 async function dragTo(page: Page, source: Locator, target: Locator) {
-  // Con el panel de notas abierto, la columna puede quedar fuera de vista.
+  // En el panel, la tarjeta puede quedar fuera de vista.
   await source.scrollIntoViewIfNeeded()
   const from = await source.boundingBox()
   const to = await target.boundingBox()
@@ -61,7 +71,7 @@ test('una nota en General crea la tarjeta en otro tablero, se tilda, se mueve y 
   await page.request.post('/api/tasks', { data: { columnId: todoId, title: 'tarea previa' } })
 
   // Escribir desde General.
-  await page.goto('/b/general')
+  await openNotes(page, 'general')
   const panel = notesPanel(page)
   const composer = panel.getByRole('combobox', { name: 'Nueva nota en General' })
   await composer.fill(`[] ${title} @${board.slug}`)
@@ -80,7 +90,7 @@ test('una nota en General crea la tarjeta en otro tablero, se tilda, se mueve y 
   await expect.poll(() => titlesIn(page, 'Por hacer')).toEqual(['tarea previa', title])
 
   // Tildarla en la nota la pasa a "Hecho".
-  await page.goto('/b/general')
+  await openNotes(page, 'general')
   // Esperar la respuesta: page.goto cortaría el pedido en vuelo.
   const toggled = page.waitForResponse((r) => r.url().includes('/toggle-done') && r.ok())
   await note.getByRole('checkbox', { name: `Tildar ${title}` }).check()
@@ -97,7 +107,7 @@ test('una nota en General crea la tarjeta en otro tablero, se tilda, se mueve y 
     column(page, 'En curso'),
   )
   await moved
-  await page.goto('/b/general')
+  await openNotes(page, 'general')
   await expect(note.getByRole('checkbox', { name: `Tildar ${title}` })).not.toBeChecked()
 
   // Borrar la nota deja la tarjeta.
@@ -110,7 +120,7 @@ test('una nota en General crea la tarjeta en otro tablero, se tilda, se mueve y 
 
 test('el composer arranca con [] y cada Enter crea una tarjeta', async ({ page }) => {
   const board = await createBoard(page, 'de-a-una')
-  await page.goto(`/b/${board.slug}`)
+  await openNotes(page, board.slug)
   const composer = notesPanel(page).getByRole('combobox', { name: `Nueva nota en ${board.name}` })
   await expect(composer).toHaveValue('[] ')
 
@@ -126,19 +136,22 @@ test('el composer arranca con [] y cada Enter crea una tarjeta', async ({ page }
     await expect(composer).toHaveValue('[] ')
     await expect(composer).toBeFocused()
   }
-  await expect
-    .poll(() => titlesIn(page, 'Por hacer'))
-    .toEqual(['llamar a Juan', 'mandar el presupuesto'])
 
   // Enter con los corchetes solos no manda nada.
   await composer.press('Enter')
   await expect(composer).toHaveValue('[] ')
   await expect(notesPanel(page).locator('article')).toHaveCount(2)
+
+  // Las dos tarjetas están en "Por hacer", en orden.
+  await tab(page, 'Tareas')
+  await expect
+    .poll(() => titlesIn(page, 'Por hacer'))
+    .toEqual(['llamar a Juan', 'mandar el presupuesto'])
 })
 
 test('composer: chips, autocompletado de @, vista previa y borrador', async ({ page }) => {
   const board = await createBoard(page, 'composer')
-  await page.goto(`/b/${board.slug}`)
+  await openNotes(page, board.slug)
   const panel = notesPanel(page)
   const composer = panel.getByRole('combobox', { name: `Nueva nota en ${board.name}` })
 
@@ -178,7 +191,7 @@ test('si la tarjeta se borra, la línea queda tachada; los links se pueden abrir
   const note = (await res.json()) as { tasks: { id: string }[] }
   await page.request.delete(`/api/tasks/${note.tasks[0]!.id}`)
 
-  await page.goto(`/b/${board.slug}`)
+  await openNotes(page, board.slug)
   const panel = notesPanel(page)
   await expect(panel.getByRole('link', { name: 'https://example.com/doc' })).toHaveAttribute(
     'href',
@@ -200,7 +213,7 @@ test('carga 50 notas y trae las anteriores al scrollear hacia arriba', async ({ 
     })
   }
 
-  await page.goto(`/b/${board.slug}`)
+  await openNotes(page, board.slug)
   const panel = notesPanel(page)
   // Arranca abajo de todo, con la más nueva a la vista.
   await expect(panel.getByText('nota número 55', { exact: true })).toBeInViewport()

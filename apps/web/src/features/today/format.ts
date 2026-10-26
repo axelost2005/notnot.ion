@@ -1,4 +1,4 @@
-import { addDays, daysBetween } from '@notnot/shared'
+import { addDays, daysBetween, type Task } from '@notnot/shared'
 
 const utc = (day: string) => new Date(`${day}T00:00:00.000Z`)
 const weekday = new Intl.DateTimeFormat('es-AR', { weekday: 'long', timeZone: 'UTC' })
@@ -36,6 +36,23 @@ export function carriedFrom(day: string, today: string) {
   return `del ${days < 7 ? weekday.format(utc(day)) : dayMonth.format(utc(day))}`
 }
 
+const shortDate = new Intl.DateTimeFormat('es-AR', {
+  day: 'numeric',
+  month: 'short',
+  timeZone: 'UTC',
+})
+
+/** Para cuándo es una tarea que todavía no es de hoy: "mañana", "mié 28", "5 nov". */
+export function shortDay(day: string, today: string) {
+  const days = daysBetween(today, day)
+  if (days === 1) return 'mañana'
+  const date = utc(day)
+  if (days > 1 && days < 7) {
+    return `${weekdayShort.format(date).replace('.', '')} ${date.getUTCDate()}`
+  }
+  return shortDate.format(date).replace('.', '')
+}
+
 export type DayOption = {
   day: string
   /** Para el chip: "Hoy", "Mañana", "mié 7". */
@@ -59,3 +76,7 @@ export function dayOptions(today: string): DayOption[] {
     }
   })
 }
+
+/** Es de hoy (o de un día que pasó y no se terminó): está en Hoy. */
+export const isForToday = (task: Pick<Task, 'day'>, today: string) =>
+  task.day !== null && task.day <= today

@@ -7,12 +7,12 @@ import type {
   UpdateColumnInput,
   UpdateTaskInput,
 } from '@notnot/shared'
-import { positionAfterLast, positionForSlot, type GeneralBoard } from '@notnot/shared'
+import { positionForSlot, type Overview } from '@notnot/shared'
 import { useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { uploadImage } from '@/lib/images'
 import { boardQuery, boardsQuery } from '../boards/api'
-import { generalQuery } from '../general/api'
+import { overviewQuery } from '../home/api'
 import { refreshNotes } from '../notes/api'
 
 function updateBoardCache(
@@ -36,10 +36,10 @@ export function useCreateTask(boardId: string) {
         ...board,
         tasks: [...board.tasks, task],
       }))
-      // Si se agregó desde General, que aparezca sin esperar a que se refresque.
+      // Que su cuadrado la cuente sin esperar a que se refresque.
       queryClient.setQueryData(
-        generalQuery.queryKey,
-        (general) => general && { ...general, tasks: [...general.tasks, task] },
+        overviewQuery.queryKey,
+        (overview) => overview && { ...overview, tasks: [...overview.tasks, task] },
       )
       void refreshCounts(queryClient)
     },
@@ -125,19 +125,22 @@ export type MoveTaskVariables = Slot & {
 const MOVE_KEY = ['move-task']
 
 /**
- * La misma movida en el kanban de General. Ahí no se reordena: si va al final de la columna
- * (General, "Mover a…") se calcula; si no, alcanza con cambiarle la columna.
+ * La misma movida en lo del Inicio, que tiene las columnas de todos los tableros: los cuadrados
+ * cambian al toque.
  */
-function moveInGeneral(general: GeneralBoard, variables: MoveTaskVariables): GeneralBoard {
+function moveInOverview(overview: Overview, variables: MoveTaskVariables): Overview {
   const { task, columnId, boardId, prevId, nextId } = variables
-  const column = general.columns.find((c) => c.id === columnId)
-  if (!column) return general
-  const siblings = general.tasks.filter((t) => t.columnId === columnId && t.id !== task.id)
-  const position = prevId === null && nextId === null ? positionAfterLast(siblings) : task.position
+  const column = overview.columns.find((c) => c.id === columnId)
+  if (!column) return overview
+  const siblings = overview.tasks.filter((t) => t.columnId === columnId && t.id !== task.id)
+  // Puede estar atrasado respecto del tablero: sin los vecinos, queda donde estaba hasta refrescar.
+  const known = (id: string | null) => id === null || siblings.some((t) => t.id === id)
+  const position =
+    known(prevId) && known(nextId) ? positionForSlot(siblings, { prevId, nextId }) : task.position
   const completedAt = column.isDone ? (task.completedAt ?? new Date().toISOString()) : null
   return {
-    ...general,
-    tasks: general.tasks.map((t) =>
+    ...overview,
+    tasks: overview.tasks.map((t) =>
       t.id === task.id ? { ...t, boardId, columnId, position, completedAt } : t,
     ),
   }
@@ -157,12 +160,12 @@ export function useMoveTask() {
       const { task, columnId, boardId, prevId, nextId } = variables
       const key = boardQuery(task.boardId).queryKey
       await queryClient.cancelQueries({ queryKey: key })
-      await queryClient.cancelQueries({ queryKey: generalQuery.queryKey })
+      await queryClient.cancelQueries({ queryKey: overviewQuery.queryKey })
       const previous = queryClient.getQueryData(key)
-      const general = queryClient.getQueryData(generalQuery.queryKey)
+      const overview = queryClient.getQueryData(overviewQuery.queryKey)
       queryClient.setQueryData(
-        generalQuery.queryKey,
-        (data) => data && moveInGeneral(data, variables),
+        overviewQuery.queryKey,
+        (data) => data && moveInOverview(data, variables),
       )
 
       updateBoardCache(queryClient, task.boardId, (board) => {
@@ -181,13 +184,13 @@ export function useMoveTask() {
           ),
         }
       })
-      return { previous, general }
+      return { previous, overview }
     },
     onError: (_error, { task }, context) => {
       if (context?.previous) {
         queryClient.setQueryData(boardQuery(task.boardId).queryKey, context.previous)
       }
-      if (context?.general) queryClient.setQueryData(generalQuery.queryKey, context.general)
+      if (context?.overview) queryClient.setQueryData(overviewQuery.queryKey, context.overview)
     },
     onSuccess: (moved, { task }) => {
       if (moved.boardId !== task.boardId) return
@@ -206,6 +209,35 @@ export function useMoveTask() {
       if (queryClient.isMutating({ mutationKey: MOVE_KEY }) === 1) {
         void queryClient.invalidateQueries({ queryKey: boardQuery(task.boardId).queryKey })
       }
+    },
+  })
+}
+
+type DayVariables = { task: Task; day: string | null }
+
+/** El sol y el día del detalle. Optimista en el tablero de la tarea y en el Inicio. */
+export function useSetTaskDay() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ task, day }: DayVariables) =>
+      api<Task>(`/tasks/${task.id}`, { method: 'PATCH', json: { day } }),
+    onMutate: async ({ task, day }) => {
+      const boardKey = boardQuery(task.boardId).queryKey
+      await queryClient.cancelQueries({ queryKey: boardKey })
+      await queryClient.cancelQueries({ queryKey: overviewQuery.queryKey })
+      const board = queryClient.getQueryData(boardKey)
+      const overview = queryClient.getQueryData(overviewQuery.queryKey)
+      const withDay = (t: Task) => (t.id === task.id ? { ...t, day } : t)
+      updateBoardCache(queryClient, task.boardId, (b) => ({ ...b, tasks: b.tasks.map(withDay) }))
+      queryClient.setQueryData(
+        overviewQuery.queryKey,
+        (data) => data && { ...data, tasks: data.tasks.map(withDay) },
+      )
+      return { board, overview }
+    },
+    onError: (_error, { task }, context) => {
+      if (context?.board) queryClient.setQueryData(boardQuery(task.boardId).queryKey, context.board)
+      if (context?.overview) queryClient.setQueryData(overviewQuery.queryKey, context.overview)
     },
   })
 }

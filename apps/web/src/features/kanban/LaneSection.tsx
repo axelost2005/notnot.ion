@@ -1,18 +1,21 @@
 import { useDroppable } from '@dnd-kit/core'
 import type { ReactNode } from 'react'
 
-/** Las columnas: en la compu, el kanban con scroll horizontal; en el celu, una lista vertical. */
+/**
+ * Las columnas, dentro del panel del tablero (que es el que scrollea): en la compu, el kanban con
+ * scroll horizontal y cada columna del alto de lo que tiene; en el celu, una lista vertical.
+ */
 export const lanesClass =
-  'flex min-h-0 flex-1 items-start gap-3 overflow-x-auto p-3 max-md:flex-col max-md:items-stretch max-md:gap-4 max-md:overflow-x-hidden max-md:overflow-y-auto max-md:overscroll-y-contain max-md:px-4 max-md:pt-1 max-md:pb-6'
+  'flex items-start gap-3 overflow-x-auto px-4 pt-1 pb-5 max-md:flex-col max-md:items-stretch max-md:gap-4 max-md:overflow-x-hidden max-md:px-3 max-md:pb-6'
 
 /** El encabezado de una columna. En el celu queda fijo arriba mientras se recorre su lista. */
 export const laneHeaderClass =
-  'flex h-10 shrink-0 items-center gap-1.5 pr-1 pl-3 max-md:sticky max-md:top-0 max-md:z-10 max-md:h-11 max-md:bg-background max-md:pr-0 max-md:pl-4'
+  'flex h-10 shrink-0 items-center gap-1.5 pr-1 pl-3 max-md:sticky max-md:top-0 max-md:z-10 max-md:h-11 max-md:bg-(--panel-bg,var(--background)) max-md:pr-0 max-md:pl-4'
 
 export const laneNameClass = 'truncate text-[13px] font-medium max-md:text-sm max-md:font-semibold'
 
 type Props = {
-  /** Lo que recibe al soltar: la columna o, en General, el estado. */
+  /** Lo que recibe al soltar: la columna. */
   id: string
   labelledBy: string
   header: ReactNode
@@ -33,11 +36,11 @@ export function LaneSection({ id, labelledBy, header, footer, children }: Props)
       ref={setNodeRef}
       aria-labelledby={labelledBy}
       data-over={isOver ? '' : undefined}
-      className="group/lane flex h-full w-66 shrink-0 flex-col rounded-lg bg-lane transition-colors md:data-over:bg-accent max-md:h-auto max-md:w-full max-md:rounded-none max-md:bg-transparent"
+      className="group/lane flex w-66 shrink-0 flex-col rounded-lg bg-lane transition-colors md:data-over:bg-accent max-md:h-auto max-md:w-full max-md:rounded-none max-md:bg-transparent"
     >
       {header}
       <div className="contents max-md:flex max-md:flex-col max-md:overflow-hidden max-md:rounded-xl max-md:border max-md:bg-card max-md:transition-shadow max-md:group-data-over/lane:border-ring max-md:group-data-over/lane:ring-3 max-md:group-data-over/lane:ring-ring/20">
-        <ol className="flex min-h-16 flex-1 flex-col gap-1.5 overflow-y-auto px-2 pb-2 max-md:min-h-0 max-md:flex-none max-md:gap-0 max-md:overflow-visible max-md:p-0 max-md:[&:not(:empty):not(:last-child)]:border-b">
+        <ol className="flex min-h-16 flex-col gap-1.5 px-2 pb-2 max-md:min-h-0 max-md:flex-none max-md:gap-0 max-md:overflow-visible max-md:p-0 max-md:[&:not(:empty):not(:last-child)]:border-b">
           {children}
         </ol>
         {footer}

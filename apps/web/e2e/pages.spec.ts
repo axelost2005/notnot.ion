@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { deleteE2EPages, e2eName, unlock } from './helpers'
 
+/** El árbol de la sección Notas (en el celu, la lista a pantalla completa de `/p`). */
 const notes = (page: Page) => page.getByRole('navigation', { name: 'Notas' })
 
 /** Abre el menú "…" de una fila del árbol y elige una opción. */
@@ -52,7 +53,7 @@ test('carpetas con carpetas adentro y notas que se guardan solas, se mueven, ren
   const access = e2eName('accesos')
   const invoices = e2eName('facturas')
   const loose = e2eName('ideas')
-  await page.goto('/b/general')
+  await page.goto('/p')
 
   // Carpeta en la raíz y otra adentro.
   await notes(page).getByRole('button', { name: 'Nueva nota o carpeta' }).click()
@@ -106,12 +107,12 @@ test('carpetas con carpetas adentro y notas que se guardan solas, se mueven, ren
   await expect(notes(page).getByRole('link', { name: loose })).toBeVisible()
 })
 
-test('una carpeta con color e ícono: se ve en la sidebar, sigue al recargar y vuelve a como estaba', async ({
+test('una carpeta con color e ícono: se ve en el árbol, sigue al recargar y vuelve a como estaba', async ({
   page,
 }) => {
   const name = e2eName('clientes')
   await page.request.post('/api/folders', { data: { name } })
-  await page.goto('/b/general')
+  await page.goto('/p')
   // El ícono de la fila es el segundo (el primero es la flecha).
   const icon = notes(page).getByRole('button', { name, exact: true }).locator('svg').nth(1)
   const plainFolder = /(^|\s)lucide-folder(\s|$)/
@@ -153,38 +154,32 @@ test('una carpeta con color e ícono: se ve en la sidebar, sigue al recargar y v
 test.describe('celu', () => {
   test.use({ viewport: { width: 375, height: 740 }, isMobile: true, hasTouch: true })
 
-  test('en 375 px se llega a una nota desde el panel lateral', async ({ page }) => {
+  test('en 375 px se llega a una nota desde el cuadrado "Notas"', async ({ page }) => {
     const title = e2eName('nota del celu')
     const res = await page.request.post('/api/pages', { data: { title } })
     const created = (await res.json()) as { id: string }
     await page.request.patch(`/api/pages/${created.id}`, { data: { content: 'desde el celu' } })
 
-    await page.goto('/b/general')
-    await page.getByRole('button', { name: /cambiar de tablero/ }).tap()
-    const menu = page.getByRole('dialog', { name: 'Menú' })
-    await menu.getByRole('link', { name: title }).tap()
+    await page.goto('/')
+    await page.getByRole('link', { name: /^Notas:/ }).tap()
+    await expect(page).toHaveURL(/\/p$/)
+    await notes(page).getByRole('link', { name: title }).tap()
     await expect(page).toHaveURL(new RegExp(`/p/${created.id}$`))
-    await expect(menu).toBeHidden()
     await expect(page.getByRole('textbox', { name: 'Texto' })).toHaveValue('desde el celu')
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375)
 
-    // Desde la nota, "Menú" en la barra de abajo vuelve a abrir el menú.
-    await page
-      .getByRole('navigation', { name: 'Secciones' })
-      .getByRole('button', { name: 'Menú' })
-      .tap()
-    await expect(page.getByRole('dialog', { name: 'Menú' })).toBeVisible()
+    // Desde la nota, "Cerrar" vuelve al Inicio.
+    await page.getByRole('button', { name: 'Cerrar' }).tap()
+    await expect(page).toHaveURL(/\/$/)
+    await expect(page.getByRole('list', { name: 'Cuadrados' })).toBeVisible()
   })
 
-  test('"Notas" abajo abre las carpetas y "Nueva nota" deja escribir al toque', async ({
+  test('el cuadrado "Notas" abre las carpetas y "Nueva nota" deja escribir al toque', async ({
     page,
   }) => {
     const title = e2eName('anotador')
-    await page.goto('/b/general')
-    await page
-      .getByRole('navigation', { name: 'Secciones' })
-      .getByRole('link', { name: 'Notas' })
-      .tap()
+    await page.goto('/')
+    await page.getByRole('link', { name: /^Notas:/ }).tap()
     await expect(page).toHaveURL(/\/p$/)
 
     await page.getByRole('button', { name: 'Nueva nota', exact: true }).tap()

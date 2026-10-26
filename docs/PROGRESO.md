@@ -2,7 +2,7 @@
 
 ## Fase actual
 
-**Fase 9 — Hoy: hecha.** Las fases 0 a 9 están hechas. Los e2e de las fases 8 y 9 quedaron escritos pero sin correr contra la base (la de dev no anda): ver "Pendientes para vos".
+**Fase 10 — Inicio en cuadrados: hecha.** Las fases 0 a 10 están hechas. La base de dev sigue sin andar, así que esta fase se probó con la API de verdad contra un Postgres en memoria (PGlite), con las migraciones del repo: ver "Pendientes para vos".
 
 ## Hecho
 
@@ -90,6 +90,19 @@
 - Web: `/hoy` con lo de hoy (primero lo pendiente de días anteriores, con "de ayer" o "del sábado") y los días que vienen; checkbox, texto que se edita al tocarlo y "…" para moverlo de día o borrarlo; campo "Anotar…" con chips de Hoy a dentro de seis días. Todo optimista. "Hoy" arriba de todo en la sidebar y primero en la barra de abajo del celu (ahora con cinco botones), con cuántas quedan para hoy.
 - e2e (`today.spec.ts`): el "Listo cuando" completo y el celu en 375 px. Pasan contra una API simulada en memoria que usa los schemas reales de `shared` (la base de dev no anda); con la base quedan pendientes. Capturas revisadas en la compu y en el celu, en claro y oscuro.
 
+### Fase 10 — Inicio en cuadrados
+
+- **Por qué**: la app tenía todo pero no te servía en el día a día: cinco lugares para anotar una tarea (Hoy, el panel de notas, la ventana de notas, "Agregar tarjeta" en cada columna y en General), tres para verlas (Hoy, General y cada tablero), lo de Hoy no se cruzaba con los clientes y todo ocupaba mucho. Te mostré dos prototipos (una lista única y cuadrados por cliente) y elegiste los cuadrados con el panel "que se abre encima", con la animación más corta.
+- **Inicio** (`/`, `features/home/`): la barra de arriba (Nuevo tablero, Historial de todos, Instalar, Bloquear), "Anotar…" y la grilla: Hoy, un cuadrado por tablero activo (General al final), Notas y Finanzas, con los archivados plegados abajo. Cada cuadrado resume con los datos de `GET /overview` (antes `/general`), el árbol de Notas y lo por cobrar.
+- **Panel** (`Panel.tsx`): un Radix Dialog que crece desde su cuadrado con GSAP Flip (0,3 s al abrir, 0,24 s al cerrar) y vuelve a él. Las rutas son las de siempre, ahora hijas del Inicio: `/b/:slug`, `/hoy`, `/p`, `/p/:id`, `/finanzas/...`. Cada sección usa `PanelHeader` (con la ×). En el celu ocupa la pantalla.
+- **Tareas con día**: `Task.day` (migración `task_day`, que pasa lo de Hoy a tareas de General con su día y borra `DayItem`). El sol en cada tarjeta (`SunButton`) y el "Día" del detalle. `parseCapture`, `groupToday` y `pendingTodayCount` en `shared`, con tests.
+- **"Anotar…"** (`QuickCapture`): en el Inicio, en Hoy y en cada tablero, con el autocompletado de `@` que ya tenían las notas (ahora `useMentions` y `MentionList`, compartidos) y chips de día.
+- **Hoy** (`TodayPanel`): lo de hoy de todos los tableros agrupado por tablero, "Hechas hoy" plegado y "Próximos días"; el título abre el detalle encima de Hoy.
+- **Notas y Finanzas** en su panel: en la compu, Notas con el árbol a la izquierda y la nota al lado.
+- **Se fueron**: la sidebar, la barra de abajo del celu, el kanban de General con lo de todos, `/day-items` y su pantalla, y "abrir el último tablero".
+- **Más compacto**: tarjetas con el título en peso normal y columnas del alto de lo que tienen.
+- e2e: `home.spec.ts` (el "Listo cuando": anotar con `@` para hoy, abrir el cuadrado, tachar, Esc, Hoy con un tablero y General, pasar a mañana, el día siguiente con "de ayer", Notas, Finanzas, link directo y el celu en 375 px) y los specs de antes actualizados a la navegación nueva (se fueron `today.spec.ts` y `general.spec.ts`). Contra la API local pasan 40 de 42: los 2 que no, suben imágenes (`images.spec.ts` y el comprobante de `finance.spec.ts`) necesitan el token de Vercel Blob de dev. Los e2e encontraron dos bugs que quedaron arreglados: Esc en un campo dentro del panel (agregar tarjeta, renombrar) cerraba el panel entero, y al crear una carpeta desde el menú de Notas el menú le robaba el foco al nombre. La migración se probó con datos de Hoy pendientes y tachados: quedan en General, en orden y con su día. README con capturas nuevas.
+
 ## Decisiones
 
 - **Versiones**: lo último estable que funciona junto. TypeScript 6.0 (typescript-eslint todavía no soporta TS 7), Prisma 7.10 (Prisma 8 está en RC), React Router 8 en modo data, Vite 8, Vitest 5, ESLint 10, Tailwind 4, Zod 4, shadcn CLI 4.
@@ -163,8 +176,22 @@
 - **Enter en el celu**: en Hoy envía también con el dedo (cada cosa es una línea); en las notas del tablero sigue siendo salto de línea.
 - **Dev**: si corrés comandos de pnpm con la app levantada, pnpm 11 puede regenerar el cliente de Prisma y `node --watch` reinicia la API (algún pedido puede dar 502 en ese momento).
 
+- **Inicio en cuadrados** (Fase 10): lo elegiste entre dos prototipos. El panel es un diálogo de verdad (foco adentro, Esc cierra solo lo de arriba: con el detalle de una tarjeta abierto, Esc cierra el detalle y no el panel; tocar un toast no lo cierra).
+- **Las rutas no cambian**: cada panel es una ruta hija del Inicio, así los links de siempre (`?tarjeta=`, `?nota=`, el atajo "Nueva nota", "Ver la nota") siguen andando. Al cerrar un panel abierto desde el Inicio, la app vuelve atrás en el historial hasta el Inicio (con el índice que guarda React Router en `history.state`): así "atrás" no lo vuelve a abrir.
+- **Animación**: `Flip.fit` sin escala (anima ancho y alto, así el texto no se deforma) y el contenido aparece al final; al cerrar, el contenido se va primero y el panel vuelve a su cuadrado. `power3`, 0,3 s y 0,24 s. Con `prefers-reduced-motion`, un fundido corto.
+- **Tintes con `color-mix` en `oklab`**: en `oklch`, mezclar con el blanco (tono 0) arrastraba todos los colores hacia el rosado.
+- **Hoy son tareas**: un solo modelo para lo que hay que hacer. Lo suelto va a General. La migración está escrita a mano (Prisma solo veía que se borraba la tabla): las claves de orden son la última de la columna con `0001V`, `0002V`… agregado, que quedan después de todo y son claves válidas de fractional indexing (no terminan en "0").
+- **El sol**: prendido si el día es hoy o ya pasó (lo pendiente pasa solo al día siguiente); tocarlo lo saca de Hoy (`day: null`) o lo pone para hoy. Para otro día, desde el detalle; la tarjeta muestra cuándo ("mañana", "jue 29"). En Hoy no hay "…": el detalle tiene todo.
+- **"Anotar…"**: un solo componente. En el Inicio y en Hoy arranca en "Hoy" (como en el prototipo) y en un tablero en "Sin día". Una tarea por línea, un `POST /tasks` por línea en orden (hasta 50): no hizo falta un endpoint nuevo. Avisa con un toast a dónde fue solo si no se ve donde estás.
+- **General es un tablero común**: lo de todos los tableros juntos lo dan los cuadrados y Hoy, así que su kanban con lo de todos se fue. Su Historial es el suyo; el de todos está en la barra del Inicio.
+- **Esc dentro del panel**: Radix escucha el Esc antes que los campos, así que el panel lo ignora si viene de un campo o de un arrastre con teclado (es de ellos); si el campo no lo usó, el foco pasa al panel y el próximo Esc lo cierra.
+- **Columnas del alto de su contenido**: lo pediste más compacto. Para soltar una tarjeta en una columna vacía hay que llevarla hasta la columna (antes toda la altura de la pantalla era zona para soltar).
+- **Tamaño**: Vite avisa que el chunk de librerías pasa los 700 kB (783 kB, 248 kB con gzip). No hay dependencias nuevas (GSAP Flip, Radix Dialog y dnd-kit ya estaban).
+
 ## Pendientes para vos
 
+- **La Fase 10 en producción**: el deploy corre la migración `task_day`, que pasa lo que tengas en Hoy a tareas de General (con su día; lo tachado, a "Hecho") y borra la tabla vieja. La probé con un Postgres en memoria con las mismas migraciones, no contra Neon. Después del deploy, mirá que en Hoy esté lo que tenías.
+- **Probar el Inicio en el celu y en la compu**: sobre todo cómo se siente la animación (si querés más rápida o más lenta es un número).
 - **Credenciales de la base de dev**: el 5/10 sigue igual y además el preview de Vercel tampoco llega al servidor de Neon `dev` (`P1001: Can't reach database server` en `prisma migrate deploy`), así que los previews fallan antes de compilar: puede que el branch `dev` o su endpoint se haya borrado o suspendido. Desde el 1/10 a la tarde, Neon rechaza el usuario y la contraseña del `.env` (`DATABASE_URL` y `DIRECT_URL`: "Authentication failed"; ese día a las 15:23 los e2e andaban), así que la API local da 500. Seguramente se reseteó la contraseña del branch `dev`. Copiá las dos URLs nuevas del branch `dev` (Neon → Connect) al `.env` y corré `pnpm e2e`: los de las fases 8 y 9 quedaron escritos pero sin correr contra la base (si el branch `dev` cambió, actualizá también `DATABASE_URL` y `DIRECT_URL` de Preview en Vercel). Las capturas del celu del README salieron de la API simulada con los mismos datos de `pnpm --filter @notnot/web capturas`; ese comando las vuelve a sacar con la base.
 - **Probar la versión mobile en tu celu**: abrila (o la app instalada) después del deploy. Si todavía ves la sidebar a la izquierda como en la compu, revisá que el navegador no tenga activado "Sitio de escritorio" para la app.
 - **Instalarla en el celu y en la compu** (ver "Instalarla" en el README). El código de producción te lo pasé por chat; no está en el repo.
