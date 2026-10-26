@@ -333,6 +333,7 @@ function FolderRow({
 }) {
   const update = useUpdateFolder()
   const renameInput = useRef<HTMLInputElement>(null)
+  const creating = useRef(false)
   const open = context.openIds.has(folder.id)
   // Un ícono elegido queda igual abierta o cerrada (la flecha ya lo dice).
   const Icon = folder.icon ? FOLDER_ICON_OPTIONS[folder.icon].Icon : open ? FolderOpen : FolderIcon
@@ -379,17 +380,34 @@ function FolderRow({
           label={`Opciones de la carpeta ${folder.name}`}
           // "Renombrar": el campo aparece con el menú abierto (que retiene el foco), así que se
           // enfoca recién cuando el menú se cierra, en vez de volver al botón "…".
+          // Lo nuevo se lleva el foco (el título de la nota, el nombre de la carpeta): si el menú lo
+          // devolviera al "…", con la API rápida el campo lo perdería y se cerraría.
           onCloseAutoFocus={(event) => {
+            if (creating.current) {
+              creating.current = false
+              event.preventDefault()
+              return
+            }
             if (context.renamingId !== folder.id) return
             event.preventDefault()
             renameInput.current?.focus()
           }}
         >
-          <DropdownMenuItem onSelect={() => context.newPage(folder.id)}>
+          <DropdownMenuItem
+            onSelect={() => {
+              creating.current = true
+              context.newPage(folder.id)
+            }}
+          >
             <FilePlus />
             Nueva nota adentro
           </DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => context.newFolder(folder.id)}>
+          <DropdownMenuItem
+            onSelect={() => {
+              creating.current = true
+              context.newFolder(folder.id)
+            }}
+          >
             <FolderPlus />
             Nueva carpeta adentro
           </DropdownMenuItem>
@@ -511,6 +529,13 @@ function NewMenu({
   onNewPage: () => void
   onNewFolder: () => void
 }) {
+  // Lo nuevo se lleva el foco: el menú no lo devuelve al "+" (ver `FolderRow`).
+  const creating = useRef(false)
+  const pick = (create: () => void) => () => {
+    creating.current = true
+    create()
+  }
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -518,12 +543,20 @@ function NewMenu({
           <Plus />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-44">
-        <DropdownMenuItem onSelect={onNewPage}>
+      <DropdownMenuContent
+        align="end"
+        className="w-44"
+        onCloseAutoFocus={(event) => {
+          if (!creating.current) return
+          creating.current = false
+          event.preventDefault()
+        }}
+      >
+        <DropdownMenuItem onSelect={pick(onNewPage)}>
           <FilePlus />
           Nueva nota
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={onNewFolder}>
+        <DropdownMenuItem onSelect={pick(onNewFolder)}>
           <FolderPlus />
           Nueva carpeta
         </DropdownMenuItem>

@@ -112,12 +112,23 @@ function PanelContent({ tile, label, color, onClosed, children }: Props) {
       ref={scope}
       aria-describedby={undefined}
       onOpenAutoFocus={(event) => {
-        // El panel y no el primer campo: con el dedo, no abre el teclado apenas se entra.
+        // El panel y no el primer campo: con el dedo, no abre el teclado apenas se entra. Si un
+        // campo ya se enfocó solo (Hoy en la compu, el atajo "Nueva nota"), queda ahí.
         event.preventDefault()
-        panel.current?.focus()
+        if (!panel.current?.contains(document.activeElement)) panel.current?.focus()
       }}
+      // Radix escucha el Esc antes que los campos: el de un campo es del campo (cerrar "Agregar
+      // tarjeta", cancelar un nombre, cerrar el autocompletado) y el de un arrastre con teclado
+      // lo cancela. Si el campo no lo usó, el foco pasa al panel y el próximo Esc lo cierra.
       onEscapeKeyDown={(event) => {
-        event.preventDefault()
+        const target = event.target instanceof HTMLElement ? event.target : null
+        if (target?.closest('[data-card-handle][aria-pressed="true"]')) return
+        if (target?.closest('input, textarea, select, [contenteditable="true"]')) {
+          setTimeout(() => {
+            if (!event.defaultPrevented && document.activeElement === target) panel.current?.focus()
+          })
+          return
+        }
         requestClose()
       }}
       // Afuera solo hay toasts y otros diálogos: tocarlos no cierra el panel.
