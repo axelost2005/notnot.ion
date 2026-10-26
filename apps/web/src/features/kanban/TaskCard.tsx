@@ -7,29 +7,26 @@ import { useState, type CSSProperties } from 'react'
 import { cn } from '@/lib/utils'
 import { BoardChip } from '../boards/BoardChip'
 import { useToggleTask } from '../notes/api'
+import { SunButton } from './SunButton'
 
 type CardProps = {
   task: Task
   done: boolean
-  /** En General: el tablero de la tarjeta. */
+  /** Fuera de su tablero (en Hoy): el tablero de la tarjeta. */
   board?: BoardSummary
 }
 
 const BOX_CLASS =
   'size-4 rounded-[4px] border border-foreground/30 bg-card max-md:size-5 max-md:rounded-[5px]'
 // En el celu, filas más altas: el checkbox y la tarjeta se tocan con el dedo.
-const CHECK_CELL_CLASS = 'py-2.5 pr-2.5 pl-3 max-md:py-3 max-md:pr-3 max-md:pl-4'
-const TEXT_CELL_CLASS = 'min-w-0 flex-1 py-2 pr-3 max-md:py-3 max-md:pr-4'
+export const CHECK_CELL_CLASS = 'py-2.5 pr-2.5 pl-3 max-md:py-3 max-md:pr-3 max-md:pl-4'
+const TEXT_CELL_CLASS = 'min-w-0 flex-1 py-2 pr-1 max-md:py-3'
+const SUN_CELL_CLASS = 'self-start py-1.5 pr-1.5 max-md:py-2 max-md:pr-2'
 
 function CardText({ task, done, board }: CardProps) {
   return (
     <>
-      <p
-        className={cn(
-          'font-semibold break-words whitespace-pre-line',
-          done && 'text-muted-foreground',
-        )}
-      >
+      <p className={cn('break-words whitespace-pre-line', done && 'text-muted-foreground')}>
         {task.title}
       </p>
       {task.description && (
@@ -44,7 +41,7 @@ function CardText({ task, done, board }: CardProps) {
 }
 
 /** Tilda y destilda como desde la nota: a "Hecho" o de vuelta a la primera columna. */
-function TaskCheckbox({ task, done }: { task: Task; done: boolean }) {
+export function TaskCheckbox({ task, done }: { task: Task; done: boolean }) {
   const toggle = useToggleTask()
   // El cache se actualiza después de un await: sin esto el checkbox vuelve atrás un instante.
   const [optimistic, setOptimistic] = useState<boolean | null>(null)
@@ -111,7 +108,7 @@ export function TaskCard({
       ref={setNodeRef}
       style={style}
       className={cn(
-        'flex touch-manipulation rounded-md border bg-card text-sm leading-snug hover:border-foreground/20 has-[[data-card-handle]:focus-visible]:ring-2 has-[[data-card-handle]:focus-visible]:ring-ring',
+        'group/row flex touch-manipulation rounded-md border bg-card text-sm leading-snug hover:border-foreground/20 has-[[data-card-handle]:focus-visible]:ring-2 has-[[data-card-handle]:focus-visible]:ring-ring',
         // En el celu es una fila del grupo: solo una línea que la separa de la siguiente.
         'max-md:rounded-none max-md:border-x-0 max-md:border-t-0 max-md:text-[15px] max-md:last:border-b-0 max-md:active:bg-accent/60 max-md:has-[[data-card-handle]:focus-visible]:ring-inset',
         dragging && 'opacity-40',
@@ -132,6 +129,7 @@ export function TaskCard({
       >
         <CardText task={task} done={done} board={board} />
       </div>
+      {!done && <SunButton task={task} className={SUN_CELL_CLASS} />}
     </li>
   )
 }

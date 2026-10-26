@@ -28,7 +28,28 @@ export function stripTaskMarker(line: string): string {
   return line.replace(MARKER, '').trim()
 }
 
-const tidy = (text: string) => text.replace(/\s+/g, ' ').trim()
+/** Espacios de más afuera y el largo de un título. */
+export const tidyTitle = (text: string) =>
+  text.replace(/\s+/g, ' ').trim().slice(0, LIMITS.taskTitle).trim()
+
+/** Los tableros activos por su slug sin mayúsculas ni acentos. */
+export function activeSlugs(boards: ParseNoteOptions['boards']): Map<string, string> {
+  return new Map(boards.filter((b) => !b.archived).map((b) => [normalizeForMatch(b.slug), b.slug]))
+}
+
+/**
+ * Saca de `text` la primera mención a un tablero activo y dice cuál es. Las demás menciones
+ * quedan como texto.
+ */
+export function takeMention(text: string, slugs: ReadonlyMap<string, string>) {
+  for (const match of text.matchAll(MENTION)) {
+    const slug = slugs.get(normalizeForMatch(match[2]!))
+    if (!slug) continue
+    const start = match.index + match[1]!.length
+    return { rest: `${text.slice(0, start)}${text.slice(start + match[2]!.length + 1)}`, slug }
+  }
+  return { rest: text, slug: null }
+}
 
 /**
  * Convierte una nota en líneas tipadas. Una línea es tarea si arranca con un marcador y le
@@ -36,28 +57,16 @@ const tidy = (text: string) => text.replace(/\s+/g, ' ').trim()
  * demás menciones quedan como texto.
  */
 export function parseNote(content: string, { currentBoardSlug, boards }: ParseNoteOptions) {
-  const activeSlugs = new Map(
-    boards.filter((b) => !b.archived).map((b) => [normalizeForMatch(b.slug), b.slug]),
-  )
+  const slugs = activeSlugs(boards)
 
   const lines = content.split(/\r?\n/).map((text, line): ParsedLine => {
     const marker = MARKER.exec(text)
     if (!marker) return { type: 'text', line, text }
 
-    let rest = text.slice(marker[0].length)
-    let boardSlug = currentBoardSlug
-    for (const match of rest.matchAll(MENTION)) {
-      const slug = activeSlugs.get(normalizeForMatch(match[2]!))
-      if (!slug) continue
-      boardSlug = slug
-      const start = match.index + match[1]!.length
-      rest = `${rest.slice(0, start)}${rest.slice(start + match[2]!.length + 1)}`
-      break
-    }
-
-    const title = tidy(rest).slice(0, LIMITS.taskTitle).trim()
+    const { rest, slug } = takeMention(text.slice(marker[0].length), slugs)
+    const title = tidyTitle(rest)
     if (!title) return { type: 'text', line, text }
-    return { type: 'task', line, text, title, boardSlug }
+    return { type: 'task', line, text, title, boardSlug: slug ?? currentBoardSlug }
   })
 
   return { lines, tasks: lines.filter((l): l is ParsedTask => l.type === 'task') }

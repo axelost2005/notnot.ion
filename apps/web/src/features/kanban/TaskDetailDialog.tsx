@@ -45,11 +45,14 @@ import {
 } from '@/components/ui/select'
 import { boardQuery, boardsQuery } from '../boards/api'
 import { BoardSelect } from '../boards/BoardSelect'
+import { today as getToday } from '../finance/format'
+import { dayOptions, longDay } from '../today/format'
 import {
   useAddTaskImage,
   useDeleteTask,
   useDeleteTaskImage,
   useMoveTask,
+  useSetTaskDay,
   useUpdateTask,
 } from './api'
 
@@ -244,6 +247,8 @@ function TaskDetailForm({
         />
       </div>
 
+      {!task.completedAt && <DayField task={task} />}
+
       <fieldset className="grid gap-2">
         <legend className="mb-2 text-sm leading-none font-medium">Mover a…</legend>
         <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
@@ -298,6 +303,42 @@ function TaskDetailForm({
         </div>
       </DialogFooter>
     </form>
+  )
+}
+
+/** Sin día que elegir en el Select de Radix: un valor que no puede ser una fecha. */
+const NO_DAY = 'sin-dia'
+
+/** Para qué día es: con día, está en Hoy. Se guarda al elegirlo. */
+function DayField({ task }: { task: Task }) {
+  const setDay = useSetTaskDay()
+  const today = getToday()
+  const options = dayOptions(today)
+  // Un día que pasó y no se terminó sigue en Hoy: se ve como "Hoy".
+  const value = task.day === null ? NO_DAY : task.day < today ? today : task.day
+  const known = value === NO_DAY || options.some((option) => option.day === value)
+
+  return (
+    <div className="grid gap-2">
+      <Label htmlFor="task-day">Día</Label>
+      <Select
+        value={value}
+        onValueChange={(day) => setDay.mutate({ task, day: day === NO_DAY ? null : day })}
+      >
+        <SelectTrigger id="task-day" className="w-full sm:w-56">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={NO_DAY}>Sin día</SelectItem>
+          {options.map((option) => (
+            <SelectItem key={option.day} value={option.day}>
+              {option.name.charAt(0).toUpperCase() + option.name.slice(1)}
+            </SelectItem>
+          ))}
+          {!known && <SelectItem value={value}>{longDay(value)}</SelectItem>}
+        </SelectContent>
+      </Select>
+    </div>
   )
 }
 

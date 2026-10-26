@@ -1,32 +1,28 @@
-import type { BoardSummary } from '@notnot/shared'
+import type { BoardSummary, Task } from '@notnot/shared'
 import { useQuery } from '@tanstack/react-query'
-import {
-  ChevronDown,
-  History,
-  MessageSquareText,
-  PanelRight,
-  PictureInPicture2,
-} from 'lucide-react'
-import { useEffect, useState } from 'react'
-import { Link, useParams, useSearchParams } from 'react-router'
-import { useLayout } from '@/app/layoutContext'
+import { History, PictureInPicture2 } from 'lucide-react'
+import { useState } from 'react'
+import { useParams, useSearchParams } from 'react-router'
+import { toast } from 'sonner'
 import { ErrorState } from '@/components/ErrorState'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
-import { GeneralBoard } from '../general/GeneralBoard'
+import { today as getToday } from '../finance/format'
 import { HistorySheet } from '../history/HistorySheet'
+import { PanelHeader } from '../home/Panel'
+import { capturedMessage } from '../home/format'
+import { QuickCapture } from '../home/QuickCapture'
 import { KanbanBoard } from '../kanban/KanbanBoard'
 import { LanesSkeleton } from '../kanban/LanesSkeleton'
 import { NotesPanel } from '../notes/NotesPanel'
 import { openNotesWindow } from '../notes/openNotesWindow'
-import { readPanelOpen, writePanelOpen } from '../notes/storage'
 import { boardQuery, boardsQuery, useUpdateBoard } from './api'
 import { BoardActionsMenu } from './BoardActionsMenu'
 import { boardStyle } from './colors'
-import { writeLastBoard } from './lastBoard'
 
+/** `/b/:slug`: el panel de un tablero, encima del Inicio. */
 export function BoardPage() {
   const { slug } = useParams()
   const boards = useQuery(boardsQuery)
@@ -45,95 +41,77 @@ export function BoardPage() {
   const board = boards.data.find((b) => b.slug === slug)
   if (!board) {
     return (
-      <div className="grid max-w-sm gap-2 p-6">
-        <title>Tablero no encontrado – notnot.ion</title>
-        <p className="font-medium">No hay ningún tablero en esta dirección.</p>
-        <p className="text-[13px] text-muted-foreground">
-          Puede que lo hayan renombrado o borrado.
-        </p>
-        <Button asChild variant="outline" size="sm" className="mt-2 justify-self-start">
-          <Link to="/">Ir a General</Link>
-        </Button>
-      </div>
+      <>
+        <PanelHeader>
+          <h1 className="text-[15px] font-semibold tracking-tight">Tablero no encontrado</h1>
+          <span className="ml-auto" />
+        </PanelHeader>
+        <div className="grid max-w-sm gap-1 p-6">
+          <title>Tablero no encontrado – notnot.ion</title>
+          <p className="font-medium">No hay ningún tablero en esta dirección.</p>
+          <p className="text-[13px] text-muted-foreground">
+            Puede que lo hayan renombrado o borrado.
+          </p>
+        </div>
+      </>
     )
   }
 
   return <BoardView key={board.id} board={board} />
 }
 
-type Tab = 'tablero' | 'notas'
+type Tab = 'tareas' | 'notas'
 
 function BoardView({ board }: { board: BoardSummary }) {
   const [searchParams, setSearchParams] = useSearchParams()
-  const [notesOpen, setNotesOpen] = useState(readPanelOpen)
-
-  // En mobile se ve una cosa por vez (el botón de notas del header cambia de una a otra). Un
-  // link a una nota (?nota=) va directo a Notas.
+  const boards = useQuery(boardsQuery)
+  // Un link a una nota (?nota=) o el atajo "Nueva nota" (?vista=notas) van directo a Notas.
   const tab: Tab =
-    searchParams.get('vista') === 'notas' || searchParams.has('nota') ? 'notas' : 'tablero'
-  // En desktop el panel va al costado; esos mismos links lo abren aunque estuviera plegado.
-  const panelOpen = notesOpen || tab === 'notas'
+    searchParams.get('vista') === 'notas' || searchParams.has('nota') ? 'notas' : 'tareas'
 
-  function updateParams(change: (params: URLSearchParams) => void) {
+  function setTab(next: Tab) {
     setSearchParams(
       (params) => {
-        change(params)
+        params.delete('nota')
+        params.delete('escribir')
+        if (next === 'notas') params.set('vista', 'notas')
+        else params.delete('vista')
         return params
       },
       { replace: true },
     )
   }
 
-  function toggleNotes() {
-    setNotesOpen(!panelOpen)
-    writePanelOpen(!panelOpen)
-    if (panelOpen) {
-      updateParams((params) => {
-        params.delete('vista')
-        params.delete('nota')
-      })
-    }
+  // Si algo fue a otro tablero (con `@`), se avisa: acá no se ve.
+  function onCreated(tasks: Task[]) {
+    const elsewhere = tasks.filter((task) => task.boardId !== board.id)
+    if (elsewhere.length) toast.success(capturedMessage(elsewhere, boards.data ?? [], getToday()))
   }
-
-  function toggleNotesView() {
-    updateParams((params) => {
-      params.delete('nota')
-      params.delete('escribir')
-      if (tab === 'notas') params.delete('vista')
-      else params.set('vista', 'notas')
-    })
-  }
-
-  useEffect(() => {
-    writeLastBoard(board.slug)
-  }, [board.slug])
 
   return (
-    <div style={boardStyle(board.color)} className="flex h-full min-h-0 flex-col">
+    <div style={boardStyle(board.color)} className="flex min-h-0 flex-1 flex-col">
       <title>{`${board.name} – notnot.ion`}</title>
-      <BoardHeader
-        board={board}
-        notesOpen={panelOpen}
-        onToggleNotes={toggleNotes}
-        notesView={tab === 'notas'}
-        onToggleNotesView={toggleNotesView}
-      />
-      <div className="flex min-h-0 flex-1">
-        <div className={cn('flex min-w-0 flex-1 flex-col', tab === 'notas' && 'max-md:hidden')}>
-          {board.isGeneral ? <GeneralBoard board={board} /> : <BoardKanban boardId={board.id} />}
-        </div>
-        {panelOpen && (
-          <NotesPanel
-            board={board}
-            autoFocus={searchParams.get('escribir') === '1'}
-            className={cn(
-              'w-full md:w-90 md:shrink-0 md:border-l',
-              tab !== 'notas' && 'max-md:hidden',
-              !panelOpen && 'md:hidden',
-            )}
-          />
-        )}
+      <BoardHeader board={board} tab={tab} onTab={setTab} />
+      <div className="px-3 pt-2 md:hidden">
+        <Tabs tab={tab} onTab={setTab} className="w-full" />
       </div>
+      {tab === 'notas' ? (
+        <NotesPanel
+          board={board}
+          autoFocus={searchParams.get('escribir') === '1'}
+          className="mx-auto min-h-0 w-full max-w-3xl flex-1 bg-transparent"
+        />
+      ) : (
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain">
+          <QuickCapture
+            board={board}
+            forToday={false}
+            onCreated={onCreated}
+            className="max-w-2xl px-4 pt-4 pb-3 max-md:px-3 max-md:pt-3"
+          />
+          <BoardKanban boardId={board.id} />
+        </div>
+      )}
     </div>
   )
 }
@@ -154,57 +132,56 @@ function BoardKanban({ boardId }: { boardId: string }) {
   return <KanbanBoard board={detail.data} />
 }
 
-type HeaderProps = {
-  board: BoardSummary
-  /** En la compu: el panel de notas al costado. */
-  notesOpen: boolean
-  onToggleNotes: () => void
-  /** En el celu: las notas en lugar de las columnas. */
-  notesView: boolean
-  onToggleNotesView: () => void
+/** Tareas o las notas del tablero (las que se vuelven tareas con `[]`). */
+function Tabs({
+  tab,
+  onTab,
+  className,
+}: {
+  tab: Tab
+  onTab: (tab: Tab) => void
+  className?: string
+}) {
+  return (
+    <div
+      role="group"
+      aria-label="Sección del tablero"
+      className={cn('inline-flex gap-0.5 rounded-lg border bg-card p-0.5', className)}
+    >
+      {(['tareas', 'notas'] as const).map((value) => (
+        <button
+          key={value}
+          type="button"
+          aria-pressed={tab === value}
+          onClick={() => onTab(value)}
+          className="h-7 flex-1 rounded-md px-3 text-[13px] font-medium text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring aria-pressed:bg-accent aria-pressed:text-foreground pointer-coarse:h-9 pointer-coarse:text-sm"
+        >
+          {value === 'tareas' ? 'Tareas' : 'Notas'}
+        </button>
+      ))}
+    </div>
+  )
 }
 
-function BoardHeader({
-  board,
-  notesOpen,
-  onToggleNotes,
-  notesView,
-  onToggleNotesView,
-}: HeaderProps) {
+type HeaderProps = { board: BoardSummary; tab: Tab; onTab: (tab: Tab) => void }
+
+function BoardHeader({ board, tab, onTab }: HeaderProps) {
   const update = useUpdateBoard()
-  const { openBoardsMenu } = useLayout()
   const [historyOpen, setHistoryOpen] = useState(false)
   const archived = board.archivedAt !== null
 
   return (
-    <header className="flex h-12 shrink-0 items-center gap-2.5 border-b px-4 max-md:pl-2">
-      <span
-        aria-hidden="true"
-        className="size-2.5 shrink-0 rounded-full bg-(--board) max-md:hidden"
-      />
-      <h1 className="min-w-0 truncate text-[15px] font-semibold tracking-tight max-md:hidden">
+    <PanelHeader>
+      <span aria-hidden="true" className="size-2.5 shrink-0 rounded-full bg-(--board)" />
+      <h1 className="min-w-0 truncate text-[15px] font-semibold tracking-tight max-md:text-[17px]">
         {board.name}
       </h1>
-      {/* En mobile, el título es el selector de tablero. */}
-      <h1 className="min-w-0 md:hidden">
-        <button
-          type="button"
-          onClick={openBoardsMenu}
-          aria-haspopup="dialog"
-          className="flex h-10 max-w-full min-w-0 items-center gap-2 rounded-md px-2 text-[17px] font-semibold tracking-tight outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring active:bg-accent"
-        >
-          <span aria-hidden="true" className="size-2.5 shrink-0 rounded-full bg-(--board)" />
-          <span className="truncate">{board.name}</span>
-          <ChevronDown className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-          <span className="sr-only">(cambiar de tablero)</span>
-        </button>
-      </h1>
-      {/* En el celu no entra: "Desarchivar" ya dice que está archivado. */}
       {archived && (
         <span className="shrink-0 rounded-sm bg-muted px-1.5 py-0.5 text-xs text-muted-foreground max-md:hidden">
           Archivado
         </span>
       )}
+      <Tabs tab={tab} onTab={onTab} className="ml-3 max-md:hidden" />
       <div className="ml-auto flex shrink-0 items-center gap-1">
         {archived && (
           <Button
@@ -216,43 +193,17 @@ function BoardHeader({
             Desarchivar
           </Button>
         )}
-        {/* En el celu, la barra de abajo lleva a la sección Notas: las del tablero van acá. */}
-        <Button
-          variant="ghost"
-          size="icon"
-          aria-label="Notas del tablero"
-          aria-pressed={notesView}
-          onClick={onToggleNotesView}
-          className="text-muted-foreground aria-pressed:bg-accent aria-pressed:text-foreground md:hidden"
-        >
-          <MessageSquareText />
-        </Button>
         <Button
           variant="ghost"
           size="sm"
           onClick={() => setHistoryOpen(true)}
-          className="gap-1.5 text-muted-foreground"
+          className="gap-1.5 text-muted-foreground max-md:size-9 max-md:px-0"
         >
           <History />
           <span className="max-md:sr-only">Historial</span>
         </Button>
-        {/* En General, el historial de todos los tableros. */}
-        <HistorySheet
-          board={board.isGeneral ? undefined : board}
-          open={historyOpen}
-          onOpenChange={setHistoryOpen}
-        />
+        <HistorySheet board={board} open={historyOpen} onOpenChange={setHistoryOpen} />
         <BoardActionsMenu board={board} />
-        <Button
-          variant="ghost"
-          size="sm"
-          aria-pressed={notesOpen}
-          onClick={onToggleNotes}
-          className="hidden gap-1.5 text-muted-foreground aria-pressed:text-foreground md:inline-flex"
-        >
-          <PanelRight />
-          Notas
-        </Button>
         {/* En la compu: las notas solas en una ventana chica, para tener al costado. */}
         <Tooltip>
           <TooltipTrigger asChild>
@@ -261,7 +212,7 @@ function BoardHeader({
               size="icon-sm"
               aria-label="Abrir las notas en otra ventana"
               onClick={() => openNotesWindow(board.slug)}
-              className="hidden text-muted-foreground md:inline-flex"
+              className="text-muted-foreground max-md:hidden"
             >
               <PictureInPicture2 />
             </Button>
@@ -269,17 +220,18 @@ function BoardHeader({
           <TooltipContent>Abrir las notas en otra ventana</TooltipContent>
         </Tooltip>
       </div>
-    </header>
+    </PanelHeader>
   )
 }
 
 function BoardSkeleton() {
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      <div className="flex h-12 items-center border-b px-4">
+    <>
+      <PanelHeader>
         <Skeleton className="h-4 w-40" />
-      </div>
+        <span className="ml-auto" />
+      </PanelHeader>
       <LanesSkeleton />
-    </div>
+    </>
   )
 }

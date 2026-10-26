@@ -38,6 +38,8 @@
   --color-status-todo: var(--status-todo);
   --color-status-doing: var(--status-doing);
   --color-status-done: var(--status-done);
+  --color-sun: var(--sun);
+  --color-sun-ink: var(--sun-ink);
 
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
@@ -87,6 +89,13 @@
   --status-doing: oklch(0.52 0.105 78);
   --status-done: oklch(0.51 0.12 152);
 
+  /* Hoy: el sol de las tareas y el color de su cuadrado. `--sun-ink` es para texto (4.5:1). */
+  --sun: oklch(0.78 0.15 78);
+  --sun-ink: oklch(0.53 0.12 62);
+  /* Cuánto color del tablero lleva su cuadrado y su panel. */
+  --tile-tint: 9%;
+  --panel-tint: 4%;
+
   --board-gray: oklch(0.62 0.012 260);
   --board-brown: oklch(0.55 0.07 55);
   --board-red: oklch(0.6 0.19 25);
@@ -134,6 +143,11 @@
     --status-todo: oklch(0.8 0.1 228);
     --status-doing: oklch(0.85 0.13 90);
     --status-done: oklch(0.8 0.14 152);
+
+    --sun: oklch(0.82 0.15 80);
+    --sun-ink: oklch(0.84 0.14 82);
+    --tile-tint: 14%;
+    --panel-tint: 7%;
 
     --board-gray: oklch(0.68 0.012 260);
     --board-brown: oklch(0.66 0.07 58);

@@ -4,7 +4,7 @@ import type {
   BoardSummary,
   Column,
   CreateBoardInput,
-  GeneralBoard,
+  Overview,
   Task,
   UpdateBoardInput,
 } from '@notnot/shared'
@@ -21,6 +21,7 @@ import { prisma } from '../db'
 import type * as Db from '../generated/prisma/client'
 import { conflict, notFound } from '../middleware/errors'
 import { deleteBlobs, imagePathnames, toImageInfo } from './images'
+import { toDay } from './payments'
 
 export function toBoard(board: Db.Board): Board {
   return {
@@ -67,6 +68,7 @@ export function toTask(task: TaskRow): Task {
     position: task.position,
     completedAt: task.completedAt?.toISOString() ?? null,
     archivedAt: task.archivedAt?.toISOString() ?? null,
+    day: task.day ? toDay(task.day) : null,
     noteId: task.noteId,
     noteLine: task.noteLine,
     noteBoardId: task.note?.boardId ?? null,
@@ -106,8 +108,8 @@ export async function getBoard(id: string): Promise<BoardDetail> {
   }
 }
 
-/** Para el kanban de General: lo de todos los tableros activos, sin el historial. */
-export async function getGeneral(): Promise<GeneralBoard> {
+/** Para el Inicio y Hoy: lo de todos los tableros activos, sin el historial. */
+export async function getOverview(): Promise<Overview> {
   const boards = await prisma.board.findMany({
     where: { archivedAt: null },
     include: { columns: true, tasks: { where: { archivedAt: null }, include: taskInclude } },

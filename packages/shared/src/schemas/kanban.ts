@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { LIMITS } from '../constants'
-import { idSchema } from './common'
+import { daySchema, idSchema } from './common'
 
 export const columnNameSchema = z
   .string()
@@ -36,12 +36,15 @@ export const createTaskSchema = z.object({
   columnId: idSchema,
   title: taskTitleSchema,
   description: taskDescriptionSchema.optional(),
+  /** Para qué día es (Hoy). */
+  day: daySchema.nullable().optional(),
 })
 
 export const updateTaskSchema = z
   .object({
     title: taskTitleSchema,
     description: taskDescriptionSchema,
+    day: daySchema.nullable(),
   })
   .partial()
   .refine((input) => Object.keys(input).length > 0, 'No hay nada para cambiar')

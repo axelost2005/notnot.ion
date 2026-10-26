@@ -9,7 +9,7 @@ import {
 } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { boardQuery, boardsQuery } from '../boards/api'
-import { generalQuery } from '../general/api'
+import { overviewQuery } from '../home/api'
 
 /** Una nota recién escrita se muestra antes de que la API conteste. */
 export type ClientNote = Note & { pending?: boolean }
@@ -118,7 +118,7 @@ type ToggleVariables = { taskId: string; boardId: string; done: boolean }
 
 /**
  * Tildar/destildar desde la nota o desde la tarjeta. Optimista en las notas, en el tablero de
- * la tarjeta y en General.
+ * la tarjeta y en el Inicio.
  */
 export function useToggleTask() {
   const queryClient = useQueryClient()
@@ -128,10 +128,10 @@ export function useToggleTask() {
     onMutate: async ({ taskId, boardId, done }) => {
       await queryClient.cancelQueries({ queryKey: ['notes'] })
       await queryClient.cancelQueries({ queryKey: boardQuery(boardId).queryKey })
-      await queryClient.cancelQueries({ queryKey: generalQuery.queryKey })
+      await queryClient.cancelQueries({ queryKey: overviewQuery.queryKey })
       const notes = queryClient.getQueriesData<NotesData>({ queryKey: ['notes'] })
       const board = queryClient.getQueryData(boardQuery(boardId).queryKey)
-      const general = queryClient.getQueryData(generalQuery.queryKey)
+      const overview = queryClient.getQueryData(overviewQuery.queryKey)
 
       queryClient.setQueriesData<NotesData>({ queryKey: ['notes'] }, (data) =>
         mapNotes(data, (list) =>
@@ -149,15 +149,15 @@ export function useToggleTask() {
         (detail) => detail && toggleIn(detail, taskId, boardId, done),
       )
       queryClient.setQueryData(
-        generalQuery.queryKey,
+        overviewQuery.queryKey,
         (data) => data && toggleIn(data, taskId, boardId, done),
       )
-      return { notes, board, general }
+      return { notes, board, overview }
     },
     onError: (_error, { boardId }, context) => {
       for (const [key, data] of context?.notes ?? []) queryClient.setQueryData(key, data)
       if (context?.board) queryClient.setQueryData(boardQuery(boardId).queryKey, context.board)
-      if (context?.general) queryClient.setQueryData(generalQuery.queryKey, context.general)
+      if (context?.overview) queryClient.setQueryData(overviewQuery.queryKey, context.overview)
     },
     onSettled: (_task, _error, { boardId }) => {
       void refreshNotes(queryClient)
@@ -171,7 +171,7 @@ export function useToggleTask() {
 
 /**
  * Lo mismo que hace la API: al final de terminadas o arriba de la primera normal. Sirve para un
- * tablero y para General (que tiene las columnas de todos).
+ * tablero y para el Inicio (que tiene las columnas de todos).
  */
 function toggleIn<T extends { columns: Column[]; tasks: Task[] }>(
   data: T,

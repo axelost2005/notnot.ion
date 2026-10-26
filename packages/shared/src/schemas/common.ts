@@ -6,3 +6,6 @@ z.config(z.locales.es())
 export const idSchema = z.uuid('Id inválido')
 
 export const idParamsSchema = z.object({ id: idSchema })
+
+/** Un día sin hora: "2026-10-26". */
+export const daySchema = z.iso.date('Día inválido')

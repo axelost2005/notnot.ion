@@ -38,8 +38,8 @@ export const queryClient = new QueryClient({
     onSuccess: (_data, _variables, _context, mutation) => {
       if (mutation.meta?.silent) return
       otherWindows?.postMessage('changed')
-      // General junta lo de todos los tableros: cualquier cambio lo puede tocar.
-      void queryClient.invalidateQueries({ queryKey: ['general'] })
+      // El Inicio junta lo de todos los tableros: cualquier cambio lo puede tocar.
+      void queryClient.invalidateQueries({ queryKey: ['overview'] })
     },
     onError: (error, _variables, _context, mutation) => {
       if (handleUnauthorized(error) || mutation.meta?.inlineError) return

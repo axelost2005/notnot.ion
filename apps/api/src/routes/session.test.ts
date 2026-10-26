@@ -68,7 +68,7 @@ describe('candado', () => {
     '/api/session',
     '/api/boards',
     '/api/boards/0190a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b',
-    '/api/general',
+    '/api/overview',
   ])('GET %s sin cookie devuelve 401', async (path) => {
     const res = await request(createApp()).get(path)
     expect(res.status).toBe(401)

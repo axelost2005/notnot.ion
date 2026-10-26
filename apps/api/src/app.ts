@@ -5,7 +5,6 @@ import { errorHandler, notFoundHandler } from './middleware/errors'
 import { requireSession } from './middleware/session'
 import { boardsRouter } from './routes/boards'
 import { columnsRouter } from './routes/columns'
-import { dayItemsRouter } from './routes/dayItems'
 import { foldersRouter } from './routes/folders'
 import { healthRouter } from './routes/health'
 import { historyRouter } from './routes/history'
@@ -47,7 +46,6 @@ export function createApp() {
   api.use(pagesRouter)
   api.use(paymentsRouter)
   api.use(receivablesRouter)
-  api.use(dayItemsRouter)
   api.use(notFoundHandler)
 
   app.use('/api', api)

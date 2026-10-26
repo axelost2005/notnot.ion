@@ -57,6 +57,7 @@ import { FOLDER_ICON_OPTIONS } from './folderIcons'
 import { FolderGlyph, FolderStyleDialog } from './FolderStyleDialog'
 import { MoveDialog, type Movable } from './MoveDialog'
 import { setFolderOpen, useOpenFolders } from './openFolders'
+import { PanelHeader } from '../home/Panel'
 
 const NEW_FOLDER = 'Nueva carpeta'
 
@@ -233,7 +234,7 @@ export function NotesSection({ onNavigate, page = false }: Props) {
   if (page) {
     return (
       <div className="flex h-full min-h-0 flex-col">
-        <header className="flex h-12 shrink-0 items-center gap-2.5 border-b px-4">
+        <PanelHeader>
           <NotebookText aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
           <h1
             id={headingId}
@@ -258,7 +259,7 @@ export function NotesSection({ onNavigate, page = false }: Props) {
               Nueva nota
             </Button>
           </div>
-        </header>
+        </PanelHeader>
         <nav
           aria-labelledby={headingId}
           className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-2 py-2 max-md:text-[15px] md:px-6 md:py-6"

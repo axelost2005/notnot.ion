@@ -5,7 +5,7 @@ import {
   createBoard,
   deleteBoard,
   getBoard,
-  getGeneral,
+  getOverview,
   listBoards,
   updateBoard,
 } from '../services/boards'
@@ -21,8 +21,8 @@ boardsRouter.post('/boards', async (req, res) => {
   res.status(201).json(await createBoard(input))
 })
 
-boardsRouter.get('/general', archiveBeforeToday, async (_req, res) => {
-  res.json(await getGeneral())
+boardsRouter.get('/overview', archiveBeforeToday, async (_req, res) => {
+  res.json(await getOverview())
 })
 
 boardsRouter.get('/boards/:id', archiveBeforeToday, async (req, res) => {
