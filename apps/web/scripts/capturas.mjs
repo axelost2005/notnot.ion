@@ -39,7 +39,7 @@ const generalTasks = []
 try {
   const lumen = await board('Estudio Lumen', 'blue')
   const cafe = await board('Café Altamira', 'amber')
-  await board('Personal', 'green')
+  const personal = await board('Personal', 'green')
 
   const fromToday = (days) => {
     const date = new Date()
@@ -69,6 +69,9 @@ try {
   await call('POST', '/api/tasks', { columnId: doing.id, title: 'Ajustar la paleta de colores' })
   for (const title of ['Kickoff con el equipo', 'Relevar la web actual'])
     await call('POST', '/api/tasks', { columnId: done.id, title })
+  // Personal queda al día: lo único que tenía ya está tachado.
+  const [, , personalDone] = await columns(personal)
+  await call('POST', '/api/tasks', { columnId: personalDone.id, title: 'Renovar el pasaporte' })
   const [cafeTodo] = await columns(cafe)
   await call('POST', '/api/tasks', {
     columnId: cafeTodo.id,
@@ -219,6 +222,7 @@ try {
       path = `/b/${lumen.slug}`,
       openFolders = [],
       waitFor = ['Maqueta de la home'],
+      menu = false,
     },
   ) {
     const context = await browser.newContext({
@@ -240,6 +244,10 @@ try {
     await page.goto(path)
     // En mobile una de las dos vistas está oculta: alcanza con que estén cargadas.
     for (const text of waitFor) await page.getByText(text).first().waitFor({ state: 'attached' })
+    if (menu) {
+      await page.getByRole('button', { name: 'Menú' }).click()
+      await page.getByRole('dialog', { name: 'Menú' }).waitFor()
+    }
     await page.waitForTimeout(400)
     await page.screenshot({ path: fileURLToPath(new URL(file, OUT)) })
     await context.close()
@@ -274,8 +282,16 @@ try {
     waitFor: ['Mantenimiento de noviembre'],
   })
   await shoot('mobile-inicio.png', { width: 390, height: 844, mobile: true, path: '/' })
+  await shoot('mobile-menu.png', {
+    width: 390,
+    height: 844,
+    mobile: true,
+    path: '/',
+    menu: true,
+    openFolders: [clients.id],
+  })
   await shoot('mobile-tablero.png', { width: 390, height: 844, mobile: true })
-  // En el celu, el cuadrado de Notas abre la sección a pantalla completa.
+  // En el celu, `/p` es la sección Notas a pantalla completa.
   await shoot('mobile-notas.png', {
     width: 390,
     height: 844,
