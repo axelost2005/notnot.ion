@@ -91,31 +91,30 @@ test('el tablero es una lista: las columnas van una abajo de la otra', async ({ 
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375)
 })
 
-test('desde el Inicio se llega a Notas, a Finanzas y a otro tablero; "Cerrar" vuelve', async ({
+test('desde ☰ se llega a Finanzas y a Tareas; "Cerrar" vuelve a los cuadrados', async ({
   page,
 }) => {
   const board = await createBoard(page, 'barra')
   await page.goto('/b/general')
   await expect(page.getByRole('heading', { level: 1, name: 'General' })).toBeVisible()
-  const close = page.getByRole('button', { name: 'Cerrar' })
-  await close.tap()
+  await page.getByRole('button', { name: 'Cerrar' }).tap()
   await expect(page).toHaveURL(/\/$/)
 
-  // "Notas" es la sección Notas (carpetas y notas), no las notas del tablero.
-  await page.getByRole('link', { name: /^Notas:/ }).tap()
-  await expect(page).toHaveURL(/\/p$/)
-  await expect(page.getByRole('heading', { level: 1, name: 'Notas' })).toBeVisible()
-  await close.tap()
-  await expect(page).toHaveURL(/\/$/)
-
-  await page.getByRole('link', { name: /^Finanzas:/ }).tap()
+  const menu = page.getByRole('dialog', { name: 'Menú' })
+  await page.getByRole('button', { name: 'Menú' }).tap()
+  // En la hoja está el árbol de Notas (la sección Notas, no las notas de un tablero).
+  await expect(menu.getByRole('navigation', { name: 'Notas' })).toBeVisible()
+  await menu.getByRole('link', { name: /^Finanzas/ }).tap()
+  await expect(menu).toBeHidden()
   await expect(page).toHaveURL(/\/finanzas\/\d{4}-\d{2}$/)
   await expect(page.getByRole('heading', { level: 1, name: 'Finanzas' })).toBeVisible()
-  await close.tap()
+
+  await page.getByRole('button', { name: 'Menú' }).tap()
+  await menu.getByRole('link', { name: /^Tareas/ }).tap()
   await expect(page).toHaveURL(/\/$/)
 
   // Cambiar de tablero es tocar su cuadrado.
-  await page.getByRole('link', { name: `${board.name}: 0 abiertas` }).tap()
+  await page.getByRole('link', { name: `${board.name}: al día, 0 abiertas` }).tap()
   await expect(page).toHaveURL(new RegExp(`/b/${board.slug}$`))
   await expect(page.getByRole('heading', { level: 1, name: board.name })).toBeVisible()
 })

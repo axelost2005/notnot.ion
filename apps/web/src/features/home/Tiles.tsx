@@ -1,33 +1,18 @@
 import {
   boardStatus,
-  dueCount,
-  groupReceivables,
-  groupToday,
   laneOf,
-  pendingTodayCount,
-  remainingCents,
   sortByPosition,
   type BoardSummary,
-  type Currency,
   type Lane,
   type Overview,
-  type PagesTree,
-  type Receivable,
 } from '@notnot/shared'
-import { Check, NotebookText, Sun, Wallet } from 'lucide-react'
+import { Check, Sun } from 'lucide-react'
 import type { CSSProperties, ReactNode } from 'react'
 import { Link } from 'react-router'
 import { cn } from '@/lib/utils'
 import { boardStyle } from '../boards/colors'
-import { formatMoney } from '../finance/format'
 import { isForToday } from '../today/format'
 import { FROM_HOME } from './navigation'
-
-const weekdayShort = new Intl.DateTimeFormat('es-AR', {
-  weekday: 'short',
-  day: 'numeric',
-  timeZone: 'UTC',
-})
 
 const STATUS_LABEL: Record<Lane, string> = {
   todo: 'Por hacer',
@@ -49,7 +34,7 @@ type TileProps = {
   /** Lo que lee un lector de pantalla: "Pepito: en curso, 4 abiertas, 2 para hoy". */
   label: string
   /** El estado del tablero (`data-status`). */
-  status?: Lane
+  status: Lane
   children: ReactNode
 }
 
@@ -86,9 +71,7 @@ function TileTop({ icon, name, extra }: { icon: ReactNode; name: string; extra?:
 type PreviewItem = {
   key: string
   text: string
-  marker: 'doing' | 'today' | 'open' | 'due' | 'dot'
-  color?: string
-  value?: string
+  marker: 'doing' | 'today' | 'open'
 }
 
 const MARKER_CLASS: Record<PreviewItem['marker'], string> = {
@@ -96,18 +79,15 @@ const MARKER_CLASS: Record<PreviewItem['marker'], string> = {
   doing: 'border-status-doing bg-[linear-gradient(90deg,var(--status-doing)_50%,transparent_50%)]',
   today: 'border-sun',
   open: 'border-muted-foreground/50',
-  due: 'border-destructive bg-destructive',
-  dot: 'border-0 bg-(--dot)',
 }
 
 function TilePreview({ items, empty }: { items: PreviewItem[]; empty: string }) {
   if (items.length === 0) return <p className="text-xs text-muted-foreground">{empty}</p>
   return (
-    <ul className="grid gap-1.5 text-xs leading-4 text-muted-foreground max-md:[&>li:nth-child(n+4)]:hidden">
+    <ul className="grid gap-1.5 text-xs leading-4 text-muted-foreground">
       {items.map((item) => (
         <li
           key={item.key}
-          style={item.color ? ({ '--dot': item.color } as CSSProperties) : undefined}
           className={cn(
             'flex min-w-0 items-center gap-2',
             item.marker === 'doing' && 'text-foreground',
@@ -118,64 +98,24 @@ function TilePreview({ items, empty }: { items: PreviewItem[]; empty: string }) 
             className={cn('size-2 shrink-0 rounded-full border-[1.5px]', MARKER_CLASS[item.marker])}
           />
           <span className="min-w-0 truncate">{item.text}</span>
-          {item.value && (
-            <span className="ml-auto shrink-0 font-medium text-foreground tabular-nums">
-              {item.value}
-            </span>
-          )}
         </li>
       ))}
     </ul>
   )
 }
 
-function TileFoot({
-  value,
-  label,
-  done,
-  status,
-  small,
-}: {
-  value: string
-  label: string
-  done?: number
-  /** La palabra del estado, en su tinta: así no depende solo del color. */
-  status?: Lane
-  small?: boolean
-}) {
+function TileFoot({ value, label, status }: { value: string; label: string; status: Lane }) {
   return (
     <div className="mt-auto flex min-w-0 items-baseline gap-1.5">
-      <span
-        className={cn(
-          'shrink-0 leading-none font-semibold tracking-tight tabular-nums',
-          small ? 'text-lg' : 'text-[28px] max-md:text-[26px]',
-        )}
-      >
+      <span className="shrink-0 text-[28px] leading-none font-semibold tracking-tight tabular-nums max-md:text-[26px]">
         {value}
       </span>
       <span className="min-w-0 truncate text-xs text-muted-foreground">{label}</span>
-      {done ? <DoneCount done={done} className="ml-auto" /> : null}
-      {status && (
-        <span className={cn('ml-auto shrink-0 text-xs font-semibold', STATUS_INK[status])}>
-          {STATUS_LABEL[status]}
-        </span>
-      )}
+      {/* La palabra del estado, en su tinta: así no depende solo del color. */}
+      <span className={cn('ml-auto shrink-0 text-xs font-semibold', STATUS_INK[status])}>
+        {STATUS_LABEL[status]}
+      </span>
     </div>
-  )
-}
-
-function DoneCount({ done, className }: { done: number; className?: string }) {
-  return (
-    <span
-      title="Tachadas hoy"
-      className={cn(
-        'flex shrink-0 items-center gap-0.5 text-xs text-status-done tabular-nums',
-        className,
-      )}
-    >
-      <Check aria-hidden="true" strokeWidth={2.6} className="size-3" />
-      {done}
-    </span>
   )
 }
 
@@ -235,7 +175,15 @@ export function BoardTile({
                   {forToday}
                 </span>
               )}
-              {done > 0 && <DoneCount done={done} />}
+              {done > 0 && (
+                <span
+                  title="Tachadas hoy"
+                  className="flex items-center gap-0.5 text-xs text-status-done tabular-nums"
+                >
+                  <Check aria-hidden="true" strokeWidth={2.6} className="size-3" />
+                  {done}
+                </span>
+              )}
             </span>
           )
         }
@@ -252,148 +200,6 @@ export function BoardTile({
         value={String(open.length)}
         label={plural(open.length, 'abierta', 'abiertas')}
         status={status}
-      />
-    </Tile>
-  )
-}
-
-export function TodayTile({
-  overview,
-  boards,
-  today,
-}: {
-  overview: Overview
-  boards: BoardSummary[]
-  today: string
-}) {
-  const groups = groupToday(overview.tasks, today)
-  const left = pendingTodayCount(overview.tasks, today)
-  const colorOf = (boardId: string) => {
-    const board = boards.find((b) => b.id === boardId)
-    return board ? `var(--board-${board.color})` : 'var(--muted-foreground)'
-  }
-
-  return (
-    <Tile
-      to="/hoy"
-      tile="hoy"
-      color="var(--sun)"
-      label={`Hoy: ${left} ${plural(left, 'queda', 'quedan')}`}
-    >
-      <TileTop
-        icon={<Sun aria-hidden="true" className="mt-px size-4 shrink-0 text-sun-ink" />}
-        name="Hoy"
-        extra={
-          <span className="shrink-0 text-xs text-muted-foreground">
-            {weekdayShort.format(new Date(`${today}T00:00:00.000Z`)).replace('.', '')}
-          </span>
-        }
-      />
-      <TilePreview
-        empty="Nada para hoy."
-        items={groups.today.slice(0, 4).map((task) => ({
-          key: task.id,
-          text: task.title,
-          marker: 'dot',
-          color: colorOf(task.boardId),
-        }))}
-      />
-      <TileFoot value={String(left)} label="para hoy" done={groups.done.length} />
-    </Tile>
-  )
-}
-
-export function NotesTile({ tree }: { tree: PagesTree }) {
-  const recent = [...tree.pages].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).slice(0, 3)
-  const count = tree.pages.length
-
-  return (
-    <Tile
-      to="/p"
-      tile="notas"
-      color="var(--muted-foreground)"
-      label={`Notas: ${count} ${plural(count, 'nota', 'notas')}`}
-    >
-      <TileTop
-        icon={
-          <NotebookText
-            aria-hidden="true"
-            className="mt-px size-4 shrink-0 text-muted-foreground"
-          />
-        }
-        name="Notas"
-      />
-      <TilePreview
-        empty="Para lo que no es una tarea."
-        items={recent.map((page) => ({
-          key: page.id,
-          text: page.title || 'Sin título',
-          marker: 'open',
-        }))}
-      />
-      <TileFoot value={String(count)} label={plural(count, 'nota', 'notas')} />
-    </Tile>
-  )
-}
-
-export function FinanceTile({
-  receivables,
-  boards,
-  today,
-}: {
-  receivables: Receivable[]
-  boards: BoardSummary[]
-  today: string
-}) {
-  const { overdue, upcoming, undated } = groupReceivables(receivables, today)
-  const pending = [...overdue, ...upcoming, ...undated]
-  const due = dueCount(receivables, today)
-  const totals = (['ARS', 'USD'] as const satisfies readonly Currency[])
-    .map((currency) => ({
-      currency,
-      cents: pending
-        .filter((r) => r.currency === currency)
-        .reduce((sum, r) => sum + remainingCents(r), 0),
-    }))
-    .filter((total) => total.cents > 0)
-  const [main, ...others] = totals.length ? totals : [{ currency: 'ARS' as const, cents: 0 }]
-  const nameOf = (r: Receivable) => boards.find((b) => b.id === r.boardId)?.name ?? r.description
-
-  return (
-    <Tile
-      to="/finanzas"
-      tile="finanzas"
-      color="var(--muted-foreground)"
-      label={`Finanzas: ${formatMoney(main!.cents, main!.currency)} por cobrar${due ? `, ${due} ${plural(due, 'vencida', 'vencidas')}` : ''}`}
-    >
-      <TileTop
-        icon={<Wallet aria-hidden="true" className="mt-px size-4 shrink-0 text-muted-foreground" />}
-        name="Finanzas"
-        extra={
-          due > 0 && (
-            <span className="shrink-0 text-xs font-semibold text-destructive">
-              {due} {plural(due, 'vencida', 'vencidas')}
-            </span>
-          )
-        }
-      />
-      <TilePreview
-        empty="Nada por cobrar."
-        items={pending.slice(0, 3).map((r) => ({
-          key: r.id,
-          text: nameOf(r),
-          marker: r.dueDate !== null && r.dueDate <= today ? 'due' : 'open',
-          value: formatMoney(remainingCents(r), r.currency),
-        }))}
-      />
-      <TileFoot
-        small
-        value={formatMoney(main!.cents, main!.currency)}
-        label={
-          others.length
-            ? `+ ${others.map((t) => formatMoney(t.cents, t.currency)).join(' + ')}`
-            : 'por cobrar'
-        }
       />
     </Tile>
   )

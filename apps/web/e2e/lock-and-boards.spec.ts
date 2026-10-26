@@ -129,7 +129,7 @@ test.describe('tableros', () => {
     await expect(dialog.getByRole('alert')).toHaveText('El nombre no puede quedar vacío')
   })
 
-  test('/ es el Inicio: no salta al último tablero y cada tablero tiene su cuadrado', async ({
+  test('/ es Tareas: no salta al último tablero y cada tablero tiene su cuadrado', async ({
     page,
   }) => {
     const name = e2eName('ultimo')
@@ -139,7 +139,7 @@ test.describe('tableros', () => {
     await page.goto(`/b/${slug}`)
     await expect(page.getByRole('heading', { level: 1, name })).toBeVisible()
     await page.goto('/')
-    await expect(page.getByRole('link', { name: `${name}: 0 abiertas` })).toBeVisible()
+    await expect(page.getByRole('link', { name: `${name}: al día, 0 abiertas` })).toBeVisible()
     await expect(page).toHaveURL(/\/$/)
     await expect(page.getByRole('dialog')).toHaveCount(0)
   })

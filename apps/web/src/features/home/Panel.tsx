@@ -1,12 +1,12 @@
 import { useGSAP } from '@gsap/react'
 import { gsap } from 'gsap'
 import { Flip } from 'gsap/Flip'
-import { X } from 'lucide-react'
+import { Menu, X } from 'lucide-react'
 import { Dialog as DialogPrimitive } from 'radix-ui'
 import { createContext, useContext, useEffect, useRef, type ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { tileSelector } from './navigation'
+import { MenuContext, tileSelector } from './navigation'
 
 gsap.registerPlugin(useGSAP, Flip)
 
@@ -158,17 +158,36 @@ type HeaderProps = {
   className?: string
   /** Dónde va la × para cerrar el panel. En las notas de la compu va en la nota, no en la lista. */
   close?: 'always' | 'mobile' | 'never'
+  /** Fuera de un panel, en el celu, el ☰ que abre la barra. Dentro de una nota va "‹". */
+  menu?: boolean
 }
 
-/** El encabezado de cada panel, con la × al final. */
-export function PanelHeader({ children, className, close = 'always' }: HeaderProps) {
+/** El encabezado de cada sección: con la × al final en un panel y con el ☰ en el celu. */
+export function PanelHeader({ children, className, close = 'always', menu = true }: HeaderProps) {
+  const panel = useContext(PanelContext)
+  const openMenu = useContext(MenuContext)
+  const showMenu = !panel && openMenu !== null && menu
+
   return (
     <header
       className={cn(
         'flex h-12 shrink-0 items-center gap-2.5 border-b px-4 max-md:h-14 max-md:pr-2',
+        showMenu && 'max-md:pl-2',
         className,
       )}
     >
+      {showMenu && (
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label="Menú"
+          aria-haspopup="dialog"
+          onClick={openMenu}
+          className="shrink-0 text-muted-foreground md:hidden"
+        >
+          <Menu />
+        </Button>
+      )}
       {children}
       {close !== 'never' && <PanelClose className={cn(close === 'mobile' && 'md:hidden')} />}
     </header>

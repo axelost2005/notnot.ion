@@ -52,9 +52,11 @@ const money = (cents: number, currency: Currency) =>
 
 const pendingLabel = (count: number) => `${count} ${count === 1 ? 'pendiente' : 'pendientes'}`
 
-/** El nombre del cuadrado de Finanzas termina con las vencidas: "… por cobrar, 2 vencidas". */
-const dueSuffix = (count: number) =>
-  new RegExp(`por cobrar${count ? `, ${count} ${count === 1 ? 'vencida' : 'vencidas'}` : ''}$`)
+/** Finanzas en la barra dice cuánto vence hoy o ya venció: "Finanzas, 2 por cobrar vencen…". */
+const dueName = (count: number) =>
+  count === 0
+    ? 'Finanzas'
+    : `Finanzas, ${count} por cobrar ${count === 1 ? 'vence hoy o ya venció' : 'vencen hoy o ya vencieron'}`
 
 test.beforeEach(async ({ page }) => {
   await unlock(page)
@@ -76,7 +78,7 @@ test('anota lo que te deben, registra lo que te pagan en partes y vincula un pag
   const ars = others.filter((r) => r.currency === 'ARS')
   const usd = others.filter((r) => r.currency === 'USD')
   const othersDue = others.filter((r) => r.dueDate !== null && r.dueDate <= day(0)).length
-  const financeTile = page.getByRole('link', { name: /^Finanzas:/ })
+  const financeLink = page.getByRole('complementary').getByRole('link', { name: /^Finanzas/ })
 
   await page.goto('/finanzas')
   await page.getByRole('link', { name: /^Por cobrar/ }).click()
@@ -123,11 +125,10 @@ test('anota lo que te deben, registra lo que te pagan en partes y vincula un pag
     String(others.length + 2),
   )
 
-  // En el Inicio, el cuadrado de Finanzas la cuenta entre las vencidas; y de ahí se vuelve.
-  await page.keyboard.press('Escape')
-  await expect(page).toHaveURL(/\/$/)
-  await expect(financeTile).toHaveAccessibleName(dueSuffix(othersDue + 1))
-  await financeTile.click()
+  // Finanzas en la barra la cuenta entre las vencidas; y de ahí se vuelve.
+  await expect(financeLink).toHaveAccessibleName(dueName(othersDue + 1))
+  await financeLink.click()
+  await expect(page).toHaveURL(/\/finanzas\/\d{4}-\d{2}$/)
   await page.getByRole('link', { name: /^Por cobrar/ }).click()
 
   // "Me pagaron" una parte: el pago viene completo con lo que falta y queda el resto.
@@ -213,10 +214,8 @@ test('anota lo que te deben, registra lo que te pagan en partes y vincula un pag
   await page.getByRole('button', { name: /^Cobradas/ }).click()
   await expect(web).toContainText('$ 300.000')
 
-  // Cobrada, ya no cuenta entre las vencidas del cuadrado de Finanzas.
-  await page.keyboard.press('Escape')
-  await expect(page).toHaveURL(/\/$/)
-  await expect(financeTile).toHaveAccessibleName(dueSuffix(othersDue))
+  // Cobrada, ya no cuenta entre las vencidas de la barra.
+  await expect(financeLink).toHaveAccessibleName(dueName(othersDue))
 })
 
 test('en el celu se ve entero y "Me pagaron" abre el pago', async ({ page }) => {

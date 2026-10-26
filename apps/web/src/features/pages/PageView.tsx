@@ -197,7 +197,7 @@ function PageHeader({
   const name = page.title || 'Sin título'
 
   return (
-    <PanelHeader className="gap-2 max-md:pl-2">
+    <PanelHeader menu={false} className="gap-2 max-md:pl-2">
       {/* En el celu, de vuelta a la lista de notas. */}
       <Button asChild variant="ghost" size="icon" className="text-muted-foreground md:hidden">
         <Link to="/p" aria-label="Volver a Notas">
@@ -281,7 +281,7 @@ function PageHeader({
 function PageNotFound() {
   return (
     <>
-      <PanelHeader>
+      <PanelHeader menu={false}>
         <span className="ml-auto" />
       </PanelHeader>
       <div className="grid max-w-sm gap-2 p-6">
@@ -299,7 +299,7 @@ function PageNotFound() {
 function PageSkeleton() {
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <PanelHeader>
+      <PanelHeader menu={false}>
         <Skeleton className="h-4 w-32" />
         <span className="ml-auto" />
       </PanelHeader>

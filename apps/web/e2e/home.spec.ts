@@ -1,5 +1,12 @@
 import { expect, test, type Page } from '@playwright/test'
-import { deleteE2EBoards, deleteE2EGeneralTasks, e2eName, listBoards, unlock } from './helpers'
+import {
+  deleteE2EBoards,
+  deleteE2EGeneralTasks,
+  deleteE2EPages,
+  e2eName,
+  listBoards,
+  unlock,
+} from './helpers'
 
 type Board = { id: string; name: string; slug: string }
 type Detail = { columns: { id: string; isDone: boolean; position: string }[] }
@@ -38,6 +45,7 @@ test.beforeEach(async ({ page }) => {
 test.afterEach(async ({ page }) => {
   await deleteE2EBoards(page.request)
   await deleteE2EGeneralTasks(page.request)
+  await deleteE2EPages(page.request)
 })
 
 test('anota desde el Inicio, abre el cuadrado encima, tacha y vuelve con Esc', async ({ page }) => {
@@ -131,7 +139,7 @@ test('Hoy junta lo de los tableros y lo de General; mañana, y lo pendiente de a
   await createTask(page, board.id, later, today())
 
   await page.goto('/hoy')
-  const panel = page.getByRole('dialog', { name: 'Hoy' })
+  const panel = page.getByRole('main')
   const forToday = panel.getByRole('region', { name: /^Para hoy/ })
   // El título abre el detalle (exacto: el sol también lleva el título en su nombre).
   const row = (scope: typeof forToday, name: string) =>
@@ -155,44 +163,88 @@ test('Hoy junta lo de los tableros y lo de General; mañana, y lo pendiente de a
   // Con el reloj en mañana, lo de hoy que no se tachó está en Hoy, "de ayer".
   await page.clock.setFixedTime(new Date(Date.now() + DAY_MS))
   await page.goto('/hoy')
-  const nextDay = page
-    .getByRole('dialog', { name: 'Hoy' })
-    .getByRole('region', { name: /^Para hoy/ })
+  const nextDay = page.getByRole('main').getByRole('region', { name: /^Para hoy/ })
   await expect(row(nextDay, `${fromBoard} de ayer`)).toBeVisible()
   await expect(row(nextDay, later)).toBeVisible()
 })
 
-test('Notas y Finanzas se abren desde su cuadrado; un link directo abre el panel', async ({
-  page,
-}) => {
-  const board = await createBoard(page, 'link')
+test('la barra lleva a Hoy, Tareas, Finanzas y Notas', async ({ page }) => {
+  const board = await createBoard(page, 'barra')
+  const task = e2eName('barra')
+  await createTask(page, board.id, task, today())
 
   await page.goto('/')
-  await page.getByRole('link', { name: /^Notas:/ }).click()
-  await expect(page).toHaveURL('/p')
-  await expect(page.getByRole('dialog', { name: 'Notas' })).toBeVisible()
-  await page.getByRole('dialog').getByRole('button', { name: 'Cerrar' }).click()
-  await expect(page).toHaveURL('/')
+  const bar = page.getByRole('complementary')
+  await expect(bar.getByRole('link', { name: /^Hoy/ })).toBeVisible()
+  await expect(bar.getByRole('link', { name: /^Tareas/ })).toHaveAttribute('aria-current', 'page')
+  await expect(bar.getByRole('link', { name: /^Finanzas/ })).toBeVisible()
+  await expect(bar.getByRole('navigation', { name: 'Notas' })).toBeVisible()
+  // En la grilla solo hay tableros.
+  const tiles = page.getByRole('list', { name: 'Cuadrados' })
+  await expect(tiles.getByRole('link', { name: new RegExp(`^${board.name}:`) })).toBeVisible()
+  await expect(tiles.getByRole('link', { name: /^(Hoy|Notas|Finanzas):/ })).toHaveCount(0)
 
-  await page.getByRole('link', { name: /^Finanzas:/ }).click()
-  await expect(page).toHaveURL(/\/finanzas\/\d{4}-\d{2}$/)
-  await expect(page.getByRole('dialog', { name: 'Finanzas' })).toBeVisible()
+  // Hoy se ve al lado de la barra, sin panel; el nombre de un tablero abre su panel encima.
+  await bar.getByRole('link', { name: /^Hoy/ }).click()
+  await expect(page).toHaveURL('/hoy')
+  await expect(page.getByRole('heading', { level: 1, name: 'Hoy' })).toBeVisible()
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  await page
+    .getByRole('main')
+    .getByRole('link', { name: new RegExp(`^${board.name}`) })
+    .click()
+  await expect(page).toHaveURL(`/b/${board.slug}`)
+  await expect(page.getByRole('dialog', { name: board.name })).toBeVisible()
   await page.keyboard.press('Escape')
-  await expect(page).toHaveURL('/')
+  await expect(page).toHaveURL('/hoy')
+  await expect(page.getByRole('dialog')).toHaveCount(0)
 
+  // El "+" de Notas crea una nota y la abre al lado, con el título listo para escribir.
+  await bar.getByRole('button', { name: 'Nueva nota o carpeta' }).click()
+  await page.getByRole('menuitem', { name: 'Nueva nota' }).click()
+  await expect(page).toHaveURL(/\/p\/[^/]+$/)
+  const title = page.getByRole('textbox', { name: 'Título' })
+  await expect(title).toBeFocused()
+  await title.fill(e2eName('nota de la barra'))
+  await expect(page.getByText('Guardado', { exact: true })).toBeVisible()
+
+  await bar.getByRole('link', { name: /^Finanzas/ }).click()
+  await expect(page).toHaveURL(/\/finanzas\/\d{4}-\d{2}$/)
+  await expect(page.getByRole('heading', { level: 1, name: 'Finanzas' })).toBeVisible()
+
+  // Un link directo abre el panel y la × vuelve a Tareas.
   await page.goto(`/b/${board.slug}`)
   const panel = page.getByRole('dialog', { name: board.name })
   await expect(panel.getByRole('heading', { level: 1, name: board.name })).toBeVisible()
+  await panel.getByRole('button', { name: 'Cerrar' }).click()
+  await expect(page).toHaveURL('/')
+  await expect(page.getByRole('heading', { level: 1, name: 'Tareas' })).toBeVisible()
 })
 
 test.describe('en el celu', () => {
   test.use({ viewport: { width: 375, height: 812 }, hasTouch: true, isMobile: true })
 
-  test('los cuadrados van de a dos y el panel ocupa la pantalla, sin scroll horizontal', async ({
+  test('☰ abre la barra; los cuadrados van de a dos y el panel ocupa la pantalla', async ({
     page,
   }) => {
     const board = await createBoard(page, 'celu')
+    await createBoard(page, 'celu-2')
     const task = e2eName('fotos')
+
+    // La barra sale como hoja: Esc la cierra y el foco vuelve al ☰; elegir algo también la cierra.
+    await page.goto('/')
+    const menuButton = page.getByRole('button', { name: 'Menú' })
+    await menuButton.tap()
+    const menu = page.getByRole('dialog', { name: 'Menú' })
+    await expect(menu).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(menu).toBeHidden()
+    await expect(menuButton).toBeFocused()
+    await menuButton.tap()
+    await menu.getByRole('link', { name: /^Hoy/ }).tap()
+    await expect(menu).toBeHidden()
+    await expect(page).toHaveURL('/hoy')
+    await expect(page.getByRole('heading', { level: 1, name: 'Hoy' })).toBeVisible()
 
     await page.goto('/')
     const tiles = page.getByRole('list', { name: 'Cuadrados' }).getByRole('link')

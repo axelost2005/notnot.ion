@@ -1,8 +1,8 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Locator, type Page } from '@playwright/test'
 import { deleteE2EPages, e2eName, unlock } from './helpers'
 
 /** El árbol de la sección Notas (en el celu, la lista a pantalla completa de `/p`). */
-const notes = (page: Page) => page.getByRole('navigation', { name: 'Notas' })
+const notes = (scope: Page | Locator) => scope.getByRole('navigation', { name: 'Notas' })
 
 /** Abre el menú "…" de una fila del árbol y elige una opción. */
 async function rowAction(page: Page, rowLabel: string, action: string) {
@@ -154,35 +154,36 @@ test('una carpeta con color e ícono: se ve en el árbol, sigue al recargar y vu
 test.describe('celu', () => {
   test.use({ viewport: { width: 375, height: 740 }, isMobile: true, hasTouch: true })
 
-  test('en 375 px se llega a una nota desde el cuadrado "Notas"', async ({ page }) => {
+  test('en 375 px se llega a una nota desde ☰ y "‹" vuelve a la lista', async ({ page }) => {
     const title = e2eName('nota del celu')
     const res = await page.request.post('/api/pages', { data: { title } })
     const created = (await res.json()) as { id: string }
     await page.request.patch(`/api/pages/${created.id}`, { data: { content: 'desde el celu' } })
 
     await page.goto('/')
-    await page.getByRole('link', { name: /^Notas:/ }).tap()
-    await expect(page).toHaveURL(/\/p$/)
-    await notes(page).getByRole('link', { name: title }).tap()
+    await page.getByRole('button', { name: 'Menú' }).tap()
+    const menu = page.getByRole('dialog', { name: 'Menú' })
+    await notes(menu).getByRole('link', { name: title }).tap()
+    await expect(menu).toBeHidden()
     await expect(page).toHaveURL(new RegExp(`/p/${created.id}$`))
     await expect(page.getByRole('textbox', { name: 'Texto' })).toHaveValue('desde el celu')
+    // Dentro de una nota, el encabezado lleva "‹" y no ☰.
+    await expect(page.getByRole('button', { name: 'Menú' })).toHaveCount(0)
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375)
 
-    // Desde la nota, "Cerrar" vuelve al Inicio.
-    await page.getByRole('button', { name: 'Cerrar' }).tap()
-    await expect(page).toHaveURL(/\/$/)
-    await expect(page.getByRole('list', { name: 'Cuadrados' })).toBeVisible()
+    await page.getByRole('link', { name: 'Volver a Notas' }).tap()
+    await expect(page).toHaveURL(/\/p$/)
+    await expect(notes(page).getByRole('link', { name: title })).toBeVisible()
   })
 
-  test('el cuadrado "Notas" abre las carpetas y "Nueva nota" deja escribir al toque', async ({
-    page,
-  }) => {
+  test('"Nueva nota" desde ☰ o desde la lista deja escribir al toque', async ({ page }) => {
     const title = e2eName('anotador')
     await page.goto('/')
-    await page.getByRole('link', { name: /^Notas:/ }).tap()
-    await expect(page).toHaveURL(/\/p$/)
-
-    await page.getByRole('button', { name: 'Nueva nota', exact: true }).tap()
+    await page.getByRole('button', { name: 'Menú' }).tap()
+    const menu = page.getByRole('dialog', { name: 'Menú' })
+    await menu.getByRole('button', { name: 'Nueva nota o carpeta' }).tap()
+    await page.getByRole('menuitem', { name: 'Nueva nota' }).tap()
+    await expect(menu).toBeHidden()
     await expect(page).toHaveURL(/\/p\/[^/]+$/)
     const titleInput = page.getByRole('textbox', { name: 'Título' })
     await expect(titleInput).toBeFocused()
@@ -191,9 +192,14 @@ test.describe('celu', () => {
     await page.keyboard.type('leche, pan y yerba')
     await expect(page.getByText('Guardado', { exact: true })).toBeVisible()
 
-    // De vuelta en la lista, la nota está (suelta, en la raíz).
+    // De vuelta en la lista, la nota está (suelta, en la raíz) y "Nueva nota" es un toque.
     await page.getByRole('link', { name: 'Volver a Notas' }).tap()
     await expect(page).toHaveURL(/\/p$/)
     await expect(notes(page).getByRole('link', { name: title })).toBeVisible()
+    await page.getByRole('button', { name: 'Nueva nota', exact: true }).tap()
+    await expect(page).toHaveURL(/\/p\/[^/]+$/)
+    await expect(titleInput).toBeFocused()
+    await titleInput.fill(e2eName('otra'))
+    await expect(page.getByText('Guardado', { exact: true })).toBeVisible()
   })
 })
