@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { columnForLane, laneOf } from './lanes'
+import { boardStatus, columnForLane, laneOf } from './lanes'
 
 // Desordenadas a propósito: lo que manda es `position`.
 const columns = [
@@ -47,4 +47,34 @@ describe('columnForLane', () => {
     expect(columnForLane(twoColumns, 'doing')).toBeUndefined()
     expect(columnForLane(twoColumns, 'todo')?.id).toBe('por-hacer')
   })
+})
+
+describe('boardStatus', () => {
+  // Desordenadas a propósito: la primera es por posición.
+  const cols = [
+    { id: 'hecho', position: 'a2', isDone: true },
+    { id: 'curso', position: 'a1', isDone: false },
+    { id: 'hacer', position: 'a0', isDone: false },
+  ]
+  const task = (columnId: string, completedAt: string | null = null) => ({ columnId, completedAt })
+
+  it('sin tareas está al día', () => expect(boardStatus(cols, [])).toBe('done'))
+  it('todo tachado está al día', () =>
+    expect(boardStatus(cols, [task('hecho', '2026-10-26T10:00:00.000Z')])).toBe('done'))
+  it('abiertas solo en la primera columna: por hacer', () =>
+    expect(boardStatus(cols, [task('hacer'), task('hacer')])).toBe('todo'))
+  it('una en curso gana a las por hacer', () =>
+    expect(boardStatus(cols, [task('hacer'), task('curso')])).toBe('doing'))
+  it('sin segunda columna normal nunca está en curso', () =>
+    expect(
+      boardStatus(
+        [
+          { id: 'hacer', position: 'a0', isDone: false },
+          { id: 'hecho', position: 'a1', isDone: true },
+        ],
+        [task('hacer')],
+      ),
+    ).toBe('todo'))
+  it('una abierta de una columna que no está cuenta como por hacer', () =>
+    expect(boardStatus(cols, [task('otra')])).toBe('todo'))
 })

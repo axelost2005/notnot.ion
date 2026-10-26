@@ -22,6 +22,23 @@ export function laneOf(column: ColumnLike, boardColumns: readonly ColumnLike[]):
 }
 
 /**
+ * El estado de un tablero según sus tareas abiertas: "al día" si no le queda ninguna (también
+ * sin tareas), "en curso" si alguna está en una columna en curso y si no, "por hacer".
+ */
+export function boardStatus(
+  boardColumns: readonly ColumnLike[],
+  boardTasks: readonly { columnId: string; completedAt: string | null }[],
+): Lane {
+  const open = boardTasks.filter((t) => t.completedAt === null)
+  if (open.length === 0) return 'done'
+  const doing = open.some((t) => {
+    const column = boardColumns.find((c) => c.id === t.columnId)
+    return column !== undefined && laneOf(column, boardColumns) === 'doing'
+  })
+  return doing ? 'doing' : 'todo'
+}
+
+/**
  * A qué columna de su tablero va una tarjeta que se suelta en `lane`. "En curso" es la segunda
  * columna normal: si el tablero no tiene, no hay dónde ponerla.
  */
