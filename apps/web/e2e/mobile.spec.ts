@@ -14,8 +14,9 @@ test.afterEach(async ({ page }) => {
 const column = (page: Page, name: string) =>
   page.locator('section', { has: page.getByRole('heading', { level: 2, name, exact: true }) })
 
-/** La barra de abajo: Tablero, Notas, Finanzas y Menú. */
-const nav = (page: Page) => page.getByRole('navigation', { name: 'Secciones' })
+/** Las pestañas del panel del tablero (en el celu, en la fila de abajo del header). */
+const tab = (page: Page, name: 'Tareas' | 'Notas') =>
+  page.getByRole('button', { name, exact: true })
 
 async function createBoard(page: Page, label: string) {
   const res = await page.request.post('/api/boards', {
@@ -32,9 +33,9 @@ test('en 375 px captura una nota y mueve la tarjeta con "Mover a…"', async ({ 
   // Nada se sale de la pantalla.
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375)
 
-  // Las notas del tablero se abren desde su header (abajo, "Notas" es la sección Notas).
-  // Arrancan con [] y, en touch, Enter hace salto de línea y se envía con el botón.
-  const boardNotes = page.getByRole('button', { name: 'Notas del tablero' })
+  // Las notas del tablero son la pestaña "Notas" del panel (el cuadrado "Notas" es la sección
+  // Notas). Arrancan con [] y, en touch, Enter hace salto de línea y se envía con el botón.
+  const boardNotes = tab(page, 'Notas')
   await boardNotes.tap()
   await expect(boardNotes).toHaveAttribute('aria-pressed', 'true')
   const composer = page.getByRole('combobox', { name: `Nueva nota en ${board.name}` })
@@ -49,11 +50,14 @@ test('en 375 px captura una nota y mueve la tarjeta con "Mover a…"', async ({ 
   await expect(page.getByRole('checkbox', { name: 'Tildar pedir presupuesto' })).toBeVisible()
   await expect(composer).toHaveValue('[] ')
 
-  // Tablero (abajo vuelve a las columnas): la tarjeta está en "Por hacer"; con "Mover a…" pasa
-  // a "En curso".
-  await nav(page).getByRole('link', { name: 'Tablero' }).tap()
+  // "Tareas" vuelve a las columnas: la tarjeta está en "Por hacer"; con "Mover a…" pasa a
+  // "En curso".
+  await tab(page, 'Tareas').tap()
   await expect(boardNotes).toHaveAttribute('aria-pressed', 'false')
-  const card = column(page, 'Por hacer').getByRole('button', { name: 'pedir presupuesto' })
+  const card = column(page, 'Por hacer').getByRole('button', {
+    name: 'pedir presupuesto',
+    exact: true,
+  })
   await card.tap()
   const dialog = page.getByRole('dialog', { name: 'Tarjeta' })
   await dialog.getByRole('combobox', { name: 'Columna' }).tap()
@@ -63,10 +67,10 @@ test('en 375 px captura una nota y mueve la tarjeta con "Mover a…"', async ({ 
   await moved
   await expect(dialog).toBeHidden()
   await expect(
-    column(page, 'En curso').getByRole('button', { name: 'pedir presupuesto' }),
+    column(page, 'En curso').getByRole('button', { name: 'pedir presupuesto', exact: true }),
   ).toBeAttached()
   await expect(
-    column(page, 'Por hacer').getByRole('button', { name: 'pedir presupuesto' }),
+    column(page, 'Por hacer').getByRole('button', { name: 'pedir presupuesto', exact: true }),
   ).toHaveCount(0)
 
   // Y la nota lo sigue mostrando como pendiente.
@@ -87,45 +91,31 @@ test('el tablero es una lista: las columnas van una abajo de la otra', async ({ 
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375)
 })
 
-test('la barra de abajo lleva a Notas, a Finanzas, al menú y de vuelta al tablero', async ({
+test('desde el Inicio se llega a Notas, a Finanzas y a otro tablero; "Cerrar" vuelve', async ({
   page,
 }) => {
   const board = await createBoard(page, 'barra')
-  await page.goto(`/b/${board.slug}`)
-  await expect(nav(page).getByRole('link', { name: 'Tablero' })).toHaveAttribute(
-    'aria-current',
-    'page',
-  )
+  await page.goto('/b/general')
+  await expect(page.getByRole('heading', { level: 1, name: 'General' })).toBeVisible()
+  const close = page.getByRole('button', { name: 'Cerrar' })
+  await close.tap()
+  await expect(page).toHaveURL(/\/$/)
 
   // "Notas" es la sección Notas (carpetas y notas), no las notas del tablero.
-  const notes = nav(page).getByRole('link', { name: 'Notas' })
-  await notes.tap()
+  await page.getByRole('link', { name: /^Notas:/ }).tap()
   await expect(page).toHaveURL(/\/p$/)
   await expect(page.getByRole('heading', { level: 1, name: 'Notas' })).toBeVisible()
-  await expect(notes).toHaveAttribute('aria-current', 'page')
+  await close.tap()
+  await expect(page).toHaveURL(/\/$/)
 
-  const finance = nav(page).getByRole('link', { name: /^Finanzas/ })
-  await finance.tap()
+  await page.getByRole('link', { name: /^Finanzas:/ }).tap()
   await expect(page).toHaveURL(/\/finanzas\/\d{4}-\d{2}$/)
-  await expect(finance).toHaveAttribute('aria-current', 'page')
+  await expect(page.getByRole('heading', { level: 1, name: 'Finanzas' })).toBeVisible()
+  await close.tap()
+  await expect(page).toHaveURL(/\/$/)
 
-  // "Tablero" vuelve al último que se abrió.
-  await nav(page).getByRole('link', { name: 'Tablero' }).tap()
+  // Cambiar de tablero es tocar su cuadrado.
+  await page.getByRole('link', { name: `${board.name}: 0 abiertas` }).tap()
   await expect(page).toHaveURL(new RegExp(`/b/${board.slug}$`))
-
-  // "Menú" abre la lista de tableros (y la sección Notas).
-  await nav(page).getByRole('button', { name: 'Menú' }).tap()
-  const menu = page.getByRole('dialog', { name: 'Menú' })
-  await menu.getByRole('link', { name: /^General/ }).tap()
-  await expect(page).toHaveURL(/\/b\/general$/)
-  await expect(menu).toBeHidden()
-})
-
-test('el título es el selector de tablero', async ({ page }) => {
-  const board = await createBoard(page, 'selector')
-  await page.goto('/b/general')
-  await page.getByRole('button', { name: /cambiar de tablero/ }).tap()
-  await page.getByRole('dialog').getByRole('link', { name: board.name }).tap()
-  await expect(page).toHaveURL(new RegExp(`/b/${board.slug}$`))
-  await expect(page.getByRole('heading', { level: 1, name: new RegExp(board.name) })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: board.name })).toBeVisible()
 })

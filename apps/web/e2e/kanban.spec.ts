@@ -13,7 +13,7 @@ async function titlesIn(page: Page, name: string) {
 
 /** Arrastre con mouse real: dnd-kit necesita movimientos intermedios. */
 async function dragWithMouse(page: Page, source: Locator, target: Locator, edge: 'top' | 'center') {
-  // Con el panel de notas abierto, la columna puede quedar fuera de vista.
+  // En el panel, la tarjeta puede quedar fuera de vista.
   await source.scrollIntoViewIfNeeded()
   const from = await source.boundingBox()
   const to = await target.boundingBox()
@@ -46,7 +46,9 @@ async function addCards(page: Page, columnName: string, titles: string[]) {
     await composer.press('Enter')
     await expect(card(lane, title)).toBeVisible()
   }
+  // Esc cierra el composer y nada más: el panel del tablero sigue abierto.
   await composer.press('Escape')
+  await expect(lane.getByRole('button', { name: 'Agregar tarjeta' })).toBeVisible()
 }
 
 test.beforeEach(async ({ page }) => {

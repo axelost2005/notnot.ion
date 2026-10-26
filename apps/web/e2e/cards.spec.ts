@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
-import { deleteE2EBoards, deleteE2EGeneralTasks, e2eName, listBoards, unlock } from './helpers'
+import { deleteE2EBoards, e2eName, unlock } from './helpers'
 
 const column = (page: Page, name: string) =>
   page.locator('section', { has: page.getByRole('heading', { level: 2, name, exact: true }) })
@@ -8,7 +8,7 @@ const card = (scope: Locator, title: string) =>
   scope.getByRole('button', { name: title, exact: true })
 
 type Board = { id: string; slug: string; name: string }
-type Detail = { columns: { id: string; name: string; isDone: boolean }[] }
+type Detail = { columns: { id: string; name: string }[] }
 
 async function createBoard(page: Page, label: string): Promise<Board> {
   const res = await page.request.post('/api/boards', {
@@ -35,7 +35,6 @@ test.beforeEach(async ({ page }) => {
 })
 
 test.afterEach(async ({ page }) => {
-  await deleteE2EGeneralTasks(page.request)
   await deleteE2EBoards(page.request)
 })
 
@@ -59,7 +58,7 @@ test('la tarjeta: checkbox, título y una línea de la descripción; tildarla no
   await todo.getByRole('checkbox', { name: 'Tildar mandar el contrato' }).click()
   expect((await response).ok()).toBe(true)
   await expect(card(done, 'mandar el contrato')).toBeVisible()
-  await expect(page.getByRole('dialog')).toHaveCount(0)
+  await expect(page.getByRole('dialog', { name: 'Tarjeta', exact: true })).toHaveCount(0)
   await expect(done.getByRole('checkbox', { name: 'Destildar mandar el contrato' })).toBeChecked()
 
   // Con el teclado: espacio destilda y vuelve a "Por hacer".
@@ -68,53 +67,10 @@ test('la tarjeta: checkbox, título y una línea de la descripción; tildarla no
   await page.keyboard.press('Space')
   expect((await response).ok()).toBe(true)
   await expect(card(todo, 'mandar el contrato')).toBeVisible()
-  await expect(page.getByRole('dialog')).toHaveCount(0)
+  await expect(page.getByRole('dialog', { name: 'Tarjeta', exact: true })).toHaveCount(0)
 
   await page.reload()
   await expect(todo.getByRole('checkbox', { name: 'Tildar mandar el contrato' })).not.toBeChecked()
-})
-
-test('en General: el checkbox tilda tarjetas de otro tablero y se agrega en "En curso" y "Hecho"', async ({
-  page,
-}) => {
-  const board = await createBoard(page, 'general-tarjeta')
-  await addTask(page, board, 'cobrar la factura')
-  await page.goto('/b/general')
-
-  const todo = column(page, 'Por hacer')
-  const doing = column(page, 'En curso')
-  const done = column(page, 'Hecho')
-  await expect(card(todo, 'cobrar la factura')).toContainText(board.name)
-
-  const response = toggled(page)
-  await todo.getByRole('checkbox', { name: 'Tildar cobrar la factura' }).click()
-  expect((await response).ok()).toBe(true)
-  await expect(card(done, 'cobrar la factura')).toContainText(board.name)
-  await expect(page.getByRole('dialog')).toHaveCount(0)
-
-  // "Agregar tarjeta" en las tres columnas: crea tareas de General en la que corresponde.
-  for (const [lane, title] of [
-    [doing, e2eName('en curso')],
-    [done, e2eName('hecha')],
-  ] as const) {
-    await lane.getByRole('button', { name: 'Agregar tarjeta' }).click()
-    const composer = lane.getByRole('textbox', { name: /^Nueva tarjeta en/ })
-    await composer.fill(title)
-    await composer.press('Enter')
-    await expect(card(lane, title)).toBeVisible()
-    await composer.press('Escape')
-  }
-
-  const general = (await listBoards(page.request)).find((b) => b.slug === 'general')!
-  const detail = (await (await page.request.get(`/api/boards/${general.id}`)).json()) as Detail & {
-    tasks: { title: string; columnId: string }[]
-  }
-  const columnOf = (prefix: string) =>
-    detail.columns.find(
-      (c) => c.id === detail.tasks.find((t) => t.title.startsWith(prefix))?.columnId,
-    )
-  expect(columnOf('e2e-en curso')?.name).toBe('En curso')
-  expect(columnOf('e2e-hecha')?.isDone).toBe(true)
 })
 
 test('el título de cada columna lleva el color de su rol, en claro y en oscuro', async ({

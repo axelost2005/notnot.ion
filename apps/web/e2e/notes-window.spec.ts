@@ -29,8 +29,8 @@ test('las notas se abren en otra ventana y ahí se cambia de tablero', async ({ 
   await page.getByRole('button', { name: 'Abrir las notas en otra ventana' }).click()
   const notes = await opened
   await expect(notes).toHaveURL(new RegExp(`/notas/${first.slug}$`))
-  // Solo las notas: sin la lista de tableros.
-  await expect(notes.getByRole('navigation', { name: 'Tableros' })).toHaveCount(0)
+  // Solo las notas: sin el Inicio y sus cuadrados.
+  await expect(notes.getByRole('list', { name: 'Cuadrados' })).toHaveCount(0)
   await expect(notes.getByRole('combobox', { name: `Nueva nota en ${first.name}` })).toBeFocused()
 
   // Mientras tanto, la ventana principal muestra el segundo tablero.
@@ -62,6 +62,6 @@ test('las notas se abren en otra ventana y ahí se cambia de tablero', async ({ 
 
   // La ventana principal la muestra sin recargar.
   await expect(
-    column(page, 'Por hacer').getByRole('button', { name: 'revisar la propuesta' }),
+    column(page, 'Por hacer').getByRole('button', { name: 'revisar la propuesta', exact: true }),
   ).toBeVisible()
 })
