@@ -110,7 +110,7 @@
 - **Tareas** (`/`, `home/TasksHome.tsx`): "Historial" y "Nuevo tablero" en el encabezado, "Anotar…" y solo los cuadrados de los tableros (se fueron los de Hoy, Notas y Finanzas). El panel de un tablero se abre encima como en la Fase 10 (`/b/:slug` es ruta hija de `/`) y, si lo abriste desde Hoy, al cerrarlo volvés a Hoy.
 - **Estado de un tablero**: `boardStatus` en `shared`, con tests. El cuadrado se tiñe con el color del estado (fondo y borde), lo dice al pie ("Por hacer", "En curso", "Al día") y el color del tablero queda en el punto. El panel ya no se tiñe.
 - **Hoy, Notas y Finanzas** al lado de la barra, sin panel. En la compu, `/p` muestra "Elegí una nota de la barra o creá una con el «+»"; en el celu, `/p` sigue siendo la lista a pantalla completa.
-- e2e: `home.spec.ts` (el estado cambia sin recargar: al día → por hacer → en curso → al día; la barra lleva a Hoy, Tareas, Finanzas y Notas; el panel abierto desde Hoy vuelve a Hoy; ☰ en 375 px) y los specs de antes adaptados a la navegación nueva (`mobile`, `pages`, `receivables`, `lock-and-boards`). Contra la API local pasan 43 de 45: los 2 que no, son los de siempre (suben imágenes y necesitan el token de Vercel Blob de dev). README con capturas nuevas (se suma `mobile-menu.png`).
+- e2e: `home.spec.ts` (el estado cambia sin recargar: al día → por hacer → en curso → al día; la barra lleva a Hoy, Tareas, Finanzas y Notas; el panel abierto desde Hoy aparece con un fundido y vuelve a Hoy; ☰ en 375 px) y los specs de antes adaptados a la navegación nueva (`mobile`, `pages`, `receivables`, `lock-and-boards`). Contra la API local pasan 44 de 46: los 2 que no, son los de siempre (suben imágenes y necesitan el token de Vercel Blob de dev). README con capturas nuevas (se suma `mobile-menu.png`).
 
 ## Decisiones
 
@@ -207,6 +207,7 @@
   - (decisión) El panel del tablero ya no se tiñe: fondo y borde normales, con el punto de color en su encabezado.
   - El plan pedía teñir con los mismos colores de los títulos de columna, pero en claro esos colores son oscuros (para que el texto se lea) y el amarillo quedaba marrón claro. El tinte usa el mismo color con la luminosidad subida (`oklch(from … max(l, 0.8) c h)`) y en claro va al 16 %: azul, verde y crema se distinguen sin agregar colores. En oscuro no cambia (14 %).
   - No hay un link a `/p` en la barra: en el celu la hoja ya muestra el árbol con su "+", y a la lista se llega con "‹" desde una nota.
+  - Un tablero abierto desde Hoy se abre encima de Tareas, como pide el plan: mientras está abierto, detrás se ve la grilla, y al cerrarlo Hoy se vuelve a armar (se pierden el scroll y lo que estuvieras escribiendo en "Anotar…"). Para que no crezca desde un cuadrado que no se veía ni vuelva a él, ese panel aparece y se va con un fundido. Si te molesta que cambie el fondo, se puede dejar Hoy detrás del panel, pero lleva más trabajo.
   - "Instalar app" vuelve a ser la fila de la barra (como antes de la Fase 10): en la hoja del celu, el botón de solo ícono no decía qué era.
 
 ## Pendientes para vos

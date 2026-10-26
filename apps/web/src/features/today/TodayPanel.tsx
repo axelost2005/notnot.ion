@@ -11,7 +11,7 @@ import { boardQuery, boardsQuery } from '../boards/api'
 import { boardStyle } from '../boards/colors'
 import { today as getToday } from '../finance/format'
 import { overviewQuery } from '../home/api'
-import { FROM_HOME } from '../home/navigation'
+import { FROM_OUTSIDE } from '../home/navigation'
 import { PanelHeader } from '../home/Panel'
 import { capturedMessage } from '../home/format'
 import { QuickCapture } from '../home/QuickCapture'
@@ -132,7 +132,7 @@ function TodayLists({ overview, boards, today, onOpen }: ListsProps) {
               <div key={board.id} style={boardStyle(board.color)}>
                 <Link
                   to={`/b/${board.slug}`}
-                  state={FROM_HOME}
+                  state={FROM_OUTSIDE}
                   className="mb-1 flex w-fit items-center gap-2 rounded-md px-1 text-[13px] font-medium outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <span aria-hidden="true" className="size-2 rounded-full bg-(--board)" />

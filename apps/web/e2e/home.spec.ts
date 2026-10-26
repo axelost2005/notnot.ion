@@ -221,6 +221,31 @@ test('la barra lleva a Hoy, Tareas, Finanzas y Notas', async ({ page }) => {
   await expect(page.getByRole('heading', { level: 1, name: 'Tareas' })).toBeVisible()
 })
 
+test('desde Hoy el panel aparece en su lugar, sin salir de un cuadrado de Tareas', async ({
+  page,
+}) => {
+  const board = await createBoard(page, 'desde-hoy')
+  await createTask(page, board.id, e2eName('desde-hoy'), today())
+
+  await page.clock.install()
+  await page.goto('/hoy')
+  const link = page.getByRole('main').getByRole('link', { name: new RegExp(`^${board.name}`) })
+  await expect(link).toBeVisible()
+  // Con el reloj quieto, la animación queda en su primer cuadro: si saliera de un cuadrado,
+  // el panel mediría lo que el cuadrado.
+  await page.clock.pauseAt(new Date(Date.now() + 1000))
+  await link.click()
+  await expect(page.getByRole('dialog', { name: board.name })).toBeAttached()
+  const width = await page
+    .locator('[role=dialog] [tabindex="-1"]')
+    .evaluate((el) => el.getBoundingClientRect().width)
+  expect(width).toBeGreaterThan(1000)
+
+  await page.clock.resume()
+  await page.keyboard.press('Escape')
+  await expect(page).toHaveURL('/hoy')
+})
+
 test.describe('en el celu', () => {
   test.use({ viewport: { width: 375, height: 812 }, hasTouch: true, isMobile: true })
 
@@ -256,12 +281,12 @@ test.describe('en el celu', () => {
     expect(second!.x).toBeGreaterThan(first!.x)
     expect(third!.y).toBeGreaterThan(first!.y)
 
-    // La página, el Inicio y lo que scrollea en el panel (los chips de día sí se corren de costado).
+    // Lo que scrollea en Tareas y en el panel (los chips de día sí se corren de costado).
     const noOverflow = () =>
       page.evaluate(() =>
         [
           document.documentElement,
-          ...document.querySelectorAll('main, [role=dialog] .overflow-y-auto'),
+          ...document.querySelectorAll('main .overflow-y-auto, [role=dialog] .overflow-y-auto'),
         ].every((el) => el.scrollWidth <= el.clientWidth + 1),
       )
     expect(await noOverflow()).toBe(true)

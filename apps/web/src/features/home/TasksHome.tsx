@@ -44,6 +44,9 @@ function historyIndex() {
 const isFromHome = (state: unknown) =>
   typeof state === 'object' && state !== null && 'fromHome' in state && state.fromHome === true
 
+const isFromOutside = (state: unknown) =>
+  typeof state === 'object' && state !== null && 'outside' in state && state.outside === true
+
 /**
  * `/`: Tareas (el campo para anotar y los cuadrados de los tableros) y, encima, el panel del
  * tablero abierto (`/b/:slug`).
@@ -56,9 +59,17 @@ export function TasksHome() {
   const section = sectionOf(location.pathname, boards.data)
   // Dónde estaba el historial al abrir el panel desde la app (Tareas o Hoy): al cerrar se vuelve
   // ahí, así "atrás" no lo vuelve a abrir.
-  const [opened, setOpened] = useState<{ index: number; fromHome: boolean } | null>(null)
+  const [opened, setOpened] = useState<{
+    index: number
+    fromHome: boolean
+    outside: boolean
+  } | null>(null)
   if (section && opened === null) {
-    setOpened({ index: historyIndex(), fromHome: isFromHome(location.state) })
+    setOpened({
+      index: historyIndex(),
+      fromHome: isFromHome(location.state),
+      outside: isFromOutside(location.state),
+    })
   }
   if (!section && opened !== null) setOpened(null)
 
@@ -75,7 +86,12 @@ export function TasksHome() {
         <Home />
       </div>
       {section ? (
-        <Panel tile={section.tile} label={section.label} onClosed={onClosed}>
+        // Desde Hoy no se veía ningún cuadrado: el panel no sale de uno ni vuelve a él.
+        <Panel
+          tile={opened?.outside ? null : section.tile}
+          label={section.label}
+          onClosed={onClosed}
+        >
           {outlet}
         </Panel>
       ) : (

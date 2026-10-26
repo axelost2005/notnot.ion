@@ -19,8 +19,11 @@ const CLOSE = { duration: 0.24, ease: 'power3.inOut' }
 const PanelContext = createContext<{ close: () => void } | null>(null)
 
 type Props = {
-  /** El cuadrado del que sale (`data-tile`). Puede cambiar con el panel abierto. */
-  tile: string
+  /**
+   * El cuadrado del que sale (`data-tile`). Puede cambiar con el panel abierto. Sin cuadrado
+   * (abierto desde Hoy), aparece y se va con un fundido.
+   */
+  tile: string | null
   /** Para lectores de pantalla: "Hoy", el nombre del tablero… */
   label: string
   /** Terminó de cerrarse: hay que volver al Inicio. */
@@ -51,7 +54,10 @@ function PanelContent({ tile, label, onClosed, children }: Props) {
   const content = useRef<HTMLDivElement>(null)
   const closing = useRef(false)
   const currentTile = useRef(tile)
-  const findTile = () => document.querySelector<HTMLElement>(tileSelector(currentTile.current))
+  const findTile = () =>
+    currentTile.current === null
+      ? null
+      : document.querySelector<HTMLElement>(tileSelector(currentTile.current))
 
   // Abrir: el panel sale del cuadrado y crece hasta su lugar (GSAP Flip).
   const { contextSafe } = useGSAP(
