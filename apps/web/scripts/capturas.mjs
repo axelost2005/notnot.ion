@@ -33,26 +33,58 @@ const board = async (name, color) => {
 const folders = []
 const payments = []
 const receivables = []
+// Las de General no se van con los tableros: se borran aparte.
+const generalTasks = []
 
 try {
   const lumen = await board('Estudio Lumen', 'blue')
   const cafe = await board('Café Altamira', 'amber')
   await board('Personal', 'green')
 
+  const fromToday = (days) => {
+    const date = new Date()
+    date.setDate(date.getDate() + days)
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+  }
+  const today = fromToday(0)
+
   const columns = async (b) => (await call('GET', `/api/boards/${b.id}`)).columns
   const [todo, doing, done] = await columns(lumen)
-  for (const title of ['Revisar contrato con Lucía', 'Fotos de producto para la tienda'])
-    await call('POST', '/api/tasks', { columnId: todo.id, title })
+  await call('POST', '/api/tasks', {
+    columnId: todo.id,
+    title: 'Revisar contrato con Lucía',
+    day: today,
+  })
+  await call('POST', '/api/tasks', {
+    columnId: todo.id,
+    title: 'Fotos de producto para la tienda',
+    day: fromToday(1),
+  })
   await call('POST', '/api/tasks', {
     columnId: doing.id,
     title: 'Maqueta de la home',
     description: 'Versión mobile primero.',
+    day: today,
   })
   await call('POST', '/api/tasks', { columnId: doing.id, title: 'Ajustar la paleta de colores' })
   for (const title of ['Kickoff con el equipo', 'Relevar la web actual'])
     await call('POST', '/api/tasks', { columnId: done.id, title })
   const [cafeTodo] = await columns(cafe)
-  await call('POST', '/api/tasks', { columnId: cafeTodo.id, title: 'Menú nuevo para el verano' })
+  await call('POST', '/api/tasks', {
+    columnId: cafeTodo.id,
+    title: 'Menú nuevo para el verano',
+    day: today,
+  })
+  const general = (await call('GET', '/api/boards')).find((b) => b.isGeneral)
+  const [generalTodo] = await columns(general)
+  for (const [title, day] of [
+    ['Pagar el monotributo', fromToday(-1)],
+    ['Turno con el dentista, 17 h', today],
+    ['Llamar al contador', fromToday(2)],
+  ]) {
+    const task = await call('POST', '/api/tasks', { columnId: generalTodo.id, title, day })
+    generalTasks.push(task.id)
+  }
 
   await call('POST', '/api/notes', {
     boardId: lumen.id,
@@ -97,11 +129,6 @@ try {
   // Finanzas: lo que te deben (algunas con pagos) y los pagos del mes actual.
   const now = new Date()
   const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
-  const fromToday = (days) => {
-    const date = new Date()
-    date.setDate(date.getDate() + days)
-    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
-  }
   const receivable = async (data) => {
     const r = await call('POST', '/api/receivables', data)
     receivables.push(r.id)
@@ -190,9 +217,8 @@ try {
       dark = false,
       mobile = false,
       path = `/b/${lumen.slug}`,
-      notes = true,
       openFolders = [],
-      waitFor = ['Maqueta de la home', ...(notes ? ['Ideas para la home'] : [])],
+      waitFor = ['Maqueta de la home'],
     },
   ) {
     const context = await browser.newContext({
@@ -202,16 +228,14 @@ try {
       colorScheme: dark ? 'dark' : 'light',
       isMobile: mobile,
       hasTouch: mobile,
+      // El panel aparece con un fundido corto en vez de crecer desde su cuadrado.
+      reducedMotion: 'reduce',
     })
     await context.addCookies(cookies)
-    // El panel de notas abierto (o cerrado) en escritorio, y las carpetas abiertas del árbol.
-    await context.addInitScript(
-      ({ open, folders }) => {
-        localStorage.setItem('notnot:notes-open', String(open))
-        localStorage.setItem('notnot:carpetas-abiertas', JSON.stringify(folders))
-      },
-      { open: notes, folders: openFolders },
-    )
+    // Las carpetas abiertas del árbol de Notas.
+    await context.addInitScript((folders) => {
+      localStorage.setItem('notnot:carpetas-abiertas', JSON.stringify(folders))
+    }, openFolders)
     const page = await context.newPage()
     await page.goto(path)
     // En mobile una de las dos vistas está oculta: alcanza con que estén cargadas.
@@ -222,13 +246,14 @@ try {
     console.log(`docs/capturas/${file}`)
   }
 
-  await shoot('escritorio-claro.png', { width: 1440, height: 860 })
-  await shoot('escritorio-oscuro.png', { width: 1440, height: 860, dark: true })
-  await shoot('escritorio-general.png', {
+  await shoot('escritorio-inicio.png', { width: 1440, height: 860, path: '/' })
+  await shoot('escritorio-oscuro.png', { width: 1440, height: 860, path: '/', dark: true })
+  await shoot('escritorio-tablero.png', { width: 1440, height: 860 })
+  await shoot('escritorio-hoy.png', {
     width: 1440,
     height: 860,
-    path: '/b/general',
-    notes: false,
+    path: '/hoy',
+    waitFor: ['Pagar el monotributo'],
   })
   await shoot('escritorio-notas.png', {
     width: 1440,
@@ -248,8 +273,9 @@ try {
     path: '/finanzas/por-cobrar',
     waitFor: ['Mantenimiento de noviembre'],
   })
+  await shoot('mobile-inicio.png', { width: 390, height: 844, mobile: true, path: '/' })
   await shoot('mobile-tablero.png', { width: 390, height: 844, mobile: true })
-  // En el celu, "Notas" de la barra de abajo: la sección Notas.
+  // En el celu, el cuadrado de Notas abre la sección a pantalla completa.
   await shoot('mobile-notas.png', {
     width: 390,
     height: 844,
@@ -259,6 +285,7 @@ try {
     waitFor: ['Accesos y datos del proyecto'],
   })
 } finally {
+  for (const id of generalTasks) await call('DELETE', `/api/tasks/${id}`)
   for (const payment of payments) await call('DELETE', `/api/payments/${payment.id}`)
   for (const id of receivables) await call('DELETE', `/api/receivables/${id}`)
   for (const id of folders) await call('DELETE', `/api/folders/${id}`)
